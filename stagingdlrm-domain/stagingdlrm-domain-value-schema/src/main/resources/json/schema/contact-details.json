@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/contact-details.json",
+  "type": "object",
+  "description": "Contact Details",
+  "properties": {
+    "work": {
+      "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/phone"
+    },
+    "home": {
+      "description": "A home telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/phone"
+    },
+    "mobile": {
+      "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/phone"
+    },
+    "primaryEmail": {
+      "description": "The identification of the first e-mail address.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/email"
+    },
+    "secondaryEmail": {
+      "description": "The identification of the second e-mail address.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/email"
+    }
+  },
+  "additionalProperties": false
+}

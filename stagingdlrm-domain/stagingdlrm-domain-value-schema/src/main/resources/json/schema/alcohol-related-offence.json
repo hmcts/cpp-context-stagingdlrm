@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/alcohol-related-offence.json",
+  "type": "object",
+  "properties": {
+    "alcoholOrDrugLevelMethod": {
+      "type": "string",
+      "description": "Alcohol Level Method",
+      "maxLength": 1
+    },
+    "alcoholOrDrugLevelAmount": {
+      "type": "integer",
+      "description": "Alcohol Level Amount",
+      "maximum": 999
+    }
+  },
+  "additionalProperties": false
+}

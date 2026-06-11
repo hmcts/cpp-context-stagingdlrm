@@ -1,0 +1,37 @@
+#%RAML 0.8
+title: stagingdlrm Command (Write) API
+protocols: [ HTTP ]
+
+baseUri: http://localhost:8080/stagingdlrm-command-api/command/api/rest/stagingdlrm
+
+/receive-migrated-case-submission:
+  post:
+    description: |
+      Receive Migrated Case Submission.
+      ...
+      (mapping):
+          requestType: application/vnd.stagingdlrm.receive-migrated-case-submission+json
+          name: stagingdlrm.receive-migrated-case-submission
+      ...
+    body:
+      application/vnd.stagingdlrm.receive-migrated-case-submission+json:
+        example:
+          !include json/stagingdlrm.receive-migrated-case-submission.json
+        schema:
+          !include json/schema/stagingdlrm.receive-migrated-case-submission.json
+
+/receive-error-migrated-case-submission:
+   post:
+     description: |
+       Receive Error Migrated Case Submission.
+       ...
+       (mapping):
+           requestType: application/vnd.stagingdlrm.receive-error-migrated-case-submission+json
+           name: stagingdlrm.receive-error-migrated-case-submission
+       ...
+     body:
+       application/vnd.stagingdlrm.receive-error-migrated-case-submission+json:
+         example:
+           !include json/stagingdlrm.receive-error-migrated-case-submission.json
+         schema:
+           !include json/schema/stagingdlrm.receive-error-migrated-case-submission.json

@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "groupId": "1e2f843e-d639-40b3-8611-8015f3a18958",
+      "groupName": "System Users"
+    },
+    {
+      "groupId": "5b6f843e-d639-40b3-8611-8015f3a34758",
+      "groupName": "Charging Lawyers"
+    },
+    {
+      "groupId": "c608aef0-6de0-11e7-907b-a6006ad3dba0",
+      "groupName": "Court Clerks"
+    },
+    {
+      "groupId": "e5679ef8-6de7-11e7-907b-a6006ad3dba0",
+      "groupName": "Legal Advisers"
+    }
+
+  ]
+}

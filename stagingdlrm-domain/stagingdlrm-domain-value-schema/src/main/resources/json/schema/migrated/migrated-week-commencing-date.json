@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/week-commencing-date.json",
+  "type": "object",
+  "properties": {
+    "startDate": {
+      "description": "Week commencing start date.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/datePattern"
+    },
+    "duration": {
+      "description": "Duration of hearing. Number of weeks from the start date.",
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/positiveInteger"
+    }
+  },
+  "required": [
+    "startDate"
+  ],
+  "additionalProperties": false
+}

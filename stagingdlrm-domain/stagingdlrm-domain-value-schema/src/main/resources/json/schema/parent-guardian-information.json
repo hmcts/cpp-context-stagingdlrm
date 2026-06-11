@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/parent-guardian-information.json",
+  "type": "object",
+  "description": "Parent Guardian Information",
+  "oneOf": [
+    {
+      "properties": {
+        "dateOfBirth": {
+          "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+          "description": "The date when a person was born."
+        },
+        "gender": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9,
+          "description": "Gender as stated by the parent guardian in Legacy systems"
+        },
+        "personalInformation": {
+          "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/personal-information.json"
+        },
+        "selfDefinedEthnicity": {
+          "type": "string",
+          "maxLength": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "properties": {
+        "organisationName": {
+          "type": "string",
+          "description": "Name of an organisation, e.g., Marks and Spencer.",
+          "maxLength": 255
+        },
+        "companyTelephoneNumber": {
+          "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/phone"
+        },
+        "address": {
+          "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/address.json"
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

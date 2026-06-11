@@ -1,0 +1,18 @@
+#%RAML 0.8
+title: stagingdlrm Command Handler
+baseUri: message://command/handler/message/stagingdlrm
+
+/stagingdlrm.handler.command:
+  post:
+    body:
+      application/vnd.stagingdlrm.command.handler.receive-migrated-case-submission+json:
+        schema: !include json/schema/stagingdlrm.command.handler.receive-migrated-case-submission.json
+        example: !include json/stagingdlrm.command.handler.receive-migrated-case-submission.json
+
+      application/vnd.stagingdlrm.command.handler.receive-error-migrated-case-submission+json:
+        schema: !include json/schema/stagingdlrm.command.handler.receive-error-migrated-case-submission.json
+        example: !include json/stagingdlrm.command.handler.receive-error-migrated-case-submission.json
+
+      application/vnd.stagingdlrm.command.handler.record-submission-processing-output+json:
+         schema: !include json/schema/stagingdlrm.command.handler.record-submission-processing-output.json
+         example: !include json/stagingdlrm.command.handler.record-submission-processing-output.json

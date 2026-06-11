@@ -1,0 +1,9 @@
+{
+  "events": [
+    {
+      "eventName": "stagingdlrm.events.case-received",
+      "fieldsToBeIgnored": [
+      ]
+    }
+  ]
+}

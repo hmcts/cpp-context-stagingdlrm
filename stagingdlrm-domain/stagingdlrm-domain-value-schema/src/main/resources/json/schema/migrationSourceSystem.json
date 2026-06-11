@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/migrationSourceSystem.json",
+  "type": "object",
+  "description": "Migration Source System",
+  "properties": {
+    "migrationSourceSystemName": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/migrationSourceSystemName.json"
+    },
+    "migrationSourceSystemCaseIdentifier": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "migrationSourceSystemName",
+    "migrationSourceSystemCaseIdentifier"
+  ],
+  "additionalProperties": false
+}

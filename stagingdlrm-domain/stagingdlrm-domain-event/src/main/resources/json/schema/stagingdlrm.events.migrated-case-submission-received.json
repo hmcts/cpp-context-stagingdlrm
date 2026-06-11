@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-received.json",
+  "type": "object",
+  "properties": {
+    "migratedCaseSubmission": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-case-submission.json"
+    }
+
+  },
+  "additionalProperties": false
+}

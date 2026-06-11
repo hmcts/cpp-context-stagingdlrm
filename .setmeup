@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Gerrit setup & workflow
+# https://triadmoj.atlassian.net/wiki/pages/viewpage.action?pageId=18809272
+
+TEST=$(pwd | tail -c 6)
+#if [ "$TEST" == "/.git" ]; then
+GITCONFIG=".git/config"
+PORT="29418"
+GETGITURL=$(grep url $GITCONFIG | awk '{print $3}')
+GETGITHOST=$(grep url $GITCONFIG | awk '{print $3}' | cut -d ":" -f2 | tr -d "/")
+
+if grep '\[remote \"review\"\]' $GITCONFIG;
+ then
+     echo "setmeup has already run"
+ else
+     echo "Setting you up!"
+     echo '[remote "review"]' >> $GITCONFIG
+     echo "  pushurl= ${GETGITURL}" >> $GITCONFIG
+     echo "  push = HEAD:refs/for/master" >> $GITCONFIG
+     echo "  receivepack = git receive-pack" >> $GITCONFIG
+     scp -p -P 29418 $GETGITHOST:hooks/commit-msg hooks/.
+     echo "Done"
+fi
+#else
+#echo "Please run me from ./git"
+#fi

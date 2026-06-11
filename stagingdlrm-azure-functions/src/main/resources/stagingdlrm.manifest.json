@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "stagingdlrm.manifest.json",
+  "type": "object",
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "fileName": {
+              "type": "string"
+            },
+            "fileType": {
+              "type": "string"
+            },
+            "documentType": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "fileName",
+            "fileType",
+            "documentType"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fileName": {
+              "type": "string"
+            },
+            "fileType": {
+              "type": "string"
+            },
+            "documentType": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "fileName",
+            "fileType",
+            "documentType"
+          ]
+        }
+      ]
+    },
+    "migrationSourceSystem": {
+      "$ref": "migrationSourceSystem.json"
+    }
+  },
+  "required": [
+    "migrationSourceSystem"
+  ],
+  "additionalProperties": false
+}

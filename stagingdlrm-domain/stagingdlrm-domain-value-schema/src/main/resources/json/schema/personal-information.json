@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/personal-information.json",
+  "type": "object",
+  "description": "Personal Information",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title by which a person is addressed",
+      "maxLength": 35
+    },
+    "forename": {
+      "type": "string",
+      "description": "The first given name of a person, e.g. John ",
+      "maxLength": 255
+    },
+    "surname": {
+      "type": "string",
+      "description": "Surname or Family name, e.g. Brown.",
+      "maxLength": 255
+    },
+    "middleName": {
+      "type": "string",
+      "description": "Middle name, e.g. Walter.",
+      "maxLength": 255
+    },
+    "observedEthnicity" : {
+      "type": "integer"
+    },
+    "contactDetails": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/contact-details.json"
+    },
+    "address": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/address.json"
+    }
+  },
+  "required": [
+    "surname"
+  ]
+}

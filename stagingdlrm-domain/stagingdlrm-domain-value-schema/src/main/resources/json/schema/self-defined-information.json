@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/self-defined-information.json",
+  "type": "object",
+  "description": "Self defined information",
+  "properties": {
+    "nationality": {
+      "type": "string",
+      "description": "Country of origin as stated by the defendant, as per CJS Standards section 3.103",
+      "maxLength": 3
+    },
+    "ethnicity": {
+      "type": "string",
+      "maxLength": 2
+    },
+    "dateOfBirth": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "The date when a person was born."
+    },
+    "gender": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9,
+      "description": "Gender as stated by the defendant in Legacy systems"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "gender"
+  ]
+}

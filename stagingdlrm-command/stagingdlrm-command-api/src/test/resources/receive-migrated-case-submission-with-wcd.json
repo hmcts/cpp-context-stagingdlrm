@@ -1,0 +1,124 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "B01NM00",
+      "cpsOrganisation": "A30AB00",
+      "initiationCode": "C",
+      "prosecutorCaseReference": "DL9141447d9",
+      "prosecutor": {
+        "prosecutingAuthority": "G94DV00"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "courtRoomId": 2330,
+        "weekCommencingDate": {
+          "startDate": "2025-11-10",
+          "duration": 3
+        },
+        "durationMinutes": 90,
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "a9860e1a-8695-4fd4-8046-c1c4fe6c7f80",
+            "listedOffences": [
+              "427700bd-c116-4811-badb-bfa845d44d2f"
+            ]
+          },
+          {
+            "listedOffences": [
+              "357700bd-c116-4811-badb-bfa845d44d2f"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "a9860e1a-8695-4fd4-8046-c1c4fe6c7f81",
+        "prosecutorDefendantReference": "DEFENDANT_REFERENCE1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "custodyStatus": "B",
+        "numPreviousConvictions": 3,
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "Santos",
+            "surname": "Patience",
+            "address": {
+              "address1": "No 1 Exeter Test Street",
+              "address2": "line 2",
+              "address3": "line 3",
+              "address4": "line 4",
+              "address5": "line 5",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "white",
+            "gender": "MALE",
+            "dateOfBirth": "2000-01-01",
+            "nationality": "SVK"
+          }
+        },
+        "offences": [
+          {
+            "offenceCode": "TH68023",
+            "prosecutorOffenceId": "8a63ecb2-b161-47e0-b55c-603f5648480a",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2024-08-20",
+            "offenceCommittedEndDate": "2024-08-23",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2024-08-23",
+            "alcoholRelatedOffence": {
+              "alcoholLevelMethod": "A",
+              "alcoholLevelAmount": 100
+            },
+            "verdict": {
+              "id": "8a63ecb2-b161-47e0-b55c-603f5648480a",
+              "verdictDate": "2024-08-23"
+            }
+          }
+        ],
+        "pncIdentifier": "pncID7210",
+        "croNumber": "croNO4874"
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "LIBRA",
+      "migrationSourceSystemCaseIdentifier": "L100009"
+    }
+  },
+  "materials": [
+    {
+      "id": "317004a1-7860-430a-bd20-48b78dbb73c5",
+      "fileType": "8",
+      "documentType": 1,
+      "azureLocation": "DL914144997/WitnessStatementDocument_1.pdf",
+      "fileName": "WitnessStatementDocument_1.pdf"
+    },
+    {
+      "id": "fa49cad4-ad53-47aa-a8fa-93860b557732",
+      "fileType": "8",
+      "documentType": 1,
+      "azureLocation": "DL914144997/WitnessStatementDocument_2.pdf",
+      "fileName": "WitnessStatementDocument_2.pdf"
+    }
+  ],
+  "metadata": {
+    "id": "210d06d6-7e2d-4969-94ac-81e539694290",
+    "numberOfMaterials": 2
+  },
+  "submissionId": "5b190d4b-631d-4460-92c0-e63573eb5ae7"
+}

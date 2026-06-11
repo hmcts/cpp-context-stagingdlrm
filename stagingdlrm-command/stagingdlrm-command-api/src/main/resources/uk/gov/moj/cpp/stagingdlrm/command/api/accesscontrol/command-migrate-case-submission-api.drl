@@ -1,0 +1,28 @@
+package uk.gov.moj.cpp.stagingdlrm.command.api.accesscontrol;
+
+import uk.gov.moj.cpp.accesscontrol.drools.Outcome;
+import uk.gov.moj.cpp.accesscontrol.drools.Action;
+
+global uk.gov.moj.cpp.accesscontrol.common.providers.UserAndGroupProvider userAndGroupProvider;
+
+rule "Command - Rule for Migrate Case Submission"
+  when
+    $outcome: Outcome();
+    $action: Action(name == "stagingdlrm.receive-migrated-case-submission");
+    eval(userAndGroupProvider.isSystemUser($action));
+  then
+    $outcome.setSuccess(true);
+end
+
+rule "Command - Rule for Error Migrate Case Submission"
+  when
+    $outcome: Outcome();
+    $action: Action(name == "stagingdlrm.receive-error-migrated-case-submission");
+    eval(userAndGroupProvider.isSystemUser($action));
+  then
+    $outcome.setSuccess(true);
+end
+
+
+
+

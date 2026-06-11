@@ -1,0 +1,89 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "B01NM00",
+      "cpsOrganisation": "A30AB00",
+      "initiationCode": "O",
+      "prosecutorCaseReference": "CASE-URN",
+      "prosecutor": {
+        "prosecutingAuthority": "G94DV00"
+      },
+      "sendingCourt": "C01BL00",
+      "dateReceived": "2024-01-15",
+      "receivingCourt": "C01BL00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Commital after breach",
+      "retrialIndicator": false
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C01BL01",
+        "courtRoomId": 235,
+        "durationMinutes": 120,
+        "hearingType": "FHG",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+            "listedOffences": [
+              "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "custodyStatus": "B",
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "DEFENDANT_FIRST_NAME",
+            "surname": "DEFENDANT_LAST_NAME",
+            "address": {
+              "address1": "No 1 Exeter Test Street",
+              "address2": "line 2",
+              "address3": "line 3",
+              "address4": "line 4",
+              "address5": "line 5",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "M3",
+            "gender": 1,
+            "dateOfBirth": "2000-01-01",
+            "nationality": "SVK"
+          },
+          "bailConditions": "test"
+        },
+        "offences": [
+          {
+            "offenceCode": "RT88333",
+            "prosecutorOffenceId": "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2025-06-13",
+            "offenceCommittedEndDate": "2025-06-16",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2025-06-16",
+            "arrestDate": "2025-06-16"
+          }
+        ],
+        "pncIdentifier": "pncID98833",
+        "croNumber": "croNO81292"
+      }
+    ]
+  }
+}

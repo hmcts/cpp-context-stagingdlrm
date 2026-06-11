@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/cps/stagingdlrm/command/handler/record-case-submission-output.json",
+  "type": "object",
+  "properties": {
+    "migratedCaseFileProcessedOutput": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-case-submission-processed-output.json"
+    }
+  }
+}
+

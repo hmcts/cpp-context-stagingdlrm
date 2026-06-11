@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "migrationSourceSystem.json",
+  "type": "object",
+  "description": "Migration Source System",
+  "properties": {
+  "migrationSourceSystemName": {
+    "$ref": "migrationSourceSystemName.json"
+  },
+  "migrationSourceSystemCaseIdentifier": {
+    "type": "string"
+  }
+  },
+  "additionalProperties": false
+}

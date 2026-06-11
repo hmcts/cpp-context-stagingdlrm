@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/cps/prosecution/casefile/dlrm/domain/event/public.pcfdlrm.migrated-case-file-processed.json",
+  "type": "object",
+  "properties": {
+    "submissionId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "caseId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid",
+      "description": "The Id of the SJP case to initiate"
+    },
+    "caseUrn": {
+      "description": "The prosecuting authorities’ unique reference for a prosecution case",
+      "type": "string",
+      "maxLength": 36
+    },
+    "processingIsSuccessful": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "submissionId",
+    "caseId",
+    "caseUrn",
+    "processingIsSuccessful"
+  ]
+}
