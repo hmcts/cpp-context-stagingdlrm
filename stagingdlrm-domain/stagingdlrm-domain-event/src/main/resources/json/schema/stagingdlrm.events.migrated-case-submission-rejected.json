@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-rejected.json",
+  "type": "object",
+  "properties": {
+    "caseDetails": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json"
+    },
+    "createdBy": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    }
+  },
+  "additionalProperties": false
+}

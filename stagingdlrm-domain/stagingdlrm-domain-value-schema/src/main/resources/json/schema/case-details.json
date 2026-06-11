@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json",
+  "type": "object",
+  "description": "Prosecution Case File Details",
+  "properties": {
+    "prosecutorCaseReference": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "originatingOrganisation": {
+      "type": "string",
+      "description": "This is the oucode",
+      "maxLength": 7,
+      "minLength": 7
+    },
+    "prosecutor": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/prosecutor.json"
+    },
+    "initiationCode": {
+      "type": "string",
+      "enum": [
+        "O"
+      ]
+    },
+    "cpsOrganisation": {
+      "type": "string",
+      "maxLength": 7,
+      "minLength": 7
+    },
+    "caseMarkers": {
+      "type": "array",
+      "items": {
+        "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-marker.json"
+      },
+      "default": []
+    },
+    "dateReceived": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "Date when case received from Magistrates court."
+    },
+    "dateOfSending": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date"
+    },
+    "dateOfCommittal": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date"
+    },
+    "receiptType": {
+      "description": "The Receipt type",
+      "type": "string",
+      "maxLength": 40
+    },
+    "retrialIndicator": {
+      "description": "The Re-trial indicator flag ",
+      "type": "boolean"
+    },
+    "sendingCourt": {
+      "type": "string",
+      "description": "This is the organisation unit oucode of LIBRA case court. E.g B01LY00",
+      "maxLength": 7,
+      "minLength": 7
+    },
+    "receivingCourt": {
+      "type": "string",
+      "description": "This is the organisation unit oucode of XHIBIT case court. E.g C50EX00",
+      "maxLength": 7,
+      "minLength": 7
+    }
+  },
+  "required": [
+    "prosecutorCaseReference",
+    "originatingOrganisation",
+    "initiationCode",
+    "prosecutor",
+    "dateReceived",
+    "retrialIndicator",
+    "receiptType",
+    "receivingCourt"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "dateOfCommittal"
+      ]
+    },
+    {
+      "required": [
+        "dateOfSending"
+      ]
+    }
+  ],
+  "additionalProperties": false
+}

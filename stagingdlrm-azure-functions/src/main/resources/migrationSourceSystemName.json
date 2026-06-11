@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "migrationSourceSystemName.json",
+  "type": "string",
+  "enum": [
+    "LIBRA",
+    "XHIBIT"
+  ]
+}

@@ -1,0 +1,57 @@
+---
+resource_descriptor:
+  spec_version: '1.0.0'
+  version: '${project.version}'
+
+  resources:
+    - name: java:/app/stagingdlrm-service/DS.eventstore
+      type: xa-datasource
+      setup:
+        - type: liquibase
+          maven:
+            groupId: uk.gov.justice.services
+            artifactId: event-repository-liquibase
+            type: jar
+            version: '${cpp.framework.version}'
+        - type: liquibase
+          maven:
+            groupId: uk.gov.justice.services
+            artifactId: aggregate-snapshot-repository-liquibase
+            type: jar
+            version: '${project.version}'
+
+    - name: java:/DS.stagingdlrm
+      type: xa-datasource
+      setup:
+        - type: liquibase
+          maven:
+            groupId: uk.gov.justice.services
+            artifactId: event-buffer-liquibase
+            type: jar
+            version: '${cpp.framework.version}'
+        - type: liquibase
+          maven:
+            groupId: uk.gov.moj.cpp.stagingdlrm
+            artifactId: stagingdlrm-viewstore-liquibase
+            type: jar
+            version: '${project.version}'
+
+    - name: stagingdlrm.handler.command
+      type: queue
+    - name: stagingdlrm.event
+      type: topic
+    - name: public.event
+      type: topic
+
+  services:
+    # stagingdlrm provides these service mappings
+    - name: 'stagingdlrm-service'
+      id: 'stagingdlrm_service'
+      target: '/stagingdlrm-service'
+      map:
+        - '/stagingdlrm-command-api'
+        - '/stagingdlrm-command-handler'
+        - '/stagingdlrm-event-listener'
+        - '/stagingdlrm-event-processor'
+        - '/stagingdlrm-query-api'
+      matcher: '/stagingdlrm-[^/]+'

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/error-migrated-case-submission.json",
+  "type": "object",
+  "description": "Error Migrated Case Submission",
+  "properties": {
+    "payload": {
+      "type": "string"
+    },
+    "submissionId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "errorMessage": {
+      "type": "string"
+    },
+    "caseUrn": {
+      "description": "The prosecuting authorities’ unique reference for a prosecution case",
+      "type": "string"
+    },
+    "azureLocation": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "payload",
+    "submissionId",
+    "caseUrn",
+    "azureLocation"
+  ],
+  "additionalProperties": false
+}
+

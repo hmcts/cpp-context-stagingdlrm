@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/individual.json",
+  "type": "object",
+  "description": "Individual Details",
+  "properties": {
+    "selfDefinedInformation": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/self-defined-information.json"
+    },
+    "personalInformation": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/personal-information.json"
+    },
+    "parentGuardianInformation": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/parent-guardian-information.json"
+    },
+    "custodyStatus": {
+      "type": "string",
+      "maxLength": 1
+    },
+    "custodyTimeLimit": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "date of custody time limit"
+    },
+    "bailConditions": {
+      "type": "string",
+      "maxLength": 2500
+    }
+  },
+  "required": [
+    "personalInformation",
+    "selfDefinedInformation"
+  ]
+}

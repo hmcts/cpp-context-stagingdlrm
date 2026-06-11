@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-processed.json",
+  "type": "object",
+  "properties": {
+    "migratedCaseSubmissionProcessed": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-case-submission-processed-output.json"
+    },
+    "azureLocation": {
+      "type": "string"
+    }
+  }
+}

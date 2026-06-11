@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "stagingdlrm.case-submission.json",
+  "type": "object",
+  "description": "Migrated Case File Submission",
+  "properties": {
+    "migratedCase": {
+      "$ref": "migrated-case.json"
+    }
+  },
+  "required": [
+    "migratedCase"
+  ],
+  "additionalProperties": false
+}

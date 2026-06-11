@@ -1,0 +1,144 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "dateReceived": "2024-01-15",
+      "sendingCourt": "C01BL00",
+      "receivingCourt": "C01BL00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Commital for sentence",
+      "retrialIndicator": false,
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 60,
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "listedOffences": [
+              "LIBRA-offence-id-1"
+            ]
+          },
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "listedOffences": [
+              "LIBRA-offence-id-2"
+            ]
+          }
+        ]
+      },
+      {
+        "courtHearingLocation": "B01LY02",
+        "durationMinutes": 90,
+        "courtRoomId": 60,
+        "weekCommencingDate": {
+          "startDate": "2025-05-10",
+          "duration": 5
+        },
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "listedOffences": [
+              "LIBRA-offence-id-1"
+            ]
+          },
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "listedOffences": [
+              "LIBRA-offence-id-2"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      },
+      {
+        "prosecutorDefendantId":"LIBRA-defendant-id-2",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "LIBRA-offence-id-2",
+            "offenceCode": "DA03014",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "LIBRA",
+      "migrationSourceSystemCaseIdentifier": "This is from Libra"
+    }
+  },
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "numberOfMaterials": 0
+  },
+  "submissionId": "SUBMISSION_ID",
+  "azureLocation": "TVL55117DFXXV"
+}

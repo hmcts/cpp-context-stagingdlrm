@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/offence.json",
+  "type": "object",
+  "description": "Offences Details",
+  "properties": {
+    "prosecutorOffenceId": {
+      "type": "string",
+      "description": "it is unique identifier for the offence and comes from legacy systems",
+      "maxLength": 36
+    },
+    "offenceCode": {
+      "type": "string",
+      "description": "Identifies the CJS code applicable to criminal offences as per the CJS Standard section 3.11",
+      "maxLength": 8
+    },
+    "offenceSequenceNumber": {
+      "type": "integer",
+      "description": "Sequence number of the offence",
+      "maximum": 999
+    },
+    "arrestDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": ""
+    },
+    "chargeDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": ""
+    },
+    "offenceDateCode": {
+      "description": "The code for the offence date to be used within the offence wording, 1 = on or in, 2 = before, 3 = after, 4 = between, 5 = on or about and 6 = on or before",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6
+    },
+    "offenceCommittedDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "Date on which the offence is committed"
+    },
+    "offenceCommittedEndDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "End date for period in which offence committed"
+    },
+    "convictionDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
+      "description": "Date on which the offence is convicted"
+    },
+    "offenceLocation": {
+      "type": "string",
+      "description": "Offence location",
+      "maxLength": 80
+    },
+    "offenceWording": {
+      "type": "string",
+      "description": "Details of Information or Charge to be laid before the court",
+      "maxLength": 2500
+    },
+    "offenceWordingWelsh": {
+      "type": "string",
+      "description": "Details of Information or Charge to be laid before the court in Welsh",
+      "maxLength": 2500
+    },
+    "alcoholRelatedOffence": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/alcohol-related-offence.json"
+    },
+    "plea": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/plea.json"
+    },
+    "verdict": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/verdict.json"
+    },
+    "allocationDecision": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/allocationDecision.json"
+    },
+    "convictingCourtCode": {
+      "type": "string",
+      "description": "This is the organisation unit oucode. E.g B01BH00",
+      "maxLength": 7,
+      "minLength": 7
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "prosecutorOffenceId",
+    "offenceCode",
+    "offenceSequenceNumber",
+    "offenceDateCode",
+    "offenceCommittedDate",
+    "offenceWording"
+  ]
+}

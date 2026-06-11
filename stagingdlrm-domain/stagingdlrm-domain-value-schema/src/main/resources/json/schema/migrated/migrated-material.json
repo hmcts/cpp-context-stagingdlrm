@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-material.json",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "fileName": {
+      "type": "string"
+    },
+    "fileType": {
+      "type": "string"
+    },
+    "caseId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "azureLocation": {
+      "type": "string"
+    },
+    "receivedDateTime": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date-time"
+    },
+    "documentType": {
+      "type": "integer"
+    },
+    "sectionCode": {
+      "type": "string"
+    },
+    "defendantId": {
+      "type": "string"
+    },
+    "documentCategory": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "azureLocation",
+    "fileName",
+    "fileType",
+    "documentType"
+  ],
+  "additionalProperties": false
+}

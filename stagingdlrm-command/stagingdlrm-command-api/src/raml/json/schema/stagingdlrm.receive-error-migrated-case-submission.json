@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/cps/stagingdlrm/command/api/receive-error-case-submission.json",
+  "type": "object",
+  "description": "Error Case File Submission",
+  "properties": {
+    "payload": {
+      "type": "string"
+    },
+    "submissionId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "errorMessage": {
+      "type": "string"
+    },
+    "caseUrn": {
+      "description": "The prosecuting authorities’ unique reference for a prosecution case",
+      "type": "string"
+    },
+    "azureLocation": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "payload",
+    "submissionId",
+    "caseUrn",
+    "azureLocation"
+  ],
+  "additionalProperties": false
+}
+

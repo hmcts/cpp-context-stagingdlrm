@@ -1,0 +1,21 @@
+subscriptions_descriptor:
+  spec_version: 1.0.0
+  service: stagingdlrm
+  service_component: EVENT_PROCESSOR
+  subscriptions:
+    - name: event processor subscription
+      events:
+        - name: stagingdlrm.events.migrated-case-submission-received
+          schema_uri: http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-received.json
+        - name: stagingdlrm.events.migrated-case-submission-processed
+          schema_uri: http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-processed.json
+        - name: stagingdlrm.events.error-migrated-case-submission-received
+          schema_uri: http://moj.gov.uk/stagingdlrm/domain/event/error-migrated-case-submission-received.json
+      event_source_name: stagingdlrm
+
+    - name: public event subscription
+      events:
+        - name: public.pcfdlrm.migrated-case-file-processed
+          schema_uri: http://moj.gov.uk/cps/prosecution/casefile/dlrm/domain/event/public.pcfdlrm.migrated-case-file-processed.json
+
+      event_source_name: public.event.source

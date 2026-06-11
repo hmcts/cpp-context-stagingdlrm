@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/defendant.json",
+  "type": "object",
+  "description": "Defendant Details",
+  "properties": {
+    "id": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid",
+      "description": "It is being generated for CP platform before sending PCFDLRM"
+    },
+    "prosecutorDefendantId": {
+      "type": "string",
+      "description": "The unique identifier that comes legacy systems",
+      "maxLength": 36
+    },
+    "asn": {
+      "type": "string",
+      "description": "Arrest / Summons number",
+      "maxLength": 20
+    },
+    "documentationLanguage": {
+      "type": "string",
+      "description": "Language in which the defendant’s documents are written in legacy systems",
+      "maxLength": 1
+    },
+    "hearingLanguage": {
+      "type": "string",
+      "description": "Language in which the defendant’s hearing is conducted in legacy systems",
+      "maxLength": 1
+    },
+    "languageRequirement": {
+      "type": "string",
+      "description": "Notes about the defendant’s language needs, e.g. interpreter details",
+      "maxLength": 150
+    },
+    "specificRequirements": {
+      "type": "string",
+      "description": "Notes about any help that the defendant may need when attending court – e.g. wheelchair access.",
+      "maxLength": 150
+    },
+    "individual": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/individual.json"
+    },
+    "offences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/offence.json"
+      }
+    },
+    "emailAddress1": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/email"
+    },
+    "emailAddress2": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/email"
+    },
+    "organisationName": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "pncIdentifier": {
+      "type": "string",
+      "maxLength": 13
+    },
+    "telephoneNumberBusiness": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/phone"
+    },
+    "croNumber": {
+      "type": "string",
+      "maxLength": 12
+    },
+    "individualAliases": {
+      "type": "array",
+      "items": {
+        "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/individual-alias.json"
+      }
+    },
+    "aliasForCorporate": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "address": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/address.json"
+    }
+  },
+  "required": [
+    "offences",
+    "prosecutorDefendantId",
+    "documentationLanguage",
+    "hearingLanguage"
+  ],
+  "additionalProperties": false
+}

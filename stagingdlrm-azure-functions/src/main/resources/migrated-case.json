@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "migrated-case.json",
+  "type": "object",
+  "description": "Migrated Case File Details",
+  "properties": {
+    "caseDetails": {
+      "$ref": "case-details.json"
+    }
+  },
+  "required": [
+    "caseDetails"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/allocationDecision.json",
+  "description": "The allocation decision made regarding the jurisdiction required or elected for dealing with the offence in question",
+  "type": "object",
+  "properties": {
+    "motReasonId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "allocationDecisionDate": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date"
+    }
+  },
+  "required": [
+  "motReasonId"
+ ],
+  "additionalProperties": false
+}

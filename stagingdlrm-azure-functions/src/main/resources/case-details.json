@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "case-details.json",
+  "type": "object",
+  "description": "Prosecution Case File Details",
+  "properties": {
+    "prosecutorCaseReference": {
+      "type": "string"
+    },
+    "originatingOrganisation": {
+      "type": "string"
+    },
+    "prosecutor": {
+      "$ref": "pcf-prosecutor.json"
+    },
+    "initiationCode": {
+      "type": "string"
+    },
+    "dateReceived": {
+      "type": "string",
+      "description": "Date when case received from Magistrates court."
+    },
+
+    "receiptType": {
+      "description": "The Receipt type",
+      "type": "string"
+    },
+    "retrialIndicator": {
+      "description": "The Re-trial indicator flag ",
+      "type": "boolean"
+    },
+    "receivingCourt": {
+      "type": "string",
+      "description": "This is the organisation unit oucode of XHIBIT case court. E.g C50EX00"
+    }
+  },
+  "required": [
+    "prosecutorCaseReference",
+    "originatingOrganisation",
+    "initiationCode",
+    "prosecutor",
+    "dateReceived",
+    "retrialIndicator",
+    "receiptType",
+    "receivingCourt"
+  ],
+  "additionalProperties": true
+}

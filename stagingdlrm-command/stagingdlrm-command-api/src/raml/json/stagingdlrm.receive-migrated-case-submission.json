@@ -1,0 +1,139 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "B01NM00",
+      "cpsOrganisation": "A30AB00",
+      "otherPartyOfficerInCase": {
+        "personalInformation": {
+          "address": {
+            "address1": "101",
+            "address2": "56Police House",
+            "address3": "Letsby Avenue",
+            "address4": "Avon",
+            "postcode": "HA1 2ER"
+          },
+          "contactDetails": {
+            "primaryEmail": "vegaoic@test.dom",
+            "work": "0117911911"
+          },
+          "firstName": "Gaylord",
+          "lastName": "Blick",
+          "title": "Baron"
+        }
+      },
+      "caseId": "51cac7fb-387c-4d19-9c80-8963fa8cf222",
+      "initiationCode": "J",
+      "prosecutorCaseReference": "19YI1962686",
+      "prosecutor": {
+        "prosecutingAuthority": "G94DV00"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C50EX02",
+        "courtRoomId": 905,
+        "dateOfHearing": "2024-11-26",
+        "timeOfHearing": "12:10:01",
+        "durationMinutes": 120,
+        "hearingType": "FHG",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "a9860e1a-8695-4fd4-8046-c1c4fe6c7f80",
+            "listedOffences": [
+              "427700bd-c116-4811-badb-bfa845d44d2f"
+            ]
+          },
+          {
+            "prosecutorDefendantId": "a9860e1a-8695-4fd4-8046-c1c4fe6c7f81",
+            "listedOffences": [
+              "357700bd-c116-4811-badb-bfa845d44d2f"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "a9860e1a-8695-4fd4-8046-c1c4fe6c7f80",
+        "prosecutorDefendantReference": "DEFENDANT_REFERENCE1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "numPreviousConvictions": 3,
+        "individual": {
+          "custodyStatus": "B",
+          "personalInformation": {
+            "title": "Mr",
+            "forename": "John",
+            "surname": "Jannie",
+            "address": {
+              "address1": "Oxford street",
+              "address2": "Woodlane",
+              "address3": "addressline 3",
+              "address4": "Bristol",
+              "address5": "Avon",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "M3",
+            "gender": "MALE",
+            "dateOfBirth": "1998-06-08",
+            "nationality": "SVK"
+          }
+        },
+        "offences": [
+          {
+            "offenceCode": "TH68023",
+            "offenceId": "427700bd-c116-4811-badb-bfa845d44d2f",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2024-09-24",
+            "offenceCommittedEndDate": "2024-09-27",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2024-09-27",
+            "alcoholRelatedOffence": {
+              "alcoholOrDrugLevelMethod": "A",
+              "alcoholOrDrugLevelAmount": 100
+            }
+          }
+        ],
+        "pncIdentifier": "pncID3229",
+        "croNumber": "croNO5596"
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "XHIBIT",
+      "migrationSourceSystemCaseIdentifier": "XHIBIT-2-HEARINGS"
+    }
+  },
+  "materials": [
+    {
+      "id": "c1c48e76-aa4b-48e6-8255-fe8cbe8c1570",
+      "fileType": "8",
+      "documentType": 1,
+      "azureLocation": "DL804361319/WitnessStatementDocument_1.pdf",
+      "fileName": "WitnessStatementDocument_1.pdf"
+    },
+    {
+      "id": "a0a67b32-da38-4f31-9a95-5da05b382a1f",
+      "fileType": "8",
+      "documentType": 1,
+      "azureLocation": "DL804361319/WitnessStatementDocument_2.pdf",
+      "fileName": "WitnessStatementDocument_2.pdf"
+    }
+  ],
+  "metadata": {
+    "id": "8e84fc15-d45c-42cf-8023-d0b98856209a",
+    "numberOfMaterials": 2
+  },
+  "submissionId": "550e8400-e29b-41d4-a716-446655440000",
+  "azureLocation": "28DI10239082"
+}
