@@ -1,9 +1,7 @@
 package uk.gov.moj.cpp.stagingdlrm.azure.storage;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import uk.gov.moj.cpp.stagingdlrm.azure.exception.CloudBlobException;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,29 +22,31 @@ public class BlobCloudStorage {
     private final CloudBlobContainer cloudBlobContainer;
 
     private final ExecutionContext context;
+    private final LoggerHelper loggerHelper;
 
     public BlobCloudStorage(final ExecutionContext context, final String connectionString, final String containerReference) {
         this.context = context;
-        context.getLogger().log(INFO, "Initialising BlobCloudStorage for container: {0}", containerReference);
+        this.loggerHelper = new LoggerHelper();
+        loggerHelper.logInfo(context, "Initialising BlobCloudStorage for container: {0}", new Object[]{containerReference});
         try {
             final CloudStorageAccount cloudStorageAccount = CloudStorageAccount.parse(connectionString);
             final CloudBlobClient cloudBlobClient = cloudStorageAccount.createCloudBlobClient();
             this.cloudBlobContainer = cloudBlobClient.getContainerReference(containerReference);
-            context.getLogger().log(INFO, "Successfully connected to blob container: {0}", containerReference);
+            loggerHelper.logInfo(context, "Successfully connected to blob container: {0}", new Object[]{containerReference});
         } catch (URISyntaxException | StorageException | InvalidKeyException e) {
-            context.getLogger().log(SEVERE, "Failed to connect to blob container: {0}", containerReference);
+            loggerHelper.logSevere(context, "Failed to connect to blob container: {0}", new Object[]{containerReference});
             throw new CloudBlobException(CANNOT_CONNECT_TO_STORAGE_TO_UPLOAD_FILE, e);
         }
     }
 
     public void uploadToStorage(final InputStream documentContent, final Long sizeOfDocument, final String file) {
-        context.getLogger().log(INFO, "Uploading file: {0}, size: {1} bytes", new Object[]{file, sizeOfDocument});
+        loggerHelper.logInfo(context, "Uploading file: {0}, size: {1} bytes", new Object[]{file, sizeOfDocument});
         try {
             final CloudBlockBlob blockBlobReference = cloudBlobContainer.getBlockBlobReference(file);
             blockBlobReference.upload(documentContent, sizeOfDocument);
-            context.getLogger().log(INFO, "Successfully uploaded file: {0}", file);
+            loggerHelper.logInfo(context, "Successfully uploaded file: {0}", new Object[]{file});
         } catch (URISyntaxException | StorageException | IOException e) {
-            context.getLogger().log(SEVERE, "Failed to upload file: {0}", file);
+            loggerHelper.logSevere(context, "Failed to upload file: {0}", new Object[]{file});
             throw new CloudBlobException(CANNOT_CONNECT_TO_STORAGE_TO_UPLOAD_FILE, e);
         }
     }

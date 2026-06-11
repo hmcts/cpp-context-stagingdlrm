@@ -2,10 +2,10 @@ package uk.gov.moj.cpp.stagingdlrm.azure.rest;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
+import static uk.gov.justice.services.messaging.JsonObjects.createArrayBuilder;
+import static uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder;
+
+import uk.gov.justice.services.messaging.JsonObjects;
 
 import java.io.StringWriter;
 import java.security.KeyManagementException;
@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -40,6 +39,7 @@ public class StagingDlrmCommandHelper {
     private static final String DOCUMENT_TYPE = "documentType";
     public static final String AZURE_LOCATION = "azureLocation";
 
+    private final LoggerHelper loggerHelper;
     private final ExecutionContext context;
 
     private final Client client;
@@ -47,12 +47,12 @@ public class StagingDlrmCommandHelper {
     public StagingDlrmCommandHelper(final ExecutionContext context) {
         this.context = context;
         this.client = getClient(context);
+        this.loggerHelper = new LoggerHelper();
     }
 
     public JsonObject generateErrorMigratedCaseSubmissionPayload(final String payload, final String submissionId, final String caseUrn, final String azureLocation, final String responseString) {
-        context.getLogger().log(INFO, "Generating error migrated case submission payload for submissionId: {0}, caseUrn: {1}, azureLocation: {2}", new Object[]{submissionId, caseUrn, azureLocation});
-        context.getLogger().log(INFO, "Error message: {0}", responseString);
-
+        loggerHelper.logInfo(context, submissionId, "Error message: {0}", responseString);
+        loggerHelper.logInfo(context, submissionId, "Generating error migrated case submission payload for submissionId: {0}, caseUrn: {1}, azureLocation: {2}", new Object[]{submissionId, caseUrn, azureLocation});
         final JsonObjectBuilder errorMigratedCaseSubmissionJsonBuilder = createObjectBuilder();
         errorMigratedCaseSubmissionJsonBuilder.add("payload", payload);
         errorMigratedCaseSubmissionJsonBuilder.add("submissionId", submissionId);
@@ -64,7 +64,7 @@ public class StagingDlrmCommandHelper {
     }
 
     public JsonObject generateErrorMigratedCaseSubmissionPayload(final JsonObject migratedCaseSubmissionJsonObject, final String submissionId, final String caseUrn, final String azureLocation, final String responseString) {
-        context.getLogger().log(INFO, "Generating error migrated case submission payload from JsonObject for submissionId: {0}", submissionId);
+        loggerHelper.logInfo(context, submissionId, "Generating error migrated case submission payload from JsonObject for submissionId: {0}", submissionId);
         final String payload = convertToString(migratedCaseSubmissionJsonObject);
         return generateErrorMigratedCaseSubmissionPayload(payload, submissionId, caseUrn, azureLocation, responseString);
     }
@@ -72,14 +72,14 @@ public class StagingDlrmCommandHelper {
     public JsonObject generateMigratedCaseSubmissionPayload(
             final JsonObject jsonInput, final List<String> materialFiles, final JsonObject metadataInput, String submissionId, String azureLocation) {
 
-        context.getLogger().log(INFO, "Generating migrated case submission payload for submissionId: {0}, azureLocation: {1}", new Object[]{submissionId, azureLocation});
+        loggerHelper.logInfo(context, submissionId, "Generating migrated case submission payload for submissionId: {0}, azureLocation: {1}", new Object[]{submissionId, azureLocation});
 
         final JsonObject migratedCaseJsonObject = jsonInput.getJsonObject("migratedCase");
 
         final JsonArrayBuilder materialJsonArrayBuilder = createArrayBuilder();
 
         final boolean materialAttached = metadataInput.containsKey("files");
-        context.getLogger().log(INFO, "Material attached: {0}", materialAttached);
+        loggerHelper.logInfo(context, submissionId, "Material attached: {0}", materialAttached);
 
         final JsonObjectBuilder metadataJsonBuilder = createObjectBuilder();
 
@@ -100,7 +100,7 @@ public class StagingDlrmCommandHelper {
                 final Optional<String> materialFileOptional = materialFiles.stream().filter(materialFile -> materialFile.endsWith(fileName)).findFirst();
 
                 if (materialFileOptional.isEmpty()) {
-                    context.getLogger().log(INFO, "No matching material file found for fileName: {0}", fileName);
+                    loggerHelper.logInfo(context, submissionId, "No matching material file found for fileName: {0}", fileName);
                 }
 
                 final String materialFile = materialFileOptional.orElse("");
@@ -140,14 +140,14 @@ public class StagingDlrmCommandHelper {
         return caseSubmissionJsonBuilder.build();
     }
 
-    public Response sendPostCommandApi(String url, JsonObject jsonObject, String contentType, String stagingDlrmUid) {
+    public Response sendPostCommandApi(String url, JsonObject jsonObject, String contentType, String stagingDlrmUid, String submissionId) {
 
         final String payload = convertToString(jsonObject);
 
-        context.getLogger().log(INFO, "Payload : {0}", payload);
-        context.getLogger().log(INFO, "URI : {0}", url);
-        context.getLogger().log(INFO, "Content-type : {0}", contentType);
-        context.getLogger().log(INFO, "CJSCPPUID : {0}", stagingDlrmUid);
+        loggerHelper.logInfo(context, submissionId, "Payload : {0}", payload);
+        loggerHelper.logInfo(context, submissionId, "URI : {0}", url);
+        loggerHelper.logInfo(context, submissionId, "Content-type : {0}", contentType);
+        loggerHelper.logInfo(context, submissionId, "CJSCPPUID : {0}", stagingDlrmUid);
 
         final Entity<String> entity = Entity.entity(payload, contentType);
         final MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>();
@@ -188,7 +188,7 @@ public class StagingDlrmCommandHelper {
 
     private String convertToString(JsonObject jsonObject) {
         final StringWriter stringWriter = new StringWriter();
-        try (JsonWriter jw = Json.createWriter(stringWriter)) {
+        try (JsonWriter jw = JsonObjects.createWriter(stringWriter)) {
             jw.write(jsonObject);
         }
         return stringWriter.toString();

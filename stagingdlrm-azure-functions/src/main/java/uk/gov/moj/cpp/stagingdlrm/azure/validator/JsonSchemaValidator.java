@@ -1,8 +1,8 @@
 package uk.gov.moj.cpp.stagingdlrm.azure.validator;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,13 +22,13 @@ public class JsonSchemaValidator implements Validator<String> {
     private final JsonSchema jsonSchema;
     private final ObjectMapper objectMapper;
     private final ExecutionContext context;
+    private final LoggerHelper loggerHelper;
 
     public JsonSchemaValidator(final ExecutionContext context, String schemaFile) {
         this.context = context;
-        context.getLogger().log(INFO, "Loading JSON schema: {0}", schemaFile);
+        this.loggerHelper = new LoggerHelper();
         this.jsonSchema = loadJsonSchema(schemaFile);
         this.objectMapper = new ObjectMapper();
-        context.getLogger().log(INFO, "Successfully loaded JSON schema: {0}", schemaFile);
     }
 
     private JsonSchema loadJsonSchema(String schemaFile) {
@@ -43,27 +43,24 @@ public class JsonSchemaValidator implements Validator<String> {
         try {
             return requireNonNull(Thread.currentThread().getContextClassLoader().getResource(resource)).toURI();
         } catch (URISyntaxException e) {
-            context.getLogger().log(SEVERE, "Failed to resolve URI for resource: {0}", resource);
+            loggerHelper.logSevere(context, "Failed to resolve URI for resource: {0}", resource);
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public Set<ValidationMessage> validate(final String payload) {
-        context.getLogger().log(INFO, "Validating payload against JSON schema.");
+    public Set<ValidationMessage> validate(final String submissionId, final String payload) {
         try {
             final JsonNode jsonNode = this.objectMapper.readTree(payload);
 
             if (jsonNode.isArray()) {
-                context.getLogger().log(SEVERE, "JSON schema validation failed: payload is an array.");
+                loggerHelper.logSevere(context, submissionId, "JSON schema validation failed: payload is an array.");
                 throw new RuntimeException("Json Schema validation failed");
             } else {
-                final Set<ValidationMessage> validationMessages = this.jsonSchema.validate(jsonNode);
-                context.getLogger().log(INFO, "Validation complete. Number of violations: {0}", validationMessages.size());
-                return validationMessages;
+                return this.jsonSchema.validate(jsonNode);
             }
         } catch (JsonProcessingException jsonProcessingException) {
-            context.getLogger().log(SEVERE, "Failed to parse payload for validation: {0}", jsonProcessingException.getMessage());
+            loggerHelper.logSevere(context, submissionId, "Failed to parse payload for validation: {0}", jsonProcessingException.getMessage());
             throw new RuntimeException(jsonProcessingException);
         }
     }

@@ -2,9 +2,12 @@ package uk.gov.moj.cpp.stagingdlrm.azure;
 
 import static java.lang.System.getenv;
 import static java.util.Objects.isNull;
-import static javax.ws.rs.core.Response.Status.Family.SUCCESSFUL;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
+import uk.gov.justice.services.messaging.JsonObjects;
+import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
@@ -17,10 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.ws.rs.core.Response;
@@ -38,6 +39,12 @@ public class TimerTriggerJava {
     public static final String MIGRATED_CASE_SUBMISSION_PATH = "/stagingdlrm-command-api/command/api/rest/stagingdlrm/receive-migrated-case-submission";
 
     public static final String ERROR_MIGRATED_CASE_SUBMISSION_PATH = "/stagingdlrm-command-api/command/api/rest/stagingdlrm/receive-error-migrated-case-submission";
+
+    private static final String CASE_URN = "caseUrn";
+
+    private static final String DESCRIPTION = "description";
+
+    private static final int DEFAULT_RETRY = 3;
 
     private Boolean caseProcessingEnabled;
 
@@ -59,6 +66,12 @@ public class TimerTriggerJava {
 
     private JsonSchemaValidator manifestJsonSchemaValidator;
 
+    private EventGridMonitorHelper eventGridMonitorHelper;
+
+    private LoggerHelper loggerHelper;
+
+    private long retryCount;
+
     /**
      * This method gets triggered by a timer and retrieves messages from queue along with the content of blobs.
      *
@@ -72,49 +85,58 @@ public class TimerTriggerJava {
 
         this.context = context;
 
-        context.getLogger().log(Level.INFO, "Timer function executed at : {0}", LocalDateTime.now());
-
         setTimerTriggerJavaProperties();
 
+        loggerHelper.logInfo(context, "Timer function executed at : {0}", LocalDateTime.now());
+
         if (!caseProcessingEnabled) {
-            context.getLogger().warning("The case migration is not enabled.");
+            loggerHelper.logInfo(context,"The case migration is not enabled.");
             return;
         }
 
-        final Map<String, List<String>> queueMessageWithListOfBlobNamesMap = storageCloudClient.receiveMessages();
+        final Map<String, QueueMessage> queueMessageWithListOfBlobNamesMap = storageCloudClient.receiveMessages();
 
-        context.getLogger().log(Level.INFO, "Number of queue messages received: {0}", queueMessageWithListOfBlobNamesMap.size());
+        loggerHelper.logInfo(context, "Number of queue messages received: {0}", queueMessageWithListOfBlobNamesMap.size());
 
-        queueMessageWithListOfBlobNamesMap.forEach(this::processQueueMessage);
+        queueMessageWithListOfBlobNamesMap.forEach((message, queueMessage) -> processQueueMessage(queueMessage));
+
+        loggerHelper.logInfo(context,"TimerTriggerJava processing complete.");
     }
 
-    private void processQueueMessage(final String queueMessage, final List<String> listOfBlobNames) {
+    private void processQueueMessage(final QueueMessage message) {
 
-        context.getLogger().log(Level.INFO, "Processing queue message: {0}", queueMessage);
+        final long deliveryCount = message.deliveryCount();
 
-        final List<String> metafiles = getMetaFile(listOfBlobNames);
+        final String queueMessage = message.queueName();
+
+        final String submissionId = extractSubmissionId(queueMessage);
+        loggerHelper.logInfo(context, submissionId, "Extracted submissionId: {0}", submissionId);
+
+        if (deliveryCount == 1) {
+            loggerHelper.logInfo(context, submissionId, "Processing queue message: {0}", new Object[] {queueMessage});
+        } else {
+            loggerHelper.logInfo(context, submissionId, "Retrying for {0} times queue message: {1}", new Object[] {deliveryCount, queueMessage});
+        }
+
+        final List<String> metafiles = getMetaFile(message.listOfBlobNames());
 
         if (!(metafiles.contains(queueMessage +"/"+"case.json") && metafiles.contains(queueMessage + "/"+"manifest.json"))) {
-            context.getLogger().info("Case or Manifest file does not exist.");
+            loggerHelper.logInfo(context, submissionId, "Case or Manifest file does not exist.");
+            storageCloudClient.deleteQueueMessage(queueMessage);
+            storageCloudClient.sendMessageToTheLogQueue(queueMessage);
             return;
         }
 
-        final String submissionId = extractSubmissionId(queueMessage);
-        context.getLogger().log(Level.INFO, "Extracted submissionId: {0}", submissionId);
+        final List<String> materialFiles = getMaterialFiles(message.listOfBlobNames());
+        loggerHelper.logInfo(context, submissionId, "Number of material files found: {0}", materialFiles.size());
 
-        final List<String> materialFiles = getMaterialFiles(listOfBlobNames);
-        context.getLogger().log(Level.INFO, "Number of material files found: {0}", materialFiles.size());
+        final String caseJsonContent = getJsonContent(submissionId, queueMessage +"/"+"case.json");
 
-        final String caseJsonContent = getJsonContent(queueMessage +"/"+"case.json");
+        final String manifestJsonContent = getJsonContent(submissionId, queueMessage +"/"+"manifest.json");
 
-        final String manifestJsonContent = getJsonContent(queueMessage +"/"+"manifest.json");
+        final Set<ValidationMessage> caseValidationMessages = caseJsonSchemaValidator.validate(submissionId, caseJsonContent);
 
-        final Set<ValidationMessage> caseValidationMessages = caseJsonSchemaValidator.validate(caseJsonContent);
-
-        final Set<ValidationMessage> manifestValidationMessages = manifestJsonSchemaValidator.validate(manifestJsonContent);
-
-        context.getLogger().log(Level.INFO, "Case validation messages: {0}", caseValidationMessages.size());
-        context.getLogger().log(Level.INFO, "Manifest validation messages: {0}", manifestValidationMessages.size());
+        final Set<ValidationMessage> manifestValidationMessages = manifestJsonSchemaValidator.validate(submissionId, manifestJsonContent);
 
         final List<String> baseUriArray = Arrays.stream(stagingDlrmBaseUri.split(",")).toList();
 
@@ -129,134 +151,186 @@ public class TimerTriggerJava {
             final JsonObject caseDetailsJsonObject = migratedCaseJsonObject.getJsonObject("caseDetails");
 
             final String caseUrn = caseDetailsJsonObject.getString("prosecutorCaseReference");
-            context.getLogger().log(Level.INFO, "Case URN: {0}", caseUrn);
+            loggerHelper.logInfo(context, submissionId, "Case URN: {0}", caseUrn);
 
             final JsonObject migratedCaseSubmissionJsonObject = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
-                    caseJsonInput, materialFiles, manifestJsonInput, submissionId, queueMessage);
+                    caseJsonInput, materialFiles, manifestJsonInput, submissionId, message.queueName());
 
             baseUriArray.forEach(baseUri ->
-                    processBaseUriArray(queueMessage, baseUri, migratedCaseSubmissionJsonObject, materialFiles, submissionId, caseUrn));
+                    processBaseUriArray(message, baseUri, migratedCaseSubmissionJsonObject, materialFiles, submissionId, caseUrn));
 
         } else {
 
+            loggerHelper.logInfo(context, submissionId, "Case validation messages: {0}", caseValidationMessages.size());
+
+            loggerHelper.logInfo(context, submissionId, "Manifest validation messages: {0}", manifestValidationMessages.size());
+
             if (!caseValidationMessages.isEmpty()) {
-                processClientError(queueMessage, caseValidationMessages, baseUriArray, caseJsonContent, submissionId);
+                processClientError(message, caseValidationMessages, baseUriArray, caseJsonContent, submissionId);
             } else {
-                processClientError(queueMessage, manifestValidationMessages, baseUriArray, manifestJsonContent, submissionId);
+                processClientError(message, manifestValidationMessages, baseUriArray, manifestJsonContent, submissionId);
             }
         }
     }
 
-    private void processBaseUriArray(final String queueMessage, final String baseUri, final JsonObject migratedCaseSubmissionJsonObject, final List<String> materialFiles, final String submissionId, final String caseUrn) {
+    private void processBaseUriArray(final QueueMessage message, final String baseUri, final JsonObject migratedCaseSubmissionJsonObject, final List<String> materialFiles, final String submissionId, final String caseUrn) {
         final int numberOfMaterials = migratedCaseSubmissionJsonObject.getJsonObject("metadata").getInt("numberOfMaterials");
 
-        context.getLogger().log(Level.INFO, "Material files found: {0}, expected: {1}", new Object[]{materialFiles.size(), numberOfMaterials});
+        loggerHelper.logInfo(context, submissionId, "Material files found: {0}, expected: {1}", new Object[] {materialFiles.size(), numberOfMaterials});
 
         if (materialFiles.size() == numberOfMaterials) {
 
             final String migratedCaseSubmissionUrl = getMigratedCaseSubmissionUrl(baseUri);
-            context.getLogger().log(Level.INFO, "Sending migrated case submission to: {0}", migratedCaseSubmissionUrl);
+            loggerHelper.logInfo(context, submissionId, "Sending migrated case submission to: {0}", migratedCaseSubmissionUrl);
 
             try (final Response response = stagingDlrmCommandHelper.sendPostCommandApi(
                     migratedCaseSubmissionUrl,
                     migratedCaseSubmissionJsonObject,
                     stagingDlrmMigratedCaseSubmissionContentType,
-                    stagingDlrmUserId)) {
+                    stagingDlrmUserId,
+                    submissionId)) {
 
-                context.getLogger().info("HTTP Status : " + response.getStatus());
+                loggerHelper.logInfo(context, submissionId,"HTTP Status : {0}", response.getStatus());
 
                 final String responseString = response.readEntity(String.class);
 
-                context.getLogger().log(Level.INFO, "Response : {0}", responseString);
+                loggerHelper.logInfo(context, submissionId, "Response : {0}", responseString);
 
                 switch (response.getStatusInfo().getFamily()) {
-                    case SUCCESSFUL -> processSuccessfulMessage(queueMessage);
-                    case CLIENT_ERROR ->
-                            processClientError(queueMessage, baseUri, responseString, migratedCaseSubmissionJsonObject, submissionId, caseUrn);
-                    default ->
-                            context.getLogger().info("Received error while calling : " + migratedCaseSubmissionUrl);
+                    case SUCCESSFUL -> processSuccessfulMessage(submissionId, message);
+                    case SERVER_ERROR -> processServerError(message, caseUrn, "HTTP Status : " + response.getStatus() + " Response : " + responseString);
+                    case CLIENT_ERROR -> processClientError(message, baseUri, responseString, migratedCaseSubmissionJsonObject, submissionId, caseUrn);
+                    default -> loggerHelper.logInfo(context, submissionId,"Received error while calling : {0}",  migratedCaseSubmissionUrl);
                 }
             }
         } else {
             final String errorMessage = "Mismatch material files found.";
-            context.getLogger().info(errorMessage);
-            processClientError(queueMessage, baseUri, errorMessage, migratedCaseSubmissionJsonObject, submissionId, caseUrn);
+            loggerHelper.logInfo(context, submissionId, errorMessage);
+            processClientError(message, baseUri, errorMessage, migratedCaseSubmissionJsonObject, submissionId, caseUrn);
         }
     }
 
-    private void processClientError(final String queueMessage, final Set<ValidationMessage> validationMessages, final List<String> baseUriArray, final String jsonContent, final String submissionId) {
+    private void processServerError(final QueueMessage message, final String caseUrn, final String responseString) {
+        if(message.deliveryCount() > (retryCount + 1)) {
+            setEventGridMonitorHelper();
+            writeOutcome(message.queueName(), caseUrn, responseString);
+            storageCloudClient.deleteQueueMessage(message.queueName());
+            storageCloudClient.sendMessageToTheLogQueue(message.queueName());
+        }
+    }
+
+    private void processClientError(final QueueMessage message, final Set<ValidationMessage> validationMessages, final List<String> baseUriArray, final String jsonContent, final String submissionId) {
         final Set<String> manifestValidationMessage = validationMessages.stream().map(ValidationMessage::getMessage).collect(Collectors.toSet());
 
         final String errorMessage = String.join(", ", manifestValidationMessage);
 
-        context.getLogger().info(errorMessage);
+        loggerHelper.logInfo(context, submissionId, "Validation error messages: "+ errorMessage);
 
-        processClientError(queueMessage, baseUriArray, errorMessage, jsonContent, submissionId);
+        processClientError(message, baseUriArray, errorMessage, jsonContent, submissionId);
     }
 
-    private String getJsonContent(final String queueMessage) {
-        return storageCloudClient.downloadBlobContents(queueMessage);
+    private String getJsonContent(final String submissionId, final String queueMessage) {
+        return storageCloudClient.downloadBlobContents(submissionId, queueMessage);
     }
 
     private JsonObject getJsonObject(final String payload) {
-        try(final JsonReader caseReader = Json.createReader(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))) {
+        try(final JsonReader caseReader = JsonObjects.createReader(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))) {
             return caseReader.readObject();
         }
     }
 
-    private void processClientError(final String queueMessage, final List<String> baseUriArray, final String errorMessage, final String jsonContent, final String submissionId) {
+    private void processClientError(final QueueMessage message, final List<String> baseUriArray, final String errorMessage, final String jsonContent, final String submissionId) {
         baseUriArray.forEach(baseUri -> {
 
-            context.getLogger().log(Level.INFO, "Recording message as error in the event log with stream id : {0}", submissionId);
+            final String caseUrn = "";
+
+            loggerHelper.logInfo(context, submissionId, "Recording message as error in the event log with stream id : "+ submissionId);
 
             final JsonObject errorMigratedCaseSubmissionJsonObject = stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
-                    jsonContent, submissionId, "", queueMessage, errorMessage);
+                    jsonContent, submissionId, caseUrn, message.queueName(), errorMessage);
 
-            generateErrorMigratedCaseSubmissionPayload(queueMessage, baseUri, errorMigratedCaseSubmissionJsonObject);
+            generateErrorMigratedCaseSubmissionPayload(message, baseUri, caseUrn, errorMigratedCaseSubmissionJsonObject, submissionId);
         });
     }
 
-    private void processClientError(final String queueMessage, final String baseUri, final String responseString, final JsonObject migratedCaseSubmissionJsonObject, final String submissionId, final String caseUrn) {
-        generateErrorMigratedCaseSubmissionPayload(queueMessage, baseUri,
-                migratedCaseSubmissionJsonObject, submissionId, caseUrn, queueMessage, responseString);
+    private void processClientError(final QueueMessage message, final String baseUri, final String responseString, final JsonObject migratedCaseSubmissionJsonObject, final String submissionId, final String caseUrn) {
+        generateErrorMigratedCaseSubmissionPayload(message, baseUri,
+                migratedCaseSubmissionJsonObject, submissionId, caseUrn, message.queueName(), responseString);
     }
 
-    private void processSuccessfulMessage(final String queueMessage) {
-        context.getLogger().log(Level.INFO, "After successful processing of the message, deleting the message from queue : {0}", queueMessage);
+    private void processSuccessfulMessage(final String submissionId, final QueueMessage message) {
+        loggerHelper.logInfo(context, submissionId, "After successful processing of the message, deleting the message from queue : {0}", message.queueName());
 
-        storageCloudClient.deleteQueueMessage(queueMessage);
+        storageCloudClient.deleteQueueMessage(message.queueName());
     }
 
-    private void generateErrorMigratedCaseSubmissionPayload(final String queueMessage, final String baseUri, final JsonObject migratedCaseSubmissionJsonObject, final String submissionId, final String caseUrn, final String azureLocation, final String responseString) {
+    private void writeOutcome(final String azureLocation, final String caseUrn, final String description) {
 
-        context.getLogger().log(Level.INFO, "Recording message as error in the event log with stream id : {0}", submissionId);
+        final List<String> splitStr = getSplitStr(azureLocation);
+
+        final String submissionId = extractSubmissionId(splitStr);
+        loggerHelper.logInfo(context, submissionId, "Extracted submissionId: {0}", submissionId);
+
+        final String migrationSourceSystemName = extractMigrationSourceSystemName(splitStr, azureLocation);
+        loggerHelper.logInfo(context, submissionId, "Extracted migrationSourceSystemName: {0}", migrationSourceSystemName);
+
+        final Map<String, Object> event = Map.of(
+                "submissionId", submissionId,
+                "migrationSourceSystemName", migrationSourceSystemName,
+                "azureLocation", azureLocation,
+                DESCRIPTION, description,
+                CASE_URN, caseUrn,
+                "success", "false");
+
+        final String outcomeFile = "outcome/outcome-%s.json".formatted(submissionId);
+
+        loggerHelper.logInfo(context, submissionId, "Writing {0}", outcomeFile);
+
+        eventGridMonitorHelper.processEvent(event, migrationSourceSystemName, outcomeFile);
+
+        loggerHelper.logInfo(context, submissionId, "Writing outcome.json to azureLocation: {0}", azureLocation);
+
+        eventGridMonitorHelper.processEvent(event, azureLocation, "outcome.json");
+    }
+
+    private void generateErrorMigratedCaseSubmissionPayload(final QueueMessage message, final String baseUri, final JsonObject migratedCaseSubmissionJsonObject, final String submissionId, final String caseUrn, final String azureLocation, final String responseString) {
+
+        loggerHelper.logInfo(context, submissionId, "Recording message as error in the event log with stream id : {0}", submissionId);
 
         final JsonObject errorMigratedCaseSubmissionJsonObject = stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
                 migratedCaseSubmissionJsonObject, submissionId, caseUrn, azureLocation, responseString);
 
-        generateErrorMigratedCaseSubmissionPayload(queueMessage, baseUri, errorMigratedCaseSubmissionJsonObject);
+        generateErrorMigratedCaseSubmissionPayload(message, baseUri, caseUrn, errorMigratedCaseSubmissionJsonObject, submissionId);
     }
 
-    private void generateErrorMigratedCaseSubmissionPayload(final String queueMessage, final String baseUri, final JsonObject errorMigratedCaseSubmissionJsonObject) {
+    private void generateErrorMigratedCaseSubmissionPayload(final QueueMessage message, final String baseUri, final String caseUrn, final JsonObject errorMigratedCaseSubmissionJsonObject, final String submissionId) {
         final String errorMigratedCaseSubmissionUrl = getErrorMigratedCaseSubmissionUrl(baseUri);
         try (final Response errorMigratedCaseSubmissionResponse = stagingDlrmCommandHelper.sendPostCommandApi(
                 errorMigratedCaseSubmissionUrl,
                 errorMigratedCaseSubmissionJsonObject,
                 stagingDlrmErrorMigratedCaseSubmissionContentType,
-                stagingDlrmUserId)) {
+                stagingDlrmUserId,
+                submissionId)) {
 
-            context.getLogger().info("HTTP Status : " + errorMigratedCaseSubmissionResponse.getStatus());
-
-            if (errorMigratedCaseSubmissionResponse.getStatusInfo().getFamily() == SUCCESSFUL) {
-                context.getLogger().log(Level.INFO, "Error submission accepted. Deleting message from queue: {0}", queueMessage);
-                storageCloudClient.deleteQueueMessage(queueMessage);
-            } else {
-
-                final String errorResponseString = errorMigratedCaseSubmissionResponse.readEntity(String.class);
-
-                context.getLogger().log(Level.INFO, "Response : {0}", errorResponseString);
+            loggerHelper.logInfo(context, submissionId, "HTTP Status : {0}", errorMigratedCaseSubmissionResponse.getStatus());
+            final String errorResponseString = errorMigratedCaseSubmissionResponse.readEntity(String.class);
+            switch (errorMigratedCaseSubmissionResponse.getStatusInfo().getFamily()) {
+                case SUCCESSFUL -> {
+                    loggerHelper.logInfo(context, submissionId, "Error submission accepted. Deleting message from queue: {0}", message.queueName());
+                    storageCloudClient.deleteQueueMessage(message.queueName());
+                }
+                case SERVER_ERROR -> processServerError(message, caseUrn, "HTTP Status : " + errorMigratedCaseSubmissionResponse.getStatus() + " Response : " + errorResponseString);
+                case CLIENT_ERROR -> processClientError(message, caseUrn, errorResponseString);
+                default -> loggerHelper.logInfo(context, submissionId, "Received error while calling : {0}", errorMigratedCaseSubmissionUrl);
             }
         }
+    }
+
+    private void processClientError(final QueueMessage message, final String caseUrn, final String responseString) {
+        setEventGridMonitorHelper();
+        writeOutcome(message.queueName(), caseUrn, responseString);
+        storageCloudClient.deleteQueueMessage(message.queueName());
+        storageCloudClient.sendMessageToTheLogQueue(message.queueName());
     }
 
     private String extractSubmissionId(final String queueMessage) {
@@ -276,6 +350,12 @@ public class TimerTriggerJava {
         }
     }
 
+    private void setLoggerHelper() {
+        if (isNull(loggerHelper)) {
+            this.loggerHelper = new LoggerHelper();
+        }
+    }
+
     private List<String> getMaterialFiles(final List<String> listOfBlobNames) {
         return listOfBlobNames.stream().filter(name -> !name.endsWith(".json")).toList();
     }
@@ -286,7 +366,7 @@ public class TimerTriggerJava {
 
     private void setStorageCloudClient() {
         if(isNull(this.storageCloudClient)) {
-            storageCloudClient = new StorageCloudClient(context, getenv("AzureWebJobsStorage"), getenv("dlrm_queue"), getenv("dlrm_container"));
+            storageCloudClient = new StorageCloudClient(context, getenv("AzureWebJobsStorage"), getenv("dlrm_queue"), getenv("dlrm_container"), getenv("dlrm_log_queue"));
         }
     }
 
@@ -311,6 +391,8 @@ public class TimerTriggerJava {
         setStagingDlrmMigratedCaseSubmissionContentType();
         setStagingDlrmErrorMigratedCaseSubmissionContentType();
         setJsonSchemaValidator();
+        setRetryCount();
+        setLoggerHelper();
     }
 
     private void setStagingDlrmUserId() {
@@ -343,5 +425,30 @@ public class TimerTriggerJava {
         if (isNull(stagingDlrmErrorMigratedCaseSubmissionContentType)) {
             stagingDlrmErrorMigratedCaseSubmissionContentType = getenv("staging_dlrm_error_content_type");
         }
+    }
+
+    private void setEventGridMonitorHelper() {
+        if (isNull(eventGridMonitorHelper)) {
+            eventGridMonitorHelper = new EventGridMonitorHelper(context, getenv("AzureWebJobsStorage"), getenv("dlrm_container"));
+        }
+    }
+
+    private void setRetryCount() {
+        if (retryCount == 0) {
+            String retryCountEnv = getenv("retry_count");
+            retryCount = isNull(retryCountEnv) ? DEFAULT_RETRY : Integer.parseInt(retryCountEnv);
+        }
+    }
+
+    private String extractSubmissionId(final List<String> splitStr) {
+        return isNotEmpty(splitStr) && splitStr.size() == 4 ? splitStr.get(splitStr.size() - 1) : UUID.randomUUID().toString();
+    }
+
+    private  List<String> getSplitStr(final String queueMessage) {
+        return Arrays.stream(queueMessage.split("/")).toList();
+    }
+
+    private String extractMigrationSourceSystemName(final List<String> splitStr, final String azureLocation) {
+        return isNotEmpty(splitStr) && splitStr.size() == 4 ? splitStr.get(0) : azureLocation;
     }
 }

@@ -3,6 +3,7 @@ package uk.gov.moj.cpp.stagingdlrm.stub;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static uk.gov.moj.cpp.stagingdlrm.helper.FileUtil.getStringFromResource;
@@ -30,5 +31,12 @@ public class SystemIdMapperStub {
         waitForStubToBeReady("/system-id-mapper-api/rest/systemid/mappings?sourceId=" + urn + "&sourceType=OU_URN&targetType=CASE_FILE_ID", "application/vnd.systemid.mapping+json");
     }
 
+    public static void stubAddMapping() {
+        stubFor(post(urlPathMatching("/system-id-mapper-api/rest/systemid/mappings"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"id\":\"" + UUID.randomUUID() + "\",\"code\":\"OK\"}")));
+    }
 
 }

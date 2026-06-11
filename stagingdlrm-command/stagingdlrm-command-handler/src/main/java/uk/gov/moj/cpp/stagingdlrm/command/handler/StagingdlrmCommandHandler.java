@@ -10,6 +10,7 @@ import uk.gov.justice.services.core.annotation.ServiceComponent;
 import uk.gov.justice.services.eventsourcing.source.core.exception.EventStreamException;
 import uk.gov.justice.services.messaging.Envelope;
 import uk.gov.moj.cpp.stagingdlrm.command.handler.service.CaseIdGenerator;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
@@ -73,6 +74,13 @@ public class StagingdlrmCommandHandler extends AbstractCommandHandler {
     public void recordMigratedCaseSubmissionOutput(final Envelope<MigratedCaseSubmissionProcessedOutput> envelope) throws EventStreamException {
         final MigratedCaseSubmissionProcessedOutput payload = envelope.payload();
         appendEventsToStream(payload.getSubmissionId(), envelope, migratedCaseSubmissionAggregate -> migratedCaseSubmissionAggregate.recordMigratedCaseSubmissionOutput(payload));
+    }
+
+    @Handles("stagingdlrm.command.handler.case-already-exists-in-progression")
+    public void receiveCaseAlreadyProcessed(final Envelope<CaseAlreadyProcessedAndExistsInProgressionCommand> envelope) throws EventStreamException {
+        final CaseAlreadyProcessedAndExistsInProgressionCommand payload = envelope.payload();
+        appendEventsToStream(payload.getMigratedCaseSubmission().getSubmissionId(), envelope,
+                aggregate -> aggregate.receiveCaseAlreadyProcessed(payload));
     }
 
 

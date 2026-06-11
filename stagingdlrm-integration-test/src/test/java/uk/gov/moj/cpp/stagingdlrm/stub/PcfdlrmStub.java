@@ -2,6 +2,7 @@ package uk.gov.moj.cpp.stagingdlrm.stub;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
@@ -10,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.http.HttpStatus.SC_ACCEPTED;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.service.wiremock.testutil.InternalEndpointMockUtils.stubPingFor;
 import static uk.gov.moj.cpp.stagingdlrm.helper.StubUtil.setupUsersGroupQueryStub;
 
@@ -37,6 +39,14 @@ public class PcfdlrmStub {
             );
             return true;
         });
+    }
+
+    public static void verifyReceiveCaseFileNotRequestedFor(final String submissionId) {
+        await().atMost(5, SECONDS).pollInterval(2, SECONDS).until(() -> true);
+        assertTrue(
+                findAll(postRequestedFor(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
+                        .withRequestBody(containing(submissionId))).isEmpty(),
+                "PCFDLRM receive-migrated-case-file should NOT have been called for submissionId: " + submissionId);
     }
 
 }
