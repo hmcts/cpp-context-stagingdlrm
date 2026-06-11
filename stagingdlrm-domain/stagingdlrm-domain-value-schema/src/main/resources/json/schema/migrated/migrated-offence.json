@@ -41,10 +41,6 @@
       "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
       "description": "End date for period in which offence committed"
     },
-    "convictionDate": {
-      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date",
-      "description": "Date on which the offence is convicted"
-    },
     "offenceLocation": {
       "type": "string",
       "description": "Offence location",

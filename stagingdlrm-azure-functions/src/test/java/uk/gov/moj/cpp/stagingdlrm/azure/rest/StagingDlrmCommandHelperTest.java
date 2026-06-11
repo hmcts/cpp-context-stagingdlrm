@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import javax.json.Json;
+import uk.gov.justice.services.messaging.JsonObjects;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
@@ -347,7 +347,8 @@ class StagingDlrmCommandHelperTest {
                 "http://localhost:8080" + MIGRATED_CASE_SUBMISSION_PATH,
                 buildDefaultMigratedCaseSubmissionPayload(),
                 "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
-                stagingDlrmUserId)) {
+                stagingDlrmUserId,
+                UUID.randomUUID().toString())) {
 
             assertEquals(202, response.getStatus());
         }
@@ -514,7 +515,7 @@ class StagingDlrmCommandHelperTest {
                 """;
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(caseSubmissionJson.getBytes());
-        final JsonReader reader = Json.createReader(byteArrayInputStream);
+        final JsonReader reader = JsonObjects.createReader(byteArrayInputStream);
         return reader.readObject();
     }
 
@@ -524,7 +525,7 @@ class StagingDlrmCommandHelperTest {
                 """;
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(caseSubmissionJson.getBytes());
-        final JsonReader reader = Json.createReader(byteArrayInputStream);
+        final JsonReader reader = JsonObjects.createReader(byteArrayInputStream);
         return reader.readObject();
     }
 
@@ -551,7 +552,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 
@@ -566,7 +567,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 
@@ -593,7 +594,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 
@@ -616,7 +617,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 
@@ -638,7 +639,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 
@@ -648,7 +649,7 @@ class StagingDlrmCommandHelperTest {
                 }
                 """;
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(manifest.getBytes());
-        final JsonReader metadataReader = Json.createReader(byteArrayInputStream);
+        final JsonReader metadataReader = JsonObjects.createReader(byteArrayInputStream);
         return metadataReader.readObject();
     }
 }

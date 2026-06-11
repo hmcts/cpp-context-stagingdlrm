@@ -111,6 +111,8 @@ public class StagingDlrmTestHelper {
                     }
                 }
             }
+
+            System.out.println("caseUrn : " + caseUrn);
         }
     }
 
@@ -191,6 +193,8 @@ public class StagingDlrmTestHelper {
                 saveAzureLocation(resourcePath, azureLocation);
 
             }
+
+            System.out.println("caseUrn : " + caseUrn);
         }
     }
 
@@ -256,7 +260,7 @@ public class StagingDlrmTestHelper {
 
     private String generateAzureLocation(final String migrationSourceSystemCaseIdentifier) {
 
-        final String migrationSourceSystemName = "XHIBIT-TH";
+        final String migrationSourceSystemName = properties.getProperty("folder_name");
 
         final String batchIdentifier = LocalDate.now().toString();
 

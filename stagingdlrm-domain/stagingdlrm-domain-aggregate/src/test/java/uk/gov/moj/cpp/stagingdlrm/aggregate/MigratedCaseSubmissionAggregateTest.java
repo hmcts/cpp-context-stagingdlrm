@@ -10,9 +10,11 @@ import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import uk.gov.moj.stagingdlrm.domain.event.CaseAlreadyProcessedAndExistsInProgression;
 import uk.gov.moj.stagingdlrm.domain.event.DuplicatedMigratedCaseSubmissionReceived;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmissionProcessedOutput;
@@ -178,6 +180,41 @@ class MigratedCaseSubmissionAggregateTest {
 
         assertEquals(uuid, migratedCaseSubmissionAggregate.getMigratedCaseSubmissionProcessedOutput().getCaseId(), "Caseid should match");
 
+    }
+
+    @Test
+    void shouldRaiseCaseAlreadyProcessedAndExistsInProgressionEvents() {
+        final UUID submissionId = UUID.randomUUID();
+        final UUID caseId = UUID.randomUUID();
+        final String caseUrn = "T20000001";
+
+        final MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
+        when(migratedCaseSubmission.getSubmissionId()).thenReturn(submissionId);
+        when(migratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn(caseUrn);
+        when(migratedCaseSubmission.getMaterials()).thenReturn(List.of());
+
+        final MigratedCaseSubmissionAggregate aggregate = new MigratedCaseSubmissionAggregate();
+        aggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
+
+        final CaseAlreadyProcessedAndExistsInProgressionCommand command = CaseAlreadyProcessedAndExistsInProgressionCommand
+                .caseAlreadyProcessedAndExistsInProgressionCommand()
+                .withCaseId(caseId)
+                .withMigratedCaseSubmission(migratedCaseSubmission)
+                .build();
+
+        final List<Object> events = aggregate.receiveCaseAlreadyProcessed(command).toList();
+
+        assertThat(events.size(), is(2));
+        assertTrue(events.get(0) instanceof CaseAlreadyProcessedAndExistsInProgression, "First event should be CaseAlreadyProcessedAndExistsInProgression");
+        assertTrue(events.get(1) instanceof MigratedCaseSubmissionProcessed, "Second event should be MigratedCaseSubmissionProcessed");
+        assertTrue(aggregate.isCaseAlreadyProcessedAndExistsInProgression());
+
+        final MigratedCaseSubmissionProcessed processed = (MigratedCaseSubmissionProcessed) events.get(1);
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getCaseId(), is(caseId));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getCaseUrn(), is(caseUrn));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getSubmissionId(), is(submissionId));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getProcessingIsSuccessful(), is(false));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getDescription(), is(MigratedCaseSubmissionAggregate.CASE_ALREADY_EXISTS_IN_PROGRESSION));
     }
 
     @Test

@@ -4,7 +4,7 @@
     <parent>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
         <artifactId>stagingdlrm-parent</artifactId>
-        <version>17.103.40-SNAPSHOT</version>
+        <version>17.104.15-DLRM8-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-azure-functions</artifactId>
@@ -131,6 +131,16 @@
             <groupId>com.networknt</groupId>
             <artifactId>json-schema-validator</artifactId>
             <version>1.0.83</version>
+        </dependency>
+        <dependency>
+            <groupId>uk.gov.justice.utils</groupId>
+            <artifactId>utilities-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>uk.gov.justice.services</groupId>
+            <artifactId>test-utils-framework-persistence</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
