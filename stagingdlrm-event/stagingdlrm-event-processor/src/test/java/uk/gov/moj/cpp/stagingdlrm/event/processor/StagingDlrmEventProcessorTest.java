@@ -24,13 +24,13 @@ import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.
 import uk.gov.justice.services.core.sender.Sender;
 import uk.gov.justice.services.messaging.Envelope;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.convertor.MigratedCaseConvertor;
-import uk.gov.moj.cpp.stagingdlrm.event.processor.service.SystemMapperService;
-import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.ErrorMigratedCaseSubmissionReceivedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionProcessedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionReceivedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.domain.Outcome;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.service.SystemMapperService;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Channel;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
 import uk.gov.moj.cps.pcfdlrm.command.api.ReceiveMigratedCaseFile;
 import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
@@ -187,6 +187,60 @@ class StagingDlrmEventProcessorTest {
         assertEquals(DESCRIPTION, outcome.description());
 
         verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+    }
+
+    @Test
+    void shouldNotSendToEventGridWhenDuplicateSubmissionId() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "Duplicate Submission ID");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService, never()).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter, never()).increment();
+    }
+
+    @Test
+    void shouldNotSendToEventGridWhenDuplicateSubmissionIdCaseInsensitive() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "duplicate submission id");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService, never()).sendEventToEventGrid(any());
+    }
+
+    @Test
+    void shouldSendToEventGridWhenDuplicateDescriptionButProcessingWasSuccessful() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(true, "Duplicate Submission ID");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        final Outcome outcome = outcomeEventArgumentCaptor.getValue();
+        assertEquals(CASE_ID, outcome.caseId());
+        assertEquals(CASE_URN, outcome.caseUrn());
+        assertTrue(outcome.success());
+    }
+
+    @Test
+    void shouldSendToEventGridWhenDescriptionIsNull() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, null);
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        final Outcome outcome = outcomeEventArgumentCaptor.getValue();
+        assertFalse(outcome.success());
     }
 
     @Test
