@@ -1,6 +1,8 @@
 package uk.gov.moj.cpp.stagingdlrm.azure.rest;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -14,8 +16,12 @@ import uk.gov.moj.cpp.stagingdlrm.azure.storage.BlobCloudStorage;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import javax.json.Json;
+import javax.json.JsonObject;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,11 +85,12 @@ class EventGridMonitorHelperTest {
         final ArgumentCaptor<Long> sizeCaptor = ArgumentCaptor.forClass(Long.class);
         verify(blobCloudStorage).uploadToStorage(inputStreamCaptor.capture(), sizeCaptor.capture(), any());
 
-        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes());
-        assertTrue(uploadedContent.contains("\"caseUrn\": \"URN:12345\""));
-        assertTrue(uploadedContent.contains("\"success\": true"));
-        assertTrue(uploadedContent.contains("\"description\": \"Processed successfully\""));
-        assertEquals((long) uploadedContent.getBytes().length, sizeCaptor.getValue());
+        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
+        final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
+        assertEquals("URN:12345", json.getString("caseUrn"));
+        assertTrue(json.getBoolean("success"));
+        assertEquals("Processed successfully", json.getString("description"));
+        assertEquals(uploadedContent.getBytes(UTF_8).length, sizeCaptor.getValue());
     }
 
     @Test
@@ -100,10 +107,31 @@ class EventGridMonitorHelperTest {
         final ArgumentCaptor<InputStream> inputStreamCaptor = ArgumentCaptor.forClass(InputStream.class);
         verify(blobCloudStorage).uploadToStorage(inputStreamCaptor.capture(), anyLong(), any());
 
-        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes());
-        assertTrue(uploadedContent.contains("\"caseUrn\": \"URN:99999\""));
-        assertTrue(uploadedContent.contains("\"success\": false"));
-        assertTrue(uploadedContent.contains("\"description\": \"Processing failed\""));
+        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
+        final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
+        assertEquals("URN:99999", json.getString("caseUrn"));
+        assertFalse(json.getBoolean("success"));
+        assertEquals("Processing failed", json.getString("description"));
+    }
+
+    @Test
+    void shouldProduceValidJsonWhenDescriptionContainsSpecialCharacters() throws Exception {
+        final Map<String, Object> event = Map.of(
+                "caseUrn", "URN:12345",
+                "success", false,
+                "description", "HTTP 500 \"internal error\"\nwith newline"
+        );
+        when(context.getLogger()).thenReturn(logger);
+
+        eventGridMonitorHelper.processEvent(event, AZURE_LOCATION, FILE_NAME);
+
+        final ArgumentCaptor<InputStream> inputStreamCaptor = ArgumentCaptor.forClass(InputStream.class);
+        verify(blobCloudStorage).uploadToStorage(inputStreamCaptor.capture(), anyLong(), any());
+
+        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
+        final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
+        assertEquals("HTTP 500 \"internal error\"\nwith newline", json.getString("description"));
+        assertEquals("URN:12345", json.getString("caseUrn"));
     }
 
     @Test

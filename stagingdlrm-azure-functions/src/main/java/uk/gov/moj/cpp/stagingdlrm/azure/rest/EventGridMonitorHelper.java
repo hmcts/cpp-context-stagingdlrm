@@ -6,8 +6,13 @@ import uk.gov.moj.cpp.stagingdlrm.azure.storage.BlobCloudStorage;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;
+
+import javax.json.Json;
+import javax.json.JsonWriter;
 
 import com.microsoft.azure.functions.ExecutionContext;
 
@@ -50,15 +55,15 @@ public class EventGridMonitorHelper {
     }
 
     private byte[] generateOutcomeContent(final Map<String, Object> event) {
-        String outcome = """
-                {
-                    "caseUrn": "%s",
-                    "success": %s,
-                    "description": "%s"
-                }
-                """;
-        return outcome.formatted(event.get(CASE_URN), event.get("success"), event.get(DESCRIPTION))
-                .getBytes();
+        final StringWriter writer = new StringWriter();
+        try (JsonWriter jsonWriter = Json.createWriter(writer)) {
+            jsonWriter.write(Json.createObjectBuilder()
+                    .add(CASE_URN, String.valueOf(event.get(CASE_URN)))
+                    .add("success", Boolean.parseBoolean(String.valueOf(event.get("success"))))
+                    .add(DESCRIPTION, String.valueOf(event.get(DESCRIPTION)))
+                    .build());
+        }
+        return writer.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     private void setCaseStorageActiveBlobContainer() {

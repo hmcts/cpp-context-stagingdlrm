@@ -134,9 +134,17 @@ public class StagingDlrmEventProcessor {
         final Boolean processingIsSuccessful = migratedCaseSubmissionProcessed.getProcessingIsSuccessful();
         final UUID submissionId = migratedCaseSubmissionProcessed.getSubmissionId();
 
-        sendEventToGrid(azureLocation, caseId, submissionId, caseUrn, description, processingIsSuccessful);
+        if (!isDuplicateSubmissionId(migratedCaseSubmissionProcessed)) {
+            sendEventToGrid(azureLocation, caseId, submissionId, caseUrn, description, processingIsSuccessful);
+        }
     }
-    
+
+    private static boolean isDuplicateSubmissionId(MigratedCaseSubmissionProcessedOutput migratedCaseSubmissionProcessed) {
+        final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
+        return nonNull(migratedCaseSubmissionProcessed.getDescription()) && !migratedCaseSubmissionProcessed.getProcessingIsSuccessful()
+                && migratedCaseSubmissionProcessed.getDescription().equalsIgnoreCase(DUPLICATE_SUBMISSION_ID);
+    }
+
     @Handles("stagingdlrm.events.error-migrated-case-submission-received")
     public void handleErrorMigratedCaseSubmissionReceived(final Envelope<ErrorMigratedCaseSubmissionReceived> envelope) {
 

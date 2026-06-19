@@ -70,6 +70,8 @@ public class StorageCloudClient {
 
         loggerHelper.logInfo(context, "Queue visibility timeout set to {0} seconds", queueVisibilityTimeoutSeconds);
 
+        queueMessageItems.clear();
+
         queueClient
                 .receiveMessages(count, Duration.ofSeconds(queueVisibilityTimeoutSeconds), Duration.ofSeconds(50), null)
                 .forEach(queueMessageItems::add);

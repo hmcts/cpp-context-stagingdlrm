@@ -185,6 +185,19 @@ public class ObjectBuilder {
 
     }
 
+    public static MigratedCaseSubmissionProcessed buildCaseSubmissionProcessed(final Boolean processingIsSuccessful, final String description) {
+        return MigratedCaseSubmissionProcessed.migratedCaseSubmissionProcessed()
+                .withMigratedCaseSubmissionProcessed(MigratedCaseSubmissionProcessedOutput
+                        .migratedCaseSubmissionProcessedOutput()
+                        .withCaseId(CASE_ID)
+                        .withCaseUrn(CASE_URN)
+                        .withSubmissionId(SUBMISSION_ID)
+                        .withProcessingIsSuccessful(processingIsSuccessful)
+                        .withDescription(description)
+                        .build())
+                .build();
+    }
+
     public static MigrationSourceSystem buildMigrationSourceSystem(final MigrationSourceSystemName migrationSourceSystemName) {
         return MigrationSourceSystem.migrationSourceSystem()
                 .withMigrationSourceSystemCaseIdentifier("DLRM123")

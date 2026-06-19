@@ -64,6 +64,11 @@ public class EventGridTriggerJava {
 
         final List<String> tokens = List.of(message.split("/"));
 
+        if (tokens.size() < 4) {
+            loggerHelper.logInfo(context, "Received invalid number of tokens. {0}", tokens);
+            return;
+        }
+
         final String submissionId = tokens.get(tokens.size() - 2);
 
         loggerHelper.logInfo(context, submissionId, "Received content of size: {0} bytes", content.length);
@@ -73,11 +78,6 @@ public class EventGridTriggerJava {
         loggerHelper.logInfo(context, submissionId, "Extracted blob path from URL: {0}", new Object[]{message});
 
         loggerHelper.logInfo(context, submissionId, "Parsed tokens: {0}", tokens);
-
-        if (tokens.size() < 4) {
-            loggerHelper.logInfo(context, submissionId, "Received invalid number of tokens. {0}", tokens);
-            return;
-        }
 
         requireNonNull(folderName, "dlrm_folder_name env var not configured.");
 
