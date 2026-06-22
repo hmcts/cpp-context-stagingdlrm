@@ -134,15 +134,13 @@ public class StagingDlrmEventProcessor {
         final Boolean processingIsSuccessful = migratedCaseSubmissionProcessed.getProcessingIsSuccessful();
         final UUID submissionId = migratedCaseSubmissionProcessed.getSubmissionId();
 
-        if (!isDuplicateSubmissionId(migratedCaseSubmissionProcessed)) {
-            sendEventToGrid(azureLocation, caseId, submissionId, caseUrn, description, processingIsSuccessful);
-        }
+        sendEventToGrid(azureLocation, caseId, submissionId, caseUrn, description, processingIsSuccessful);
     }
 
-    private static boolean isDuplicateSubmissionId(MigratedCaseSubmissionProcessedOutput migratedCaseSubmissionProcessed) {
+    private static boolean isDuplicateSubmissionId(String description, Boolean processingIsSuccessful) {
         final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
-        return nonNull(migratedCaseSubmissionProcessed.getDescription()) && !migratedCaseSubmissionProcessed.getProcessingIsSuccessful()
-                && migratedCaseSubmissionProcessed.getDescription().equalsIgnoreCase(DUPLICATE_SUBMISSION_ID);
+        return nonNull(description) && !processingIsSuccessful
+                && DUPLICATE_SUBMISSION_ID.equalsIgnoreCase(description);
     }
 
     @Handles("stagingdlrm.events.error-migrated-case-submission-received")
@@ -170,8 +168,10 @@ public class StagingDlrmEventProcessor {
         LOGGER.info("Success : {}", processingIsSuccessful);
         LOGGER.info("AzureLocation : {}", azureLocation);
 
-        eventGridService.sendEventToEventGrid(
-                new Outcome(caseId, submissionId, caseUrn, processingIsSuccessful, description, azureLocation));
+        if (!isDuplicateSubmissionId(description, processingIsSuccessful)) {
+            eventGridService.sendEventToEventGrid(
+                    new Outcome(caseId, submissionId, caseUrn, processingIsSuccessful, description, azureLocation));
+        }
 
         if (processingIsSuccessful) {
             migratedCaseSubmissionProcessedCounter.increment();
