@@ -5,7 +5,7 @@
     <parent>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
         <artifactId>stagingdlrm-parent</artifactId>
-        <version>17.104.17-DLRM8-SNAPSHOT</version>
+        <version>17.104.18-DLRM8-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-performance-test</artifactId>
