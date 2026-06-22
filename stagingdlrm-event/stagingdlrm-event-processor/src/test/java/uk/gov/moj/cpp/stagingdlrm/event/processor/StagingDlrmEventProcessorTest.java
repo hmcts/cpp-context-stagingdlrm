@@ -199,7 +199,7 @@ class StagingDlrmEventProcessorTest {
 
         verify(eventGridService, never()).sendEventToEventGrid(any());
         verify(migratedCaseSubmissionProcessedCounter, never()).increment();
-        verify(errorMigratedCaseSubmissionReceivedCounter, never()).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
     }
 
     @Test
