@@ -73,10 +73,8 @@ public class MigratedCaseSubmissionAggregate implements Aggregate {
              builder.add(duplicatedMigratedCaseSubmissionReceived().withDuplicateMigratedCaseSubmission(migratedCaseSubmission).build());
             final String azureFileLocation = azureLocation.get(submissionId);
             final String caseUrn = migratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference();
-            final UUID caseId = this.migratedCaseSubmissionProcessedOutput.getCaseId();
             builder.add(migratedCaseSubmissionProcessed()
                     .withMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedOutput()
-                            .withCaseId(caseId)
                             .withSubmissionId(submissionId)
                             .withCaseUrn(caseUrn)
                             .withProcessingIsSuccessful(false)

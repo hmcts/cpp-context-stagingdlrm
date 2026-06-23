@@ -55,9 +55,28 @@ public class MigratedCaseSubmissionEventHelper {
         final JsonObject migratedCaseSubmissionProcessed = jsonObject.getJsonObject("migratedCaseSubmissionProcessed");
 
         assertThat(migratedCaseSubmissionProcessed.getString("caseId"), is(caseId.toString()));
+        verifyPrivateEvents(submissionId, caseUrn, processingIsSuccessful, description, migratedCaseSubmissionProcessed);
+    }
+
+    private static void verifyPrivateEvents(final UUID submissionId, final String caseUrn, final Boolean processingIsSuccessful, final String description, final JsonObject migratedCaseSubmissionProcessed) {
         assertThat(migratedCaseSubmissionProcessed.getString("submissionId"), is(submissionId.toString()));
         assertThat(migratedCaseSubmissionProcessed.getString("caseUrn"), is(caseUrn));
         assertThat(migratedCaseSubmissionProcessed.getString("description"), is(description));
         assertThat(migratedCaseSubmissionProcessed.getBoolean("processingIsSuccessful"), is(processingIsSuccessful));
+    }
+
+    public static void verifyPrivateEvents(final JmsMessageConsumerClient consumer,
+                                           final UUID submissionId, final String caseUrn,
+                                           final Boolean processingIsSuccessful, final String description) {
+
+        final Optional<JsonEnvelope> envelopeStream = retrieveMessage(consumer);
+        final Optional<JsonEnvelope> jsonEnvelope = envelopeStream.stream().findFirst();
+
+        assertThat(jsonEnvelope.isPresent(), is(true));
+
+        final JsonObject jsonObject = jsonEnvelope.get().payloadAsJsonObject();
+        final JsonObject migratedCaseSubmissionProcessed = jsonObject.getJsonObject("migratedCaseSubmissionProcessed");
+
+        verifyPrivateEvents(submissionId, caseUrn, processingIsSuccessful, description, migratedCaseSubmissionProcessed);
     }
 }

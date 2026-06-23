@@ -162,10 +162,6 @@ class MigratedCaseSubmissionAggregateTest {
         assertTrue(eventStream.get(0) instanceof DuplicatedMigratedCaseSubmissionReceived, "First event should be DuplicatedMigratedCaseSubmissionReceived");
         assertTrue(eventStream.get(1) instanceof MigratedCaseSubmissionProcessed, "Second event should be MigratedCaseSubmissionProcessed");
         assertTrue(migratedCaseSubmissionAggregate.isCaseSubmissionDuplicated());
-        assertNotNull(migratedCaseSubmissionAggregate.getMigratedCaseSubmissionProcessedOutput(),
-                "migratedCaseSubmissionProcessedOutput should be set when duplicate is detected");
-        assertNotNull(migratedCaseSubmissionAggregate.getMigratedCaseSubmissionProcessedOutput().getCaseId(),
-                "caseId must be non-null to satisfy JSON schema required constraint");
     }
 
 
