@@ -145,7 +145,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertTrue(retrieveMessageBody(duplicatedReceivedConsumer).isPresent());
 
         verifyPrivateEvents(
-                consumerClientForDupicated, caseId, UUID.fromString(submissionId),
+                consumerClientForDupicated, UUID.fromString(submissionId),
                 realCaseUrn, false, DUPLICATE_SUBMISSION_ID);
     }
 
