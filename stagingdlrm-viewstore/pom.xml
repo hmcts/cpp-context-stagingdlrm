@@ -3,7 +3,7 @@
     <parent>
         <artifactId>stagingdlrm-parent</artifactId>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
-        <version>17.104.20-DLRM8-SNAPSHOT</version>
+        <version>17.104.21-DLRM8-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
