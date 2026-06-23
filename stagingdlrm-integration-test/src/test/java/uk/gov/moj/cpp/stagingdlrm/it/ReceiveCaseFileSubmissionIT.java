@@ -3,9 +3,7 @@ package uk.gov.moj.cpp.stagingdlrm.it;
 import static java.util.stream.IntStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -117,7 +115,10 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldNotAcceptCaseFileSubmissionRequest() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission.json").replace("SUBMISSION_ID", submissionId);
+        final String uniqueCaseUrn = "DUP" + submissionId.replace("-", "").substring(0, 10).toUpperCase();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission.json")
+                .replace("SUBMISSION_ID", submissionId)
+                .replace("TVL55117DFXXV", uniqueCaseUrn);
         final String realCaseUrn = readJson(payload).getJsonObject("migratedCase")
                 .getJsonObject("caseDetails")
                 .getString("prosecutorCaseReference");
