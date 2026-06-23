@@ -57,7 +57,7 @@ public class SystemMapperService {
                 return new CaseIdLookupResult(newCaseId, false);
             }
 
-            return new CaseIdLookupResult(caseId, status.isPresent());
+            return new CaseIdLookupResult(caseId, true);
         }
 
         final UUID newCaseId = attemptAddMapping(randomUUID(), ptiUrn)

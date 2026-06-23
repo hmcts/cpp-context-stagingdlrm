@@ -69,7 +69,7 @@ class SystemMapperServiceTest {
         final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
 
         assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
+        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
         verify(systemIdMapperClient, never()).remap(any(), any(), any());
     }
 
@@ -129,7 +129,7 @@ class SystemMapperServiceTest {
         final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
 
         assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
+        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
     }
 
     @Test
@@ -144,7 +144,7 @@ class SystemMapperServiceTest {
         final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
 
         assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
+        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
     }
 
     @Test
