@@ -176,6 +176,7 @@ public class StagingDlrmEventProcessor {
         if (processingIsSuccessful) {
             migratedCaseSubmissionProcessedCounter.increment();
         } else {
+            migratedCaseSubmissionReceivedCounter.increment();
             errorMigratedCaseSubmissionReceivedCounter.increment();
         }
     }
