@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import javax.json.Json;
+import uk.gov.justice.services.messaging.JsonObjects;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.ws.rs.core.Response;
@@ -199,7 +199,7 @@ public class TimerTriggerJava {
     }
 
     private JsonObject getJsonObject(final String payload) {
-        try(final JsonReader caseReader = Json.createReader(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))) {
+        try(final JsonReader caseReader = JsonObjects.createReader(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)))) {
             return caseReader.readObject();
         }
     }

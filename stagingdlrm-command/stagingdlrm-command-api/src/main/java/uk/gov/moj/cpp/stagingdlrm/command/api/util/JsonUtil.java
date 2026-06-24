@@ -2,7 +2,7 @@ package uk.gov.moj.cpp.stagingdlrm.command.api.util;
 
 import static java.lang.ClassLoader.getSystemResourceAsStream;
 import static java.lang.String.format;
-import static javax.json.Json.createReader;
+import static uk.gov.justice.services.messaging.JsonObjects.createReader;
 
 import java.io.IOException;
 import java.io.InputStream;
