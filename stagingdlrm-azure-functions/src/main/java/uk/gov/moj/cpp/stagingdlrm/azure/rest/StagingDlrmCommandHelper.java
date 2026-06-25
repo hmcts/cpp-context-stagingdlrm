@@ -4,8 +4,8 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
-import static javax.json.Json.createArrayBuilder;
-import static javax.json.Json.createObjectBuilder;
+import static uk.gov.justice.services.messaging.JsonObjects.createArrayBuilder;
+import static uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder;
 
 import java.io.StringWriter;
 import java.security.KeyManagementException;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.json.Json;
+import uk.gov.justice.services.messaging.JsonObjects;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
@@ -188,7 +188,7 @@ public class StagingDlrmCommandHelper {
 
     private String convertToString(JsonObject jsonObject) {
         final StringWriter stringWriter = new StringWriter();
-        try (JsonWriter jw = Json.createWriter(stringWriter)) {
+        try (JsonWriter jw = JsonObjects.createWriter(stringWriter)) {
             jw.write(jsonObject);
         }
         return stringWriter.toString();

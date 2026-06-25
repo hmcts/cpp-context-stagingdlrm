@@ -55,6 +55,11 @@
             <artifactId>access-control-drools </artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>uk.gov.justice.utils</groupId>
+            <artifactId>utilities-core</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>uk.gov.justice.services</groupId>

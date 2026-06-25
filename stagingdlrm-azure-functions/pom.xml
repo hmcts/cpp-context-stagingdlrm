@@ -74,8 +74,6 @@
         <dependency>
             <groupId>uk.gov.justice.utils</groupId>
             <artifactId>utilities-core</artifactId>
-            <version>17.3.1</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>uk.gov.justice.services</groupId>
