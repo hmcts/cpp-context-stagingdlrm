@@ -37,8 +37,8 @@
         <stream-transformation-tool-api.version>7.0.0</stream-transformation-tool-api.version>
         <coredomain.version>17.104.4</coredomain.version>
         <pcfdlrm.version>17.103.23</pcfdlrm.version>
-        <system.id-mapper.version>17.103.5</system.id-mapper.version>
-        <progression.version>17.0.260</progression.version>
+        <system.id-mapper.version>17.104.29</system.id-mapper.version>
+        <progression.version>17.0.269</progression.version>
     </properties>
 
     <modules>
