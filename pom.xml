@@ -10,7 +10,7 @@
 
     <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
     <artifactId>stagingdlrm-parent</artifactId>
-    <version>17.103.40-SNAPSHOT</version>
+    <version>17.104.23-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>stagingdlrm Context - Parent Module</name>
