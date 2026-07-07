@@ -2,6 +2,7 @@ package uk.gov.moj.cpp.stagingdlrm.azure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,11 +78,11 @@ class EventGridTriggerJavaTest {
 
         when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
 
-        when(storageCloudClient.sendMessageToTheQueue(stringArgumentCaptor.capture())).thenReturn(response);
+        when(storageCloudClient.sendMessageToTheQueue(eq(subscriptionId), stringArgumentCaptor.capture())).thenReturn(response);
 
         when(response.getValue()).thenReturn(sendMessageResult);
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
+        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
 
         assertEquals("XHIBIT/Batch0001/"+caseUrn+"/"+subscriptionId, stringArgumentCaptor.getValue());
 
@@ -111,11 +112,11 @@ class EventGridTriggerJavaTest {
 
         when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
 
-        when(storageCloudClient.sendMessageToTheQueue(stringArgumentCaptor.capture())).thenReturn(response);
+        when(storageCloudClient.sendMessageToTheQueue(eq(submissionId), stringArgumentCaptor.capture())).thenReturn(response);
 
         when(response.getValue()).thenReturn(sendMessageResult);
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
+        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
 
         assertEquals(expected, stringArgumentCaptor.getValue());
 
@@ -130,7 +131,7 @@ class EventGridTriggerJavaTest {
 
         eventGridTriggerJava.run(eventGridSchema, context, null);
 
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString());
+        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 
     @Test
@@ -144,11 +145,9 @@ class EventGridTriggerJavaTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
         eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
 
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString());
+        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 
     @Test
@@ -173,9 +172,9 @@ class EventGridTriggerJavaTest {
 
         when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
+        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
 
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString());
+        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 
     @Test
@@ -204,13 +203,13 @@ class EventGridTriggerJavaTest {
 
         when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
 
-        when(storageCloudClient.sendMessageToTheQueue(message)).thenReturn(response);
+        when(storageCloudClient.sendMessageToTheQueue(submissionId, message)).thenReturn(response);
 
         when(response.getValue()).thenReturn(sendMessageResult);
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
+        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
 
-        verify(storageCloudClient).sendMessageToTheQueue(message);
+        verify(storageCloudClient).sendMessageToTheQueue(submissionId, message);
     }
 
     @Test
@@ -235,8 +234,8 @@ class EventGridTriggerJavaTest {
 
         when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
+        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
 
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString());
+        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 }

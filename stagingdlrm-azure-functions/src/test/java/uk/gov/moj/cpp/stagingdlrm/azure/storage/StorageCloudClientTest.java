@@ -12,10 +12,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.services.test.utils.common.reflection.ReflectionUtils.setField;
 
+import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import com.azure.core.http.rest.PagedIterable;
@@ -47,6 +50,9 @@ class StorageCloudClientTest {
     private QueueClient queueClient;
 
     @Mock
+    private QueueClient dlrmLogQueueClient;
+
+    @Mock
     private BlobContainerClient blobContainerClient;
 
     private final Logger logger = Logger.getLogger(StorageCloudClient.class.getName());
@@ -57,19 +63,17 @@ class StorageCloudClientTest {
     @Mock
     private SimpleResponse<SendMessageResult> simpleResponse;
 
-    @Mock
-    private SendMessageResult sendMessageResult;
-
     @InjectMocks
     private StorageCloudClient storageCloudClient;
 
     @BeforeEach
     public void setup() {
-        when(context.getLogger()).thenReturn(logger);
         setField(storageCloudClient, "queueClient", queueClient);
+        setField(storageCloudClient, "dlrmLogQueueClient", dlrmLogQueueClient);
         setField(storageCloudClient, "blobContainerClient", blobContainerClient);
         setField(storageCloudClient, "batchSizePerMin", 10);
         setField(storageCloudClient, "visibility", 1L);
+        setField(storageCloudClient, "queueVisibilityTimeoutSeconds", 300);
     }
 
     @Test
@@ -81,10 +85,11 @@ class StorageCloudClientTest {
         BlobClient blobClient = mock(BlobClient.class);
         BinaryData binaryData = BinaryData.fromString(content);
 
+        when(context.getLogger()).thenReturn(logger);
         when(blobContainerClient.getBlobClient(blobName)).thenReturn(blobClient);
         when(blobClient.downloadContent()).thenReturn(binaryData);
 
-        String downloadContent = storageCloudClient.downloadBlobContents(blobName);
+        String downloadContent = storageCloudClient.downloadBlobContents(null, blobName);
 
         verify(blobContainerClient).getBlobClient(blobName);
         verify(blobClient).downloadContent();
@@ -98,9 +103,8 @@ class StorageCloudClientTest {
         final QueueProperties queueProperties = new QueueProperties(new HashMap<>(), 0);
 
         when(queueClient.getProperties()).thenReturn(queueProperties);
-        when(context.getLogger()).thenReturn(logger);
 
-        final Map<String, List<String>> messages = storageCloudClient.receiveMessages();
+        final Map<String, QueueMessage> messages = storageCloudClient.receiveMessages();
 
         assertTrue(messages.isEmpty());
     }
@@ -115,7 +119,7 @@ class StorageCloudClientTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(30), Duration.ofSeconds(50), null))
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
                 .thenReturn(new PagedIterable<>(() -> {
                     QueueMessageItem queueMessageItem = new QueueMessageItem();
                     queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
@@ -129,9 +133,9 @@ class StorageCloudClientTest {
                     return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
                 }));
 
-       final Map<String, List<String>> resultMap =  storageCloudClient.receiveMessages();
+       final Map<String, QueueMessage> resultMap =  storageCloudClient.receiveMessages();
 
-       assertEquals(resultMap.get("queueMessage"), List.of("test.json"));
+       assertEquals(new QueueMessage("queueMessage", 0L, List.of("test.json")), resultMap.get("queueMessage"));
 
     }
 
@@ -145,7 +149,7 @@ class StorageCloudClientTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(30), Duration.ofSeconds(50), null))
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
                 .thenReturn(new PagedIterable<>(() -> {
                     QueueMessageItem queueMessageItem = new QueueMessageItem();
                     queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
@@ -165,9 +169,9 @@ class StorageCloudClientTest {
                     return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
                 }));
 
-        final Map<String, List<String>> resultMap =  storageCloudClient.receiveMessages();
+        final Map<String, QueueMessage> resultMap =  storageCloudClient.receiveMessages();
 
-        assertEquals(resultMap.get("queueMessage"), List.of("test.json"));
+        assertEquals(new QueueMessage("queueMessage", 0L, List.of("test.json")), resultMap.get("queueMessage"));
 
     }
 
@@ -183,7 +187,7 @@ class StorageCloudClientTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(queueClient.receiveMessages(messageCountConfigured, Duration.ofSeconds(30), Duration.ofSeconds(50), null))
+        when(queueClient.receiveMessages(messageCountConfigured, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
                 .thenReturn(new PagedIterable<>(() -> {
                     QueueMessageItem queueMessageItem = new QueueMessageItem();
                     queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
@@ -197,24 +201,24 @@ class StorageCloudClientTest {
                     return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
                 }));
 
-        final Map<String, List<String>> resultMap =  storageCloudClient.receiveMessages();
+        final Map<String, QueueMessage> resultMap =  storageCloudClient.receiveMessages();
 
-        assertEquals(resultMap.get("queueMessage"), List.of("test.json"));
+        assertEquals(new QueueMessage("queueMessage", 0L, List.of("test.json")), resultMap.get("queueMessage"));
 
-        verify(queueClient).receiveMessages(messageCountConfigured, Duration.ofSeconds(30), Duration.ofSeconds(50), null);
+        verify(queueClient).receiveMessages(messageCountConfigured, Duration.ofSeconds(300), Duration.ofSeconds(50), null);
 
     }
 
     @Test
     void shouldTestSendMessageToTheQueue() {
         final String message = "Test message";
+        final String submissionId = UUID.randomUUID().toString();
 
-        when(simpleResponse.getValue()).thenReturn(sendMessageResult);
-        
+        when(context.getLogger()).thenReturn(logger);
         when(queueClient.sendMessageWithResponse(any(BinaryData.class), eq(null), eq(Duration.ofDays(1L)), eq(null), eq(Context.NONE)))
                 .thenReturn(simpleResponse);
 
-        final Response<SendMessageResult> response = storageCloudClient.sendMessageToTheQueue(message);
+        final Response<SendMessageResult> response = storageCloudClient.sendMessageToTheQueue(submissionId, message);
 
         assertEquals(simpleResponse, response);
         verify(queueClient).sendMessageWithResponse(any(BinaryData.class), eq(null), eq(Duration.ofDays(1L)), eq(null), eq(Context.NONE));
@@ -232,7 +236,7 @@ class StorageCloudClientTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(30), Duration.ofSeconds(50), null))
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
                 .thenReturn(new PagedIterable<>(() -> {
                     QueueMessageItem queueMessageItem = new QueueMessageItem();
                     queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
@@ -248,9 +252,12 @@ class StorageCloudClientTest {
 
         storageCloudClient.receiveMessages();
 
+        when(queueClient.deleteMessageWithResponse(eq(null), eq(null), any(Duration.class), any(Context.class)))
+                .thenReturn(new SimpleResponse<>(null, 204, null, null));
+
         storageCloudClient.deleteQueueMessage(message);
 
-        verify(queueClient).deleteMessage(eq(null), eq(null));
+        verify(queueClient).deleteMessageWithResponse(eq(null), eq(null), any(Duration.class), any(Context.class));
     }
 
     @Test
@@ -265,7 +272,7 @@ class StorageCloudClientTest {
 
         when(context.getLogger()).thenReturn(logger);
 
-        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(30), Duration.ofSeconds(50), null))
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
                 .thenReturn(new PagedIterable<>(() -> {
                     QueueMessageItem queueMessageItem = new QueueMessageItem();
                     queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
@@ -283,7 +290,116 @@ class StorageCloudClientTest {
 
         storageCloudClient.deleteQueueMessage(message);
 
-        verify(queueClient, never()).deleteMessage(anyString(), anyString());
+        verify(queueClient, never()).deleteMessageWithResponse(anyString(), anyString(), any(Duration.class), any(Context.class));
+    }
+
+    @Test
+    void shouldReturnDlrmContainer() {
+        final String dlrmContainer = "my-dlrm-container";
+        final StorageCloudClient client = new StorageCloudClient(context, "connectionString", "queueName", dlrmContainer, "logQueueName");
+
+        assertEquals(dlrmContainer, client.getDlrmContainer());
+    }
+
+    @Test
+    void shouldReceiveMultipleMessagesFromQueue() {
+        int messageCount = 2;
+
+        final QueueProperties queueProperties = new QueueProperties(new HashMap<>(), messageCount);
+
+        when(queueClient.getProperties()).thenReturn(queueProperties);
+        when(context.getLogger()).thenReturn(logger);
+
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
+                .thenReturn(new PagedIterable<>(() -> {
+                    QueueMessageItem item1 = new QueueMessageItem();
+                    item1.setBody(BinaryData.fromString("message1"));
+                    QueueMessageItem item2 = new QueueMessageItem();
+                    item2.setBody(BinaryData.fromString("message2"));
+                    return new PagedResponseBase<>(null, 200, null, List.of(item1, item2), null, null);
+                }));
+
+        when(blobContainerClient.listBlobsByHierarchy(any(String.class), any(ListBlobsOptions.class), eq(null)))
+                .thenReturn(new PagedIterable<>(() -> {
+                    final BlobItem blobItem = new BlobItem();
+                    blobItem.setName("file1.json");
+                    return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
+                }))
+                .thenReturn(new PagedIterable<>(() -> {
+                    final BlobItem blobItem = new BlobItem();
+                    blobItem.setName("file2.json");
+                    return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
+                }));
+
+        final Map<String, QueueMessage> resultMap = storageCloudClient.receiveMessages();
+
+        assertEquals(2, resultMap.size());
+        assertEquals(new QueueMessage("message1", 0L, List.of("file1.json")), resultMap.get("message1"));
+        assertEquals(new QueueMessage("message2", 0L, List.of("file2.json")), resultMap.get("message2"));
+    }
+
+    @Test
+    void shouldPopulateDeliveryCountFromQueueMessageItem() {
+        int messageCount = 1;
+        long dequeueCount = 3L;
+
+        final QueueProperties queueProperties = new QueueProperties(new HashMap<>(), messageCount);
+
+        when(queueClient.getProperties()).thenReturn(queueProperties);
+        when(context.getLogger()).thenReturn(logger);
+
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
+                .thenReturn(new PagedIterable<>(() -> {
+                    QueueMessageItem queueMessageItem = new QueueMessageItem();
+                    queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
+                    queueMessageItem.setDequeueCount(dequeueCount);
+                    return new PagedResponseBase<>(null, 200, null, List.of(queueMessageItem), null, null);
+                }));
+
+        when(blobContainerClient.listBlobsByHierarchy(any(String.class), any(ListBlobsOptions.class), eq(null)))
+                .thenReturn(new PagedIterable<>(() -> {
+                    final BlobItem blobItem = new BlobItem();
+                    blobItem.setName("test.json");
+                    return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
+                }));
+
+        final Map<String, QueueMessage> resultMap = storageCloudClient.receiveMessages();
+
+        assertEquals(new QueueMessage("queueMessage", dequeueCount, List.of("test.json")), resultMap.get("queueMessage"));
+    }
+
+    @Test
+    void shouldNotDeleteQueueMessageFromQueueAfterItHasBeenRemovedFromLocalCache() {
+        final String message = "queueMessage";
+        int messageCount = 1;
+
+        final QueueProperties queueProperties = new QueueProperties(new HashMap<>(), messageCount);
+
+        when(queueClient.getProperties()).thenReturn(queueProperties);
+        when(context.getLogger()).thenReturn(logger);
+
+        when(queueClient.receiveMessages(messageCount, Duration.ofSeconds(300), Duration.ofSeconds(50), null))
+                .thenReturn(new PagedIterable<>(() -> {
+                    QueueMessageItem queueMessageItem = new QueueMessageItem();
+                    queueMessageItem.setBody(BinaryData.fromString("queueMessage"));
+                    return new PagedResponseBase<>(null, 200, null, List.of(queueMessageItem), null, null);
+                }));
+
+        when(blobContainerClient.listBlobsByHierarchy(any(String.class), any(ListBlobsOptions.class), eq(null)))
+                .thenReturn(new PagedIterable<>(() -> {
+                    final BlobItem blobItem = new BlobItem();
+                    blobItem.setName("test.json");
+                    return new PagedResponseBase<>(null, 200, null, List.of(blobItem), null, null);
+                }));
+
+        when(queueClient.deleteMessageWithResponse(eq(null), eq(null), any(Duration.class), any(Context.class)))
+                .thenReturn(new SimpleResponse<>(null, 204, null, null));
+
+        storageCloudClient.receiveMessages();
+        storageCloudClient.deleteQueueMessage(message);
+        storageCloudClient.deleteQueueMessage(message);
+
+        verify(queueClient).deleteMessageWithResponse(eq(null), eq(null), any(Duration.class), any(Context.class));
     }
 
 }

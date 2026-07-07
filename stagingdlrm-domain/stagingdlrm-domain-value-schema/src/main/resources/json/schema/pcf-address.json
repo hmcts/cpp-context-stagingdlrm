@@ -30,8 +30,7 @@
       "maxLength": 35
     },
     "postcode": {
-      "type": "string",
-      "maxLength": 8
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/ukGovPostCode"
     }
   },
   "required": [

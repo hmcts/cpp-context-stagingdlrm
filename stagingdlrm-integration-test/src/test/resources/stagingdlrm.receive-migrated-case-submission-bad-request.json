@@ -8,7 +8,7 @@
       "receivingCourt": "C01BL00",
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
-      "receiptType": "Commital for sentence includes a breach",
+      "receiptType": "Either way case",
       "retrialIndicator": false,
       "prosecutorCaseReference": "TVL55117DFXXV",
       "prosecutor": {
@@ -52,7 +52,6 @@
             "offenceCode": "CA03013",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
-            "convictionDate": "2019-02-05",
             "offenceDateCode": 1,
             "offenceLocation": "Croydon",
             "offenceWording": "TV Licence not paid",
@@ -71,7 +70,7 @@
             "surname": "Smith",
             "address": {
               "address1": "armagaddon house",
-              "postcode": "M60 1NW"
+              "postcode": "KJ3 4RF"
             },
             "contactDetails": {}
           },

@@ -7,28 +7,30 @@ import static uk.gov.justice.services.core.annotation.Component.EVENT_PROCESSOR;
 import static uk.gov.justice.services.messaging.Envelope.envelopeFrom;
 import static uk.gov.justice.services.messaging.Envelope.metadataFrom;
 import static uk.gov.moj.cpp.stagingdlrm.event.processor.convertor.MigratedCaseConvertor.buildMaterials;
-
-import uk.gov.moj.cpp.stagingdlrm.event.processor.convertor.MigratedCaseConvertor;
-import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.ErrorMigratedCaseSubmissionReceivedCounter;
-import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionProcessedCounter;
-import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionReceivedCounter;
-import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
-import uk.gov.moj.cps.pcfdlrm.command.api.ReceiveMigratedCaseFile;
+import static uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand.caseAlreadyProcessedAndExistsInProgressionCommand;
 
 import uk.gov.justice.services.core.annotation.Handles;
 import uk.gov.justice.services.core.annotation.ServiceComponent;
 import uk.gov.justice.services.core.sender.Sender;
 import uk.gov.justice.services.messaging.Envelope;
 import uk.gov.justice.services.messaging.Metadata;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.convertor.MigratedCaseConvertor;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.ErrorMigratedCaseSubmissionReceivedCounter;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionProcessedCounter;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionReceivedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.domain.Outcome;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.service.SystemMapperService;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.service.SystemMapperService.CaseIdLookupResult;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Channel;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmissionProcessedOutput;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
+import uk.gov.moj.cps.pcfdlrm.command.api.ReceiveMigratedCaseFile;
 import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionReceived;
-
 
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +46,7 @@ public class StagingDlrmEventProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(StagingDlrmEventProcessor.class);
 
     private static final String PCF_DLRM_RECEIVE_MIGRATED_CASE_FILE = "pcfdlrm.receive-migrated-case-file";
+    private static final String STAGINGDLRM_COMMAND_HANDLER_CASE_ALREADY_EXISTS_IN_PROGRESSION = "stagingdlrm.command.handler.case-already-exists-in-progression";
 
     @Inject
     private EventGridService eventGridService;
@@ -53,6 +56,9 @@ public class StagingDlrmEventProcessor {
 
     @Inject
     private MigratedCaseConvertor migratedCaseConvertor;
+
+    @Inject
+    private SystemMapperService systemMapperService;
 
     @Inject
     private MigratedCaseSubmissionReceivedCounter migratedCaseSubmissionReceivedCounter;
@@ -78,7 +84,22 @@ public class StagingDlrmEventProcessor {
         final List<MigratedMaterial> materials = payload.getMigratedCaseSubmission().getMaterials();
         final MigratedCase migratedCase = payload.getMigratedCaseSubmission().getMigratedCase();
         final UUID submissionId = payload.getMigratedCaseSubmission().getSubmissionId();
-        final UUID caseId = CaseIdGenerator.generateCaseIdFromCaseUrnAndSubmissionId(migratedCase.getCaseDetails().getProsecutorCaseReference(), submissionId);
+        final CaseIdLookupResult lookupResult = systemMapperService.getCaseIdForPtiURN(
+                migratedCase.getCaseDetails().getProsecutorCaseReference());
+        final UUID caseId = lookupResult.getCaseId();
+
+        if (lookupResult.isCaseAlreadyProcessedAndExistsInProgression()) {
+            LOGGER.info("Case already processed and exists in progression for submissionId: {}", submissionId);
+            final Metadata caseAlreadyProcessedMetadata = metadataFrom(envelope.metadata())
+                    .withName(STAGINGDLRM_COMMAND_HANDLER_CASE_ALREADY_EXISTS_IN_PROGRESSION)
+                    .build();
+            final CaseAlreadyProcessedAndExistsInProgressionCommand command = caseAlreadyProcessedAndExistsInProgressionCommand()
+                    .withCaseId(caseId)
+                    .withMigratedCaseSubmission(payload.getMigratedCaseSubmission())
+                    .build();
+            sender.send(envelopeFrom(caseAlreadyProcessedMetadata, command));
+            return;
+        }
 
         final ReceiveMigratedCaseFile.Builder builder = ReceiveMigratedCaseFile.receiveMigratedCaseFile()
                 .withSubmissionId(submissionId)
@@ -115,7 +136,13 @@ public class StagingDlrmEventProcessor {
 
         sendEventToGrid(azureLocation, caseId, submissionId, caseUrn, description, processingIsSuccessful);
     }
-    
+
+    private static boolean isDuplicateSubmissionId(String description, Boolean processingIsSuccessful) {
+        final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
+        return nonNull(description) && !processingIsSuccessful
+                && DUPLICATE_SUBMISSION_ID.equalsIgnoreCase(description);
+    }
+
     @Handles("stagingdlrm.events.error-migrated-case-submission-received")
     public void handleErrorMigratedCaseSubmissionReceived(final Envelope<ErrorMigratedCaseSubmissionReceived> envelope) {
 
@@ -141,12 +168,15 @@ public class StagingDlrmEventProcessor {
         LOGGER.info("Success : {}", processingIsSuccessful);
         LOGGER.info("AzureLocation : {}", azureLocation);
 
-        eventGridService.sendEventToEventGrid(
-                new Outcome(caseId, submissionId, caseUrn, processingIsSuccessful, description, azureLocation));
+        if (!isDuplicateSubmissionId(description, processingIsSuccessful)) {
+            eventGridService.sendEventToEventGrid(
+                    new Outcome(caseId, submissionId, caseUrn, processingIsSuccessful, description, azureLocation));
+        }
 
         if (processingIsSuccessful) {
             migratedCaseSubmissionProcessedCounter.increment();
         } else {
+            migratedCaseSubmissionReceivedCounter.increment();
             errorMigratedCaseSubmissionReceivedCounter.increment();
         }
     }

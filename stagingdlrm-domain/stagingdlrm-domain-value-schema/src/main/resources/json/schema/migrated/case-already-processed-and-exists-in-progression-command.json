@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/case-already-processed-and-exists-in-progression-command.json",
+  "type": "object",
+  "properties": {
+    "migratedCaseSubmission": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-case-submission.json"
+    },
+    "caseId": {
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    }
+  },
+  "required": [
+    "migratedCaseSubmission",
+    "caseId"
+  ]
+}

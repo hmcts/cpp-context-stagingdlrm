@@ -1,10 +1,9 @@
 package uk.gov.moj.cpp.stagingdlrm.azure.validator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 import java.util.Set;
-import java.util.logging.Logger;
+import java.util.UUID;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.networknt.schema.ValidationMessage;
@@ -17,8 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class JsonSchemaValidatorTest {
 
-    private final Logger logger = Logger.getLogger(JsonSchemaValidatorTest.class.getName());
-
     @Mock
     private ExecutionContext context;
 
@@ -28,8 +25,6 @@ class JsonSchemaValidatorTest {
 
     @BeforeEach
     public void setup() {
-        when(context.getLogger()).thenReturn(logger);
-
         final String caseJsonSchema = "stagingdlrm.case-submission.json";
         caseValidator = new JsonSchemaValidator(context, caseJsonSchema);
 
@@ -162,7 +157,7 @@ class JsonSchemaValidatorTest {
                   }
                 """;
 
-        final Set<ValidationMessage> validationMessages = caseValidator.validate(payload);
+        final Set<ValidationMessage> validationMessages = caseValidator.validate(UUID.randomUUID().toString(), payload);
         assertEquals(0, validationMessages.size());
 
     }
@@ -174,7 +169,7 @@ class JsonSchemaValidatorTest {
                    }
                 """;
 
-        final Set<ValidationMessage> validationMessages = caseValidator.validate(payload);
+        final Set<ValidationMessage> validationMessages = caseValidator.validate(UUID.randomUUID().toString(), payload);
         assertEquals(1, validationMessages.size());
     }
 
@@ -185,7 +180,7 @@ class JsonSchemaValidatorTest {
                    }
                 """;
 
-        final Set<ValidationMessage> validationMessages = manifestValidator.validate(payload);
+        final Set<ValidationMessage> validationMessages = manifestValidator.validate(UUID.randomUUID().toString(), payload);
         assertEquals(1, validationMessages.size());
     }
 
@@ -209,7 +204,7 @@ class JsonSchemaValidatorTest {
                     }
                 """;
 
-        final Set<ValidationMessage> validationMessages = manifestValidator.validate(payload);
+        final Set<ValidationMessage> validationMessages = manifestValidator.validate(UUID.randomUUID().toString(), payload);
         assertEquals(0, validationMessages.size());
     }
 
@@ -224,7 +219,7 @@ class JsonSchemaValidatorTest {
                     }
                 """;
 
-        final Set<ValidationMessage> validationMessages = manifestValidator.validate(payload);
+        final Set<ValidationMessage> validationMessages = manifestValidator.validate(UUID.randomUUID().toString(), payload);
         assertEquals(0, validationMessages.size());
     }
 }

@@ -6,5 +6,5 @@ import com.networknt.schema.ValidationMessage;
 
 public interface Validator<T extends Object> {
 
-    Set<ValidationMessage> validate(T t);
+    Set<ValidationMessage> validate(String submissionId, T t);
 }
