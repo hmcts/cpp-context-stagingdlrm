@@ -33,6 +33,7 @@ import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionReceived;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -47,7 +48,10 @@ public class StagingDlrmEventProcessor {
 
     private static final String PCF_DLRM_RECEIVE_MIGRATED_CASE_FILE = "pcfdlrm.receive-migrated-case-file";
     private static final String STAGINGDLRM_COMMAND_HANDLER_CASE_ALREADY_EXISTS_IN_PROGRESSION = "stagingdlrm.command.handler.case-already-exists-in-progression";
-
+    private static final String JSON_SCHEMA = "JSON schema validation has failed";
+    private static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
+    private static final String CASE_ALREADY_EXISTS_IN_PROGRESSION = "Case Already exists in progression";
+    private static final List<String> stagingContextErrors = List.of(JSON_SCHEMA,DUPLICATE_SUBMISSION_ID,CASE_ALREADY_EXISTS_IN_PROGRESSION);
     @Inject
     private EventGridService eventGridService;
 
@@ -138,7 +142,6 @@ public class StagingDlrmEventProcessor {
     }
 
     private static boolean isDuplicateSubmissionId(String description, Boolean processingIsSuccessful) {
-        final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
         return nonNull(description) && !processingIsSuccessful
                 && DUPLICATE_SUBMISSION_ID.equalsIgnoreCase(description);
     }
@@ -176,7 +179,9 @@ public class StagingDlrmEventProcessor {
         if (processingIsSuccessful) {
             migratedCaseSubmissionProcessedCounter.increment();
         } else {
-            migratedCaseSubmissionReceivedCounter.increment();
+            if(nonNull(description) && stagingContextErrors.stream().anyMatch(e-> e.contains(description) || description.contains(e))){
+                migratedCaseSubmissionReceivedCounter.increment();
+            }
             errorMigratedCaseSubmissionReceivedCounter.increment();
         }
     }

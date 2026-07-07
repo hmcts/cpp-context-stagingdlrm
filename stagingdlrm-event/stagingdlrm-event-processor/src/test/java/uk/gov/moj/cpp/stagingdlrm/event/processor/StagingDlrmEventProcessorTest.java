@@ -244,6 +244,24 @@ class StagingDlrmEventProcessorTest {
     }
 
     @Test
+    void shouldIncrementMigratedCaseSubmissionReceivedCounterWhenJsonSchemaValidationFailedWithLongDescription() {
+        final String description = "JSON schema validation has failed on {\"metadata\":{}} due to " +
+                "{\"message\":\"#/migratedCase/caseDetails: #: only 1 subschema matches out of 2\"," +
+                "\"violatedSchema\":\"http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json\"," +
+                "\"violation\":\"#/migratedCase/caseDetails\"}";
+        final MigratedCaseSubmissionProcessed processed = buildCaseSubmissionProcessed(false, description);
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+    }
+
+    @Test
     void shouldSendCaseAlreadyProcessedCommandWhenCaseExistsInProgression() {
         final MigratedCaseSubmissionReceived migratedCaseSubmissionReceived = buildMigratedCaseSubmissionReceived(XHIBIT, "C50EX02");
         when(envelope.payload()).thenReturn(migratedCaseSubmissionReceived);
