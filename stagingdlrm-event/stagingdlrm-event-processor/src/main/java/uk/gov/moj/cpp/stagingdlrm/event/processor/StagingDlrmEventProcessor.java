@@ -142,7 +142,6 @@ public class StagingDlrmEventProcessor {
     }
 
     private static boolean isDuplicateSubmissionId(String description, Boolean processingIsSuccessful) {
-        final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
         return nonNull(description) && !processingIsSuccessful
                 && DUPLICATE_SUBMISSION_ID.equalsIgnoreCase(description);
     }
