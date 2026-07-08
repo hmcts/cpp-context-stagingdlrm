@@ -1,31 +1,26 @@
 package uk.gov.moj.cpp.stagingdlrm.azure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.doNothing;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.services.test.utils.common.reflection.ReflectionUtils.setField;
 
 import uk.gov.moj.cpp.stagingdlrm.azure.event.EventGridEvent;
-import uk.gov.moj.cpp.stagingdlrm.azure.storage.BlobCloudStorage;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -37,71 +32,68 @@ class EventGridMonitorTest {
     private ExecutionContext context;
 
     @Mock
-    private BlobCloudStorage blobCloudStorage;
+    private EventGridMonitorHelper helper;
 
     @InjectMocks
     private EventGridMonitor eventGridMonitor;
-
-    @Captor
-    private ArgumentCaptor<InputStream> inputStreamArgumentCaptor;
-
-    @Captor
-    private ArgumentCaptor<String> stringArgumentCaptor;
-
-    @Captor
-    private ArgumentCaptor<Long> longArgumentCaptor;
 
     private final Logger logger = Logger.getLogger(EventGridMonitor.class.getName());
 
     @BeforeEach
     public void setup() {
-        setField(eventGridMonitor, "blobCloudStorage", blobCloudStorage);
+        setField(eventGridMonitor, "helper", helper);
     }
 
     @Test
-    void shouldTestTimerTriggerSuccessfully() {
-
-        final String caseUrn = "28DI10239082";
-
+    void shouldProcessEventAndWriteOutcomeToCorrectLocations() {
         final String migrationSourceSystemName = "XHIBIT";
-
         final String batchIdentifier = "20082025";
-
         final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
         final String submissionId = UUID.randomUUID().toString();
-
         final String azureLocation = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
 
-        final String expected = """
-                {
-                    "caseUrn": "%s",
-                    "success": %s,
-                    "description": "%s"
-                }"""
-                .formatted(caseUrn, false, "Failed to storage materials");
+        final Map<String, Object> eventData = Map.of(
+                "caseUrn", "28DI10239082",
+                "success", "false",
+                "description", "Failed to storage materials",
+                "azureLocation", azureLocation
+        );
+        final EventGridEvent eventGridEvent = new EventGridEvent(new Date(), eventData);
 
         when(context.getLogger()).thenReturn(logger);
 
-        doNothing().when(blobCloudStorage).uploadToStorage(
-                inputStreamArgumentCaptor.capture(), longArgumentCaptor.capture(), stringArgumentCaptor.capture());
+        eventGridMonitor.run(eventGridEvent, context);
 
+        verify(helper).processEvent(eventData, migrationSourceSystemName, "outcome/outcome-" + submissionId + ".json");
+        verify(helper).processEvent(eventData, azureLocation, "outcome.json");
+    }
 
-        EventGridEvent eventGridEvent = new EventGridEvent(
-                new Date(),
-                Map.of("caseUrn", "28DI10239082", "success", "false", "description", "Failed to storage materials", "azureLocation", azureLocation));
+    @Test
+    void shouldUseAzureLocationAsMigrationSourceSystemNameWhenItDoesNotHaveFourParts() {
+        final String azureLocation = "XHIBIT/20082025";
+
+        final Map<String, Object> eventData = Map.of(
+                "caseUrn", "28DI10239082",
+                "success", "false",
+                "description", "Failed",
+                "azureLocation", azureLocation
+        );
+        final EventGridEvent eventGridEvent = new EventGridEvent(new Date(), eventData);
+
+        when(context.getLogger()).thenReturn(logger);
+
+        final ArgumentCaptor<String> locationCaptor = ArgumentCaptor.forClass(String.class);
+        final ArgumentCaptor<String> fileNameCaptor = ArgumentCaptor.forClass(String.class);
 
         eventGridMonitor.run(eventGridEvent, context);
 
-        final String content = new BufferedReader(new InputStreamReader(inputStreamArgumentCaptor.getValue()))
-                .lines()
-                .collect(Collectors.joining("\n"));
+        verify(helper, times(2)).processEvent(any(), locationCaptor.capture(), fileNameCaptor.capture());
 
-        final List<String> allValues = stringArgumentCaptor.getAllValues();
+        assertEquals(azureLocation, locationCaptor.getAllValues().get(0));
+        assertTrue(fileNameCaptor.getAllValues().get(0).startsWith("outcome/outcome-"));
+        assertTrue(fileNameCaptor.getAllValues().get(0).endsWith(".json"));
 
-        assertEquals(expected, content);
-        assertNotNull(longArgumentCaptor.getValue());
-        assertEquals(migrationSourceSystemName + File.separator + "outcome" + File.separator + "outcome-"+submissionId+".json", allValues.get(0));
-        assertEquals(azureLocation + File.separator + "outcome.json", allValues.get(1));
+        assertEquals(azureLocation, locationCaptor.getAllValues().get(1));
+        assertEquals("outcome.json", fileNameCaptor.getAllValues().get(1));
     }
 }

@@ -29,9 +29,11 @@ import uk.gov.justice.services.test.utils.core.enveloper.EnveloperFactory;
 import uk.gov.justice.services.test.utils.core.matchers.JsonEnvelopePayloadMatcher;
 import uk.gov.moj.cpp.stagingdlrm.aggregate.MigratedCaseSubmissionAggregate;
 import uk.gov.moj.cpp.stagingdlrm.command.handler.service.CaseIdGenerator;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmissionProcessedOutput;
+import uk.gov.moj.stagingdlrm.domain.event.CaseAlreadyProcessedAndExistsInProgression;
 import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 
@@ -70,6 +72,9 @@ class StagingdlrmCommandHandlerTest {
     @Mock(answer = RETURNS_DEEP_STUBS)
     private MigratedCaseSubmission migratedCaseSubmission;
 
+    @Mock(answer = RETURNS_DEEP_STUBS)
+    private MigratedCaseSubmission caseAlreadyProcessedMigratedCaseSubmission;
+
     @Mock
     private CaseIdGenerator caseIdGenerator;
 
@@ -78,7 +83,7 @@ class StagingdlrmCommandHandlerTest {
 
     @Spy
     private final Enveloper enveloper = EnveloperFactory.createEnveloperWithEvents(
-            ErrorMigratedCaseSubmissionReceived.class, MigratedCaseSubmissionProcessed.class);
+            CaseAlreadyProcessedAndExistsInProgression.class, ErrorMigratedCaseSubmissionReceived.class, MigratedCaseSubmissionProcessed.class);
 
 
     @Test
@@ -187,6 +192,59 @@ class StagingdlrmCommandHandlerTest {
                                                 withJsonPath("$.migratedCaseSubmissionProcessed", notNullValue()),
                                                 withJsonPath("$.migratedCaseSubmissionProcessed.submissionId", is(submissionId.toString())),
                                                 withJsonPath("$.migratedCaseSubmissionProcessed.caseId", is(submissionId.toString()))
+                                        )
+                                )
+                        )
+                )
+        );
+    }
+
+    @Test
+    void shouldReceiveCaseAlreadyProcessed() throws Exception {
+        final UUID submissionId = randomUUID();
+        final UUID caseId = randomUUID();
+        final String caseUrn = "T20000001";
+
+        when(caseAlreadyProcessedMigratedCaseSubmission.getSubmissionId()).thenReturn(submissionId);
+        when(caseAlreadyProcessedMigratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn(caseUrn);
+
+        final CaseAlreadyProcessedAndExistsInProgressionCommand command = CaseAlreadyProcessedAndExistsInProgressionCommand
+                .caseAlreadyProcessedAndExistsInProgressionCommand()
+                .withCaseId(caseId)
+                .withMigratedCaseSubmission(caseAlreadyProcessedMigratedCaseSubmission)
+                .build();
+
+        final Metadata metadata = Envelope.metadataBuilder()
+                .withName("stagingdlrm.command.handler.case-already-exists-in-progression")
+                .withId(randomUUID())
+                .build();
+
+        final Envelope<CaseAlreadyProcessedAndExistsInProgressionCommand> commandEnvelope = envelopeFrom(metadata, command);
+
+        when(eventSource.getStreamById(submissionId)).thenReturn(eventStream);
+        when(aggregateService.get(eventStream, MigratedCaseSubmissionAggregate.class)).thenReturn(new MigratedCaseSubmissionAggregate());
+        when(eventStream.append(eventCaptor.capture())).thenReturn(1L);
+
+        stagingdlrmCommandHandler.receiveCaseAlreadyProcessed(commandEnvelope);
+
+        final Stream<JsonEnvelope> envelopeStream = verifyAppendAndGetArgumentFrom(eventStream);
+
+        assertThat(envelopeStream, streamContaining(
+                        jsonEnvelope(
+                                metadata()
+                                        .withName("stagingdlrm.events.case-already-processed-and-exists-in-progression"),
+                                JsonEnvelopePayloadMatcher.payload().isJson(
+                                        withJsonPath("$.migratedCaseSubmission", notNullValue())
+                                )
+                        ),
+                        jsonEnvelope(
+                                metadata()
+                                        .withName("stagingdlrm.events.migrated-case-submission-processed"),
+                                JsonEnvelopePayloadMatcher.payload().isJson(allOf(
+                                                withJsonPath("$.migratedCaseSubmissionProcessed.caseId", is(caseId.toString())),
+                                                withJsonPath("$.migratedCaseSubmissionProcessed.submissionId", is(submissionId.toString())),
+                                                withJsonPath("$.migratedCaseSubmissionProcessed.processingIsSuccessful", is(false)),
+                                                withJsonPath("$.migratedCaseSubmissionProcessed.description", is(MigratedCaseSubmissionAggregate.CASE_ALREADY_EXISTS_IN_PROGRESSION))
                                         )
                                 )
                         )

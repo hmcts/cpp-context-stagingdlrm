@@ -3,7 +3,9 @@ package uk.gov.moj.cpp.stagingdlrm.event.processor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.moj.cpp.stagingdlrm.event.processor.ObjectBuilder.CASE_ID;
@@ -26,7 +28,9 @@ import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.ErrorMigratedCaseSubmi
 import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionProcessedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.counter.MigratedCaseSubmissionReceivedCounter;
 import uk.gov.moj.cpp.stagingdlrm.event.processor.domain.Outcome;
+import uk.gov.moj.cpp.stagingdlrm.event.processor.service.SystemMapperService;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Channel;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
 import uk.gov.moj.cps.pcfdlrm.command.api.ReceiveMigratedCaseFile;
 import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
@@ -68,6 +72,9 @@ class StagingDlrmEventProcessorTest {
     @Mock
     private MigratedCaseConvertor migratedCaseConvertor;
 
+    @Mock
+    private SystemMapperService systemMapperService;
+
     @Captor
     private ArgumentCaptor<Outcome> outcomeEventArgumentCaptor;
 
@@ -87,6 +94,7 @@ class StagingDlrmEventProcessorTest {
         final MigratedCaseSubmissionReceived migratedCaseSubmissionReceived = buildMigratedCaseSubmissionReceivedWithMaterial(LIBRA, "B01LY01");
         when(envelope.payload()).thenReturn(migratedCaseSubmissionReceived);
         when(envelope.metadata()).thenReturn(buildMetaData("receive-migrated-case-file"));
+        when(systemMapperService.getCaseIdForPtiURN(any())).thenReturn(new SystemMapperService.CaseIdLookupResult(CASE_ID, false));
         ArgumentCaptor<Envelope<ReceiveMigratedCaseFile>> captor = ArgumentCaptor.forClass(Envelope.class);
 
         eventProcessor.handleMigratedCaseSubmissionReceived(envelope);
@@ -130,6 +138,7 @@ class StagingDlrmEventProcessorTest {
         final MigratedCaseSubmissionReceived migratedCaseSubmissionReceived = buildMigratedCaseSubmissionReceived(XHIBIT, "C50EX02");
         when(envelope.payload()).thenReturn(migratedCaseSubmissionReceived);
         when(envelope.metadata()).thenReturn(buildMetaData("receive-migrated-case-file"));
+        when(systemMapperService.getCaseIdForPtiURN(any())).thenReturn(new SystemMapperService.CaseIdLookupResult(CASE_ID, false));
         ArgumentCaptor<Envelope<ReceiveMigratedCaseFile>> captor = ArgumentCaptor.forClass(Envelope.class);
 
         eventProcessor.handleMigratedCaseSubmissionReceived(envelope);
@@ -178,5 +187,101 @@ class StagingDlrmEventProcessorTest {
         assertEquals(DESCRIPTION, outcome.description());
 
         verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+    }
+
+    @Test
+    void shouldNotSendToEventGridWhenDuplicateSubmissionId() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "Duplicate Submission ID");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService, never()).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+    }
+
+    @Test
+    void shouldNotSendToEventGridWhenDuplicateSubmissionIdCaseInsensitive() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "duplicate submission id");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService, never()).sendEventToEventGrid(any());
+    }
+
+    @Test
+    void shouldSendToEventGridWhenDuplicateDescriptionButProcessingWasSuccessful() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(true, "Duplicate Submission ID");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        final Outcome outcome = outcomeEventArgumentCaptor.getValue();
+        assertEquals(CASE_ID, outcome.caseId());
+        assertEquals(CASE_URN, outcome.caseUrn());
+        assertTrue(outcome.success());
+    }
+
+    @Test
+    void shouldSendToEventGridWhenDescriptionIsNull() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, null);
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        final Outcome outcome = outcomeEventArgumentCaptor.getValue();
+        assertFalse(outcome.success());
+    }
+
+    @Test
+    void shouldIncrementMigratedCaseSubmissionReceivedCounterWhenJsonSchemaValidationFailedWithLongDescription() {
+        final String description = "JSON schema validation has failed on {\"metadata\":{}} due to " +
+                "{\"message\":\"#/migratedCase/caseDetails: #: only 1 subschema matches out of 2\"," +
+                "\"violatedSchema\":\"http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json\"," +
+                "\"violation\":\"#/migratedCase/caseDetails\"}";
+        final MigratedCaseSubmissionProcessed processed = buildCaseSubmissionProcessed(false, description);
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+    }
+
+    @Test
+    void shouldSendCaseAlreadyProcessedCommandWhenCaseExistsInProgression() {
+        final MigratedCaseSubmissionReceived migratedCaseSubmissionReceived = buildMigratedCaseSubmissionReceived(XHIBIT, "C50EX02");
+        when(envelope.payload()).thenReturn(migratedCaseSubmissionReceived);
+        when(envelope.metadata()).thenReturn(buildMetaData("receive-migrated-case-file"));
+        when(systemMapperService.getCaseIdForPtiURN(any()))
+                .thenReturn(new SystemMapperService.CaseIdLookupResult(CASE_ID, true));
+
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Envelope<CaseAlreadyProcessedAndExistsInProgressionCommand>> captor =
+                ArgumentCaptor.forClass(Envelope.class);
+
+        eventProcessor.handleMigratedCaseSubmissionReceived(envelope);
+
+        verify(sender).send(captor.capture());
+        assertEquals("stagingdlrm.command.handler.case-already-exists-in-progression", captor.getValue().metadata().name());
+
+        final CaseAlreadyProcessedAndExistsInProgressionCommand payload = captor.getValue().payload();
+        assertEquals(CASE_ID, payload.getCaseId());
+        assertEquals(SUBMISSION_ID, payload.getMigratedCaseSubmission().getSubmissionId());
+
+        verify(migratedCaseSubmissionReceivedCounter, never()).increment();
     }
 }

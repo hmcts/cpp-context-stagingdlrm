@@ -1,0 +1,57 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "dateReceived": "2024-01-15",
+      "sendingCourt": "C01BL00",
+      "receivingCourt": "C01BL00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Either way case",
+      "retrialIndicator": false,
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "11:10:01",
+        "durationMinutes": 60,
+        "courtRoomId": 60,
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
+            "listedOffences": [
+              "XHIBIT-offence-id-1"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "XHIBIT",
+      "migrationSourceSystemCaseIdentifier": "This is from XHIBIT"
+    }
+  },
+  "materials": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "azureLocation": "http://inazure/secrets/1",
+      "fileName": "Audio Recording one",
+      "fileType": ".wav",
+      "documentType": 3
+    }
+  ],
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "numberOfMaterials": 1
+  },
+  "submissionId": "SUBMISSION_ID",
+  "azureLocation": "TVL55117DFXXV"
+}

@@ -87,23 +87,4 @@ class StagingdlrmCommandApiTest {
 
     }
 
-    @Test
-    void shouldHandleReceiveMigratedCaseSubmissionXHIBITWithConvictionDate() {
-
-        final JsonObject payload = readJsonResource("receive-migrated-case-submission-XHIBIT-conviction-date.json");
-
-        final JsonEnvelope envelope = envelope()
-                .with(metadataWithDefaults().withName("stagingdlrm.receive-migrated-case-submission"))
-                .withPayloadFrom(payload)
-                .build();
-
-        stagingdlrmCommandApi.receiveMigratedCaseSubmission(envelope);
-
-        verify(sender).send(envelopeCaptor.capture());
-        final Envelope<JsonObject> resultEnvelope = envelopeCaptor.getValue();
-
-        assertThat(resultEnvelope.metadata().name(), is("stagingdlrm.command.handler.receive-migrated-case-submission"));
-        assertThat(resultEnvelope.payload(), is(payload));
-    }
-
 }

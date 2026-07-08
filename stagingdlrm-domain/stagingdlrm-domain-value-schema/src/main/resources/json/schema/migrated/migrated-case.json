@@ -14,6 +14,7 @@
       }
     },
     "defendants": {
+      "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/defendant.json"

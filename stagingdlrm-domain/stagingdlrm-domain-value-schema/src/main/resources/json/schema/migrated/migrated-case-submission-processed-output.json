@@ -24,7 +24,6 @@
   },
   "required": [
     "submissionId",
-    "caseId",
     "caseUrn",
     "processingIsSuccessful"
   ]

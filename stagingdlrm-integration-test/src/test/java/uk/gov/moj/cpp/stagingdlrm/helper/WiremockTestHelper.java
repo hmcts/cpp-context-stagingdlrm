@@ -11,8 +11,6 @@ import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.stubForReceiveMigrated
 import uk.gov.justice.services.test.utils.core.http.RequestParams;
 import uk.gov.moj.cpp.stagingdlrm.stub.SystemIdMapperStub;
 
-import java.util.UUID;
-
 import javax.ws.rs.core.Response.Status;
 
 /**
@@ -29,7 +27,7 @@ public class WiremockTestHelper {
     public static void createCommonMockEndpoints() {
         resetStubs();
         stubForReceiveMigratedCaseFile();
-        SystemIdMapperStub.stubGetCaseIdByURN("TVL55117DFXXV", UUID.fromString("51cac7fb-387c-4d19-9c80-8963fa8cf222"));
+        SystemIdMapperStub.stubAddMapping();
     }
 
     public static void waitForStubToBeReady(String resource, String mediaType) {

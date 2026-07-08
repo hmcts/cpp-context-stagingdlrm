@@ -13,7 +13,7 @@
       "receivingCourt": "C01BL00",
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
-      "receiptType": "Bring back",
+      "receiptType": "Either way case",
       "retrialIndicator": false
     },
     "hearings": [
@@ -65,8 +65,7 @@
             "ethnicity": "M3",
             "gender": 1,
             "dateOfBirth": "2000-01-01",
-            "nationality": "SVK",
-            "additionalNationality": "HUN"
+            "nationality": "SVK"
           },
           "bailConditions": "test"
         },

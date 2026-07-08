@@ -1,16 +1,12 @@
 package uk.gov.moj.cpp.stagingdlrm.azure;
 
-import static java.lang.System.getenv;
 import static java.util.Objects.isNull;
-import static java.util.logging.Level.INFO;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
 import uk.gov.moj.cpp.stagingdlrm.azure.event.EventGridEvent;
-import uk.gov.moj.cpp.stagingdlrm.azure.storage.BlobCloudStorage;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
+import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -20,16 +16,19 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.EventGridTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
 
+import static java.lang.System.getenv;
+
 /**
  * Azure Functions with Event Grid trigger.
  */
 public class EventGridMonitor {
 
-    private BlobCloudStorage blobCloudStorage;
-
     private static final String CASE_URN = "caseUrn";
     private static final String DESCRIPTION = "description";
     private ExecutionContext context;
+
+    private EventGridMonitorHelper helper;
+    private LoggerHelper loggerHelper;
 
     /**
      * This function will be invoked when an event is received from Event Grid.
@@ -38,41 +37,43 @@ public class EventGridMonitor {
     public void run(@EventGridTrigger(name = "eventGridEvent") EventGridEvent eventGridEvent, final ExecutionContext context) {
 
         this.context = context;
-        context.getLogger().info("Event content: ");
+        setLoggerHelper();
+
         final Map<String, Object> event = eventGridEvent.getData();
-        context.getLogger().log(INFO, "CaseUrn: {0}", event.get(CASE_URN));
-        context.getLogger().log(INFO, "Success: {0}", event.get("success"));
-        context.getLogger().log(INFO, "Case Id: {0}", event.get("caseId"));
-        context.getLogger().log(INFO, "Submission Id: {0}", event.get("submissionId"));
-        context.getLogger().log(INFO, "Description: {0}", event.get(DESCRIPTION));
-        context.getLogger().log(INFO, "AzureLocation: {0}", event.get("azureLocation"));
-
         final String azureLocation = (String) event.get("azureLocation");
-
         final List<String> splitStr = getSplitStr(azureLocation);
-        context.getLogger().log(INFO, "Split azure location tokens: {0}", splitStr);
-
         final String submissionId = extractSubmissionId(splitStr);
-        context.getLogger().log(INFO, "Extracted submissionId: {0}", submissionId);
-
         final String migrationSourceSystemName = extractMigrationSourceSystemName(splitStr, azureLocation);
-        context.getLogger().log(INFO, "Extracted migrationSourceSystemName: {0}", migrationSourceSystemName);
+
+        loggerHelper.logInfo(context, submissionId, "Event content: ");
+        loggerHelper.logInfo(context, submissionId, "CaseUrn: {0}", event.get(CASE_URN));
+        loggerHelper.logInfo(context, submissionId, "Success: {0}", event.get("success"));
+        loggerHelper.logInfo(context, submissionId, "Case Id: {0}", event.get("caseId"));
+        loggerHelper.logInfo(context, submissionId, "Submission Id: {0}", event.get("submissionId"));
+        loggerHelper.logInfo(context, submissionId, "Description: {0}", event.get(DESCRIPTION));
+        loggerHelper.logInfo(context, submissionId, "AzureLocation: {0}", azureLocation);
+        loggerHelper.logInfo(context, submissionId, "Split azure location tokens: {0}", splitStr);
+        loggerHelper.logInfo(context, submissionId, "Extracted migrationSourceSystemName: {0}", migrationSourceSystemName);
+
+        setEventGridMonitorHelper();
 
         final String outcomeFile = "outcome/outcome-%s.json".formatted(submissionId);
-        context.getLogger().log(INFO, "Writing {0}", outcomeFile);
-        processEvent(event, migrationSourceSystemName, outcomeFile);
 
-        context.getLogger().log(INFO, "Writing outcome.json to azureLocation: {0}", azureLocation);
-        processEvent(event, azureLocation, "outcome.json");
+        loggerHelper.logInfo(context, submissionId, "Writing {0}", outcomeFile);
 
-        context.getLogger().info("EventGridMonitor processing complete.");
+        helper.processEvent(event, migrationSourceSystemName, outcomeFile);
+
+        loggerHelper.logInfo(context, submissionId, "Writing outcome.json to azureLocation: {0}", azureLocation);
+        helper.processEvent(event, azureLocation, "outcome.json");
+
+        loggerHelper.logInfo(context, submissionId, "EventGridMonitor processing complete.");
     }
 
     private String extractSubmissionId(final List<String> splitStr) {
         return isNotEmpty(splitStr) && splitStr.size() == 4 ? splitStr.get(splitStr.size() - 1) : UUID.randomUUID().toString();
     }
 
-    private  List<String> getSplitStr(final String queueMessage) {
+    private List<String> getSplitStr(final String queueMessage) {
         return Arrays.stream(queueMessage.split("/")).toList();
     }
 
@@ -80,35 +81,15 @@ public class EventGridMonitor {
         return isNotEmpty(splitStr) && splitStr.size() == 4 ? splitStr.get(0) : azureLocation;
     }
 
-    private void processEvent(final Map<String, Object> event, final String azureLocation, final String fileName) {
-
-        final Path path = Path.of(azureLocation + File.separator + fileName);
-
-        final byte[] bytes = generateOutcomeContent(event);
-
-        setCaseStorageActiveBlobContainer();
-
-        context.getLogger().log(INFO, "Uploading outcome to: {0}", path);
-        blobCloudStorage.uploadToStorage(new ByteArrayInputStream(bytes), (long) bytes.length, path.toString());
-        context.getLogger().log(INFO, "Successfully uploaded outcome to: {0}", path);
-    }
-
-    private byte[] generateOutcomeContent(final Map<String, Object> event) {
-        String outcome = """
-                {
-                    "caseUrn": "%s",
-                    "success": %s,
-                    "description": "%s"
-                }
-                """;
-        return outcome.formatted(event.get(CASE_URN), event.get("success"), event.get(DESCRIPTION))
-                .getBytes();
-    }
-
-    private void setCaseStorageActiveBlobContainer() {
-        if (isNull(blobCloudStorage)) {
-            blobCloudStorage = new BlobCloudStorage(context, getenv("AzureWebJobsStorage"), getenv("dlrm_container"));
+    private void setEventGridMonitorHelper() {
+        if (isNull(helper)) {
+            helper = new EventGridMonitorHelper(context, getenv("AzureWebJobsStorage"), getenv("dlrm_container"));
         }
+    }
 
+    private void setLoggerHelper() {
+        if (isNull(loggerHelper)) {
+            loggerHelper = new LoggerHelper();
+        }
     }
 }
