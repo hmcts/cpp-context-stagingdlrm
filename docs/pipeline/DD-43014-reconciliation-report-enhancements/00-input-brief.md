@@ -12,7 +12,7 @@ pipeline is adopted here.
 >    business report, dlrm report
 > 3. Update `hearing_status` to store the count of each hearing type instead of just
 >    whether it's present (e.g. `unallocated_hearing=1; week_commencing_hearing=2`
->    instead of `unallocated_hearing=true`) — added to RSE-01 rather than as a separate
+>    instead of `unallocated_hearing=true`) — added to RSE01 rather than as a separate
 >    story.
 
 ## 2. Clarifying Q&A

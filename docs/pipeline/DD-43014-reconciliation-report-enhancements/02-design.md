@@ -1,7 +1,7 @@
 # Design — Reconciliation Summary Report Enhancements
 
 > Stage 2 artefact (architecture-designer). Source: `01-requirements.md` (approved).
-> No ADR required — this change is additive, backward-compatible (FR-6), and touches no
+> No ADR required — this change is additive, backward-compatible (FR6), and touches no
 > architecturally-significant or one-way-door decision.
 
 ## Overview
@@ -54,7 +54,7 @@ REPORT_TYPES = {
 }
 ```
 
-`material_count` sits next to `staging_defendant_count` in `TECHNICAL_COLUMNS` (FR-1) —
+`material_count` sits next to `staging_defendant_count` in `TECHNICAL_COLUMNS` (FR1) —
 same section of the row as the other staging-sourced counts.
 
 ### Un-namespaced `defendant_count`/`material_count` in business/DLRM
@@ -73,7 +73,7 @@ FIELD_ALIASES = {
 
 This keeps the join/derivation logic (the `main()` loop building each row) written
 exactly once regardless of `--report-type` — only the final column projection differs,
-satisfying NFR-3 (same row set, narrower columns) without duplicating logic per type.
+satisfying NFR3 (same row set, narrower columns) without duplicating logic per type.
 
 ### CLI parsing
 
@@ -96,7 +96,7 @@ def parse_report_type(argv):
 ```
 
 Plain functions over `argparse` here, matching the file's existing terse style for a
-single flag (either is acceptable — implementer's call, per NFR-1 both are stdlib).
+single flag (either is acceptable — implementer's call, per NFR1 both are stdlib).
 
 ### Output
 
@@ -105,7 +105,7 @@ single flag (either is acceptable — implementer's call, per NFR-1 both are std
 unchanged), and the `DictWriter` uses `fieldnames=columns` with `extrasaction="ignore"` so
 each row dict can keep every internal key without needing a per-type dict rebuild.
 
-### `derive_hearing_flags` — counts instead of boolean presence (FR-8)
+### `derive_hearing_flags` — counts instead of boolean presence (FR8)
 
 Today's function computes `any(...)` per category and emits a fixed `"<flag>=true"`
 string when at least one hearing matches. Replace the four `any()` checks with `sum()`
@@ -162,7 +162,7 @@ as "matches none of the other three" — this rewrite only changes counting vs. 
 nothing about what counts as a match. Because `hearing_status` is a shared field reused by
 column projection (not recomputed per report type), this same count format automatically
 flows into the business and DLRM reports wherever they include `hearing_status` — no
-separate change needed for RSE-02.
+separate change needed for RSE02.
 
 ## `run-all.sh`
 
@@ -189,7 +189,7 @@ done
 ```
 
 Pass it through only when set, so an empty `REPORT_TYPE` falls back to
-`summary-report.py`'s own default (FR-5/FR-6):
+`summary-report.py`'s own default (FR5/FR6):
 
 ```bash
 run_step "5/5 summary-report" "$SCRIPT_DIR/summary-report.sh" ${REPORT_TYPE:+--report-type="$REPORT_TYPE"}
@@ -219,10 +219,10 @@ it.
 ## `README.md`
 
 - Move `material_count` out of the "deliberately omits" paragraph under
-  `summary_report.csv`'s field reference and into its column table (FR-1/FR-7).
+  `summary_report.csv`'s field reference and into its column table (FR1/FR7).
 - Update `hearing_status`'s existing description (currently documents the `=true`
   boolean-flag format) to describe the count format instead, with a worked example
-  (FR-8).
+  (FR8).
 - Add a new subsection under "Report field reference" (or immediately after it) listing
   all three report types, their exact columns, and their output filenames — mirroring the
   style already used for the four per-hop reports.
@@ -235,4 +235,4 @@ Per the CLAUDE.md SDLC section: this directory has no JUnit/Maven test harness. 
 tests to Python's stdlib `unittest` against `summary-report.py`'s pure functions
 (`parse_report_type`, the column-projection logic) plus a small fixture-based end-to-end
 check (fixed input CSVs in, assert exact output columns/rows per `--report-type`) — no new
-dependency, consistent with NFR-1.
+dependency, consistent with NFR1.
