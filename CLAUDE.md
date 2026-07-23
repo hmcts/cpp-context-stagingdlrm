@@ -147,3 +147,32 @@ Build agents require `centos8-j17` capability (Java 17).
 - **Messaging**: Apache ActiveMQ (JMS via WildFly resource adapter)
 - **Persistence**: DeltaSpike + JPA (Hibernate), PostgreSQL
 - **Testing**: JUnit 5, Mockito, REST Assured, WireMock
+
+## SDLC Orchestrator (hmcts-sdlc-orchestrator plugin)
+
+The `hmcts-sdlc-orchestrator` plugin ships an 8-stage SDLC pipeline (Requirements →
+Architecture & Design → User Story → Test Specs → Code → Code Review → Build & Test →
+Deploy Sandbox). This repo's Java/Maven CQRS modules already match the plugin's legacy
+context-service assumptions, so the pipeline and its agents are **reused as-is** — no
+local overrides needed for that part of the codebase.
+
+- **Reuse from the plugin as-is:** `requirements-analyst`, `architecture-designer`,
+  `story-writer`, `test-engineer`, `implementation`, `code-reviewer`, `ci-orchestrator`,
+  `deployer`, `context-scaffold`, `context-service-guide`, `api-contract-check`,
+  `dependency-audit`, `review-pr`, the security hooks (`block-secrets`, `block-pii`,
+  `guard-bash`, `guard-paths`).
+- **Do NOT use:** `springboot-service-from-template`, `springboot-api-from-template`,
+  `terraform-validate`, `helm-config-validator` — no Spring Boot, Terraform, or Helm chart
+  in this repo.
+- **One real delta — `tools/reconciliation/`:** standalone bash/Python3(stdlib)/SQL
+  scripts, not part of the Maven build. No JUnit, no Maven test/CI wiring for this
+  directory. Read `tools/reconciliation/README.md` first when a pipeline stage touches
+  this directory — it's the authoritative context (design facts, env vars, CSV field
+  reference, known limitations), not the plugin's generic `tech-stack.md`. `test-engineer`
+  should scope tests to Python's stdlib `unittest` (no new dependency); `ci-orchestrator`'s
+  Maven-triggered CI does not cover this directory — verification is a manual run against
+  a real batch in a dev/sandbox environment.
+- Pipeline artefacts go to `docs/pipeline/<JIRA-TICKET>-<slug>/` (created on first use, no
+  pre-scaffolding required): `00-input-brief.md` → `01-requirements.md` → `02-design.md` →
+  `03-stories.md`, plus a shared `docs/pipeline/adrs/` for any architecturally-significant
+  decision.
