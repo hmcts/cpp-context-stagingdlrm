@@ -59,19 +59,22 @@ tracks pipeline progress, not data consistency.
 hearing_status is a separate column carrying an aggregate hearing-allocation
 status, computed once listing data was found for the case (blank otherwise)
 from listing's own `hearings` JSON array. Each hearing in the case is
-classified independently, then the case's flags are the union of whatever
-was found: allocated_hearing=true if any hearing is allocated,
-unscheduled_hearing=true if any hearing is unscheduled,
-week_commencing_hearing=true if any hearing carries both a
+classified independently, then the case's flags report the count of hearings
+matching each category: allocated_hearing=<n> for hearings that are
+allocated, unscheduled_hearing=<n> for hearings that are unscheduled,
+week_commencing_hearing=<n> for hearings that carry both a
 week_commencing_start_date and week_commencing_end_date, and
-unallocated_hearing=true if any hearing matches none of the other three —
-computed the same per-hearing-OR way as the other three, so a hearing with
-none of those three properties is still surfaced even when a different
-hearing on the same case does carry one of them. Any combination of all
-four flags can appear together for a case with a sufficiently varied mix of
-hearings. Blank (no flags at all) if the case's `hearings` array is empty or
-fails to parse as JSON — not treated as unallocated, since there's no
-hearing to classify. Does not affect overall_status.
+unallocated_hearing=<n> for hearings matching none of the other three —
+computed the same per-hearing-independent way as the other three, so a
+hearing with none of those three properties is still counted even when a
+different hearing on the same case does carry one of them. A category is
+omitted entirely when its count is 0. Any combination of all four categories
+can appear together for a case with a sufficiently varied mix of hearings
+(e.g. "week_commencing_hearing=2; unallocated_hearing=1" for a case with 2
+week-commencing hearings and 1 unallocated hearing). Blank (no flags at all)
+if the case's `hearings` array is empty or fails to parse as JSON — not
+treated as unallocated, since there's no hearing to classify. Does not
+affect overall_status.
 
 USAGE:
   ./summary-report.py
@@ -88,7 +91,7 @@ OUTPUT_COLUMNS = [
     "funcapp_outcome_success", "funcapp_outcome_description",
     "staging_status", "staging_description", "azure_location",
     "pcf_status", "pcf_description",
-    "staging_hearing_count", "staging_defendant_count",
+    "staging_hearing_count", "staging_defendant_count", "material_count",
     "listing_case_reference", "listing_hearing_count",
     "case_reference_match", "hearing_count_match",
     "hearing_status",
@@ -167,27 +170,27 @@ def derive_hearing_flags(hearings_raw):
     def is_week_commencing(h):
         return bool(h.get("week_commencing_start_date") and h.get("week_commencing_end_date"))
 
-    has_allocated = any(is_allocated(h) for h in hearings)
-    has_unscheduled = any(is_unscheduled(h) for h in hearings)
-    has_week_commencing = any(is_week_commencing(h) for h in hearings)
+    allocated_count = sum(1 for h in hearings if is_allocated(h))
+    unscheduled_count = sum(1 for h in hearings if is_unscheduled(h))
+    week_commencing_count = sum(1 for h in hearings if is_week_commencing(h))
     # A hearing matching none of the three above is itself an "unallocated"
-    # hearing — computed the same per-hearing-OR way as the other three, not
-    # as a whole-case fallback, so it isn't masked by a different, flagged
-    # hearing on the same case.
-    has_unallocated = any(
-        not (is_allocated(h) or is_unscheduled(h) or is_week_commencing(h))
-        for h in hearings
+    # hearing — computed the same per-hearing-independent way as the other
+    # three, not as a whole-case fallback, so it isn't masked by a different,
+    # flagged hearing on the same case.
+    unallocated_count = sum(
+        1 for h in hearings
+        if not (is_allocated(h) or is_unscheduled(h) or is_week_commencing(h))
     )
 
     flags = []
-    if has_allocated:
-        flags.append("allocated_hearing=true")
-    if has_unscheduled:
-        flags.append("unscheduled_hearing=true")
-    if has_week_commencing:
-        flags.append("week_commencing_hearing=true")
-    if has_unallocated:
-        flags.append("unallocated_hearing=true")
+    if allocated_count:
+        flags.append(f"allocated_hearing={allocated_count}")
+    if unscheduled_count:
+        flags.append(f"unscheduled_hearing={unscheduled_count}")
+    if week_commencing_count:
+        flags.append(f"week_commencing_hearing={week_commencing_count}")
+    if unallocated_count:
+        flags.append(f"unallocated_hearing={unallocated_count}")
     return flags
 
 
@@ -298,6 +301,7 @@ def main():
             "pcf_description": p.get("description", ""),
             "staging_hearing_count": staging_hearing_count,
             "staging_defendant_count": staging_defendant_count,
+            "material_count": s.get("material_count", ""),
             "listing_case_reference": listing_case_reference,
             "listing_hearing_count": listing_hearing_count,
             "case_reference_match": case_reference_match,

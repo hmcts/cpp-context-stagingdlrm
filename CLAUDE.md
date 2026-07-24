@@ -25,6 +25,12 @@ mvn test -pl stagingdlrm-command/stagingdlrm-command-handler -Dtest=StagingdlrmC
 
 # Run a single IT class
 mvn verify -P stagingdlrm-integration-test -pl stagingdlrm-integration-test -Dit.test=ReceiveCaseFileSubmissionIT
+
+# Unzip command/query RAML jars into stagingdlrm-integration-test/target so ITs can run from the IDE
+./enableIDEIntegrationTests.sh
+
+# Send a JMX system command (e.g. CATCHUP) to a running local WildFly instance; no args lists all commands
+./runSystemCommand.sh <command name>
 ```
 
 ## Local Development Setup
@@ -135,7 +141,7 @@ Build agents require `centos8-j17` capability (Java 17).
 
 ### Reconciliation Tooling
 
-`tools/reconciliation/` holds standalone bash/Python/SQL scripts (not part of the Maven build) that cross-reference a migration batch across Blob Storage → stagingdlrm → pcfdlrm → Listing to produce a per-case CSV reconciliation report — see `docs/reconciliation/reconciliation-plan.md` for the design and `docs/reconciliation/*-csv-fields.md` for each report's column reference. Run `./tools/reconciliation/run-all.sh <batch_id>` to execute the full pipeline; each stage script is independently runnable. All CSV output goes to `reconciliation/output/` (gitignored); `reconciliation/archived/` holds manually filed-away past runs.
+`tools/reconciliation/` holds standalone bash/Python/SQL scripts (not part of the Maven build) that cross-reference a migration batch across Blob Storage → stagingdlrm → pcfdlrm → Listing to produce a per-case CSV reconciliation report — see `tools/reconciliation/README.md` for the design, environment variables, and each report's column reference (this is the authoritative doc; there is no separate `docs/reconciliation/` directory). Run `./tools/reconciliation/run-all.sh <batch_id>` to execute the full pipeline; each stage script is independently runnable. All CSV output goes to `reconciliation/output/` (gitignored); `reconciliation/archived/` holds manually filed-away past runs.
 
 ### Key Dependencies (from parent POM)
 
