@@ -219,16 +219,16 @@ the only optional input (a missing one just blanks the `funcapp_*` columns and d
 | `azure_location` | From staging's own `azure_location` — blank for `NEVER_INGESTED` rows. |
 | `pcf_status` / `pcf_description` | From `pcfdlrm_report.csv`'s `pcfdlrm_status`/`description`. Blank if the case never reached staging with a resolved `case_id`. |
 | `staging_hearing_count` / `staging_defendant_count` | The submitted case's counts per staging — `staging_hearing_count` feeds the listing cross-check; `staging_defendant_count` has no listing-side counterpart and is reference-only. |
+| `material_count` | Carried straight over from `stagingdlrm_report.csv`'s own `material_count` column (see above) — no listing-side counterpart, reference-only. |
 | `listing_case_reference` / `listing_hearing_count` | From `listing_report.csv` — only populated once `pcf_status=PROCESSED` **and** the case was actually found in listing. |
 | `case_reference_match` / `hearing_count_match` | `true`/`false` comparison of staging vs. listing values, computed only when listing data was found. A mismatch does **not** change `overall_status` — it's a separate data-consistency signal, surfaced via `overall_description`. |
-| `hearing_status` | Aggregate hearing-allocation status from listing's `hearings` array, computed only when listing data was found: semicolon-joined combination of `allocated_hearing=true` / `unscheduled_hearing=true` / `week_commencing_hearing=true` / `unallocated_hearing=true` (any combination can appear together). Blank if no listing data or `hearings` is empty. |
+| `hearing_status` | Aggregate hearing-allocation status from listing's `hearings` array, computed only when listing data was found: semicolon-joined counts of matching hearings per category — `allocated_hearing=<n>` / `unscheduled_hearing=<n>` / `week_commencing_hearing=<n>` / `unallocated_hearing=<n>` (any combination can appear together; a category is omitted entirely when its count is `0`). E.g. a case with 2 week-commencing hearings and 1 unallocated hearing reads `week_commencing_hearing=2; unallocated_hearing=1`. Blank if no listing data or `hearings` is empty. |
 | `overall_status` | `NEVER_INGESTED` (never reached stagingdlrm) / `STUCK_AT_STAGINGDLRM` (staging status is `ERROR`/`RECEIVED`/`DUPLICATE`/`CASE_ALREADY_EXISTS`/`PROCESSED_FAILED`/`UNKNOWN`) / `STUCK_AT_PCFDLRM` (staging succeeded, pcf hasn't) / `PROCESSED_NO_HEARING_TO_LIST` (staging+pcf succeeded, case has no hearings — never reaches Listing by design) / `STUCK_AT_LISTING` (staging+pcf succeeded, case has hearings, but absent from Listing) / `PROCESSED` (all three stages succeeded) / `UNKNOWN` (defensive fallback). **First column to check when triaging a batch.** |
 | `overall_description` | Blank unless a match-flag mismatch was found, in which case it names the field(s) and both values (e.g. `hearing_count mismatch: staging='3' vs listing='2'`). Also populated (with an explanatory note) for `PROCESSED_NO_HEARING_TO_LIST` rows. Does not affect `overall_status`. |
 
 This summary deliberately omits columns available in the per-script CSVs (`latest_event`,
-`last_updated`, `funcapp_anomaly`, `staging_duplicate_submissions_received`, staging's
-material count, pcf's non-fatal diagnostic detail columns) — go to the individual reports
-above for that detail.
+`last_updated`, `funcapp_anomaly`, `staging_duplicate_submissions_received`, pcf's
+non-fatal diagnostic detail columns) — go to the individual reports above for that detail.
 
 ## Known limitations
 
