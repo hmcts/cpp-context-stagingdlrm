@@ -13,18 +13,25 @@
 # comment for its exact output filename.
 #
 # USAGE:
-#   ./run-all.sh <batch_id> [--archive=<tag>]
+#   ./run-all.sh <batch_id> [--archive=<tag>] [--report-type=technical|business|dlrm]
 #
 # --archive=<tag> (optional): before running the pipeline, renames every
 # pre-existing output CSV (dlrm_storage.csv, dlrm_logqueue.csv,
 # stagingdlrm_report.csv, pcfdlrm_report.csv, listing_report.csv,
-# summary_report.csv — the individual scripts' own fixed output filenames)
-# from output/<name>.csv to output/<tag>_<name>.csv, if present. This clears
-# the way for the fresh run's own output rather than letting each individual
-# script's own timestamp-suffix archive-on-exists logic kick in, giving the
-# previous run's files a name you chose instead. A file that doesn't exist
-# yet (e.g. first run) is silently skipped. batch_id and --archive=<tag> can
-# be given in either order.
+# summary_report.csv, summary_report_business.csv, summary_report_dlrm.csv —
+# the individual scripts' own fixed output filenames) from output/<name>.csv
+# to output/<tag>_<name>.csv, if present. This clears the way for the fresh
+# run's own output rather than letting each individual script's own
+# timestamp-suffix archive-on-exists logic kick in, giving the previous run's
+# files a name you chose instead. A file that doesn't exist yet (e.g. first
+# run, or a report type that wasn't generated last time) is silently
+# skipped. batch_id, --archive=<tag>, and --report-type= can be given in any
+# order.
+#
+# --report-type=technical|business|dlrm (optional, default: technical):
+# forwarded as-is to summary-report.sh for step 5/5 — see summary-report.py's
+# own header comment for exactly what each type produces. Omitting it
+# preserves today's behaviour exactly (technical report, output/summary_report.csv).
 #
 # source_system is hardcoded to XHIBIT throughout the pipeline (same
 # convention as every individual script) — this pipeline is not currently
@@ -73,6 +80,8 @@
 #   export LISTING_DB_USER=pgreadonly
 #   ./run-all.sh test_7_cases_2705
 #   ./run-all.sh test_7_cases_2705 --archive=testrun
+#   ./run-all.sh test_7_cases_2705 --report-type=business
+#   ./run-all.sh test_7_cases_2705 --archive=testrun --report-type=dlrm
 
 set -euo pipefail
 
@@ -89,15 +98,21 @@ OUTPUT_FILENAMES=(
   pcfdlrm_report.csv
   listing_report.csv
   summary_report.csv
+  summary_report_business.csv
+  summary_report_dlrm.csv
 )
 
 BATCH_ID=""
 ARCHIVE_TAG=""
+REPORT_TYPE=""
 
 for arg in "$@"; do
   case "$arg" in
     --archive=*)
       ARCHIVE_TAG="${arg#--archive=}"
+      ;;
+    --report-type=*)
+      REPORT_TYPE="${arg#--report-type=}"
       ;;
     *)
       if [[ -z "$BATCH_ID" ]]; then
@@ -112,7 +127,7 @@ console() {
 }
 
 if [[ -z "$BATCH_ID" ]]; then
-  console "Usage: $0 <batch_id> [--archive=<tag>]"
+  console "Usage: $0 <batch_id> [--archive=<tag>] [--report-type=technical|business|dlrm]"
   exit 1
 fi
 
@@ -146,7 +161,13 @@ run_step "1/5 function-app-report" "$SCRIPT_DIR/function-app-report.sh" "$BATCH_
 run_step "2/5 stagingdlrm-report" "$SCRIPT_DIR/stagingdlrm-report.sh" "$BATCH_ID"
 run_step "3/5 pcfdlrm-report" "$SCRIPT_DIR/pcfdlrm-report.sh"
 run_step "4/5 listing-report" "$SCRIPT_DIR/listing-report.sh"
-run_step "5/5 summary-report" "$SCRIPT_DIR/summary-report.sh"
+run_step "5/5 summary-report" "$SCRIPT_DIR/summary-report.sh" ${REPORT_TYPE:+--report-type="$REPORT_TYPE"}
+
+case "$REPORT_TYPE" in
+  business) SUMMARY_FILE="summary_report_business.csv" ;;
+  dlrm) SUMMARY_FILE="summary_report_dlrm.csv" ;;
+  *) SUMMARY_FILE="summary_report.csv" ;;
+esac
 
 console ""
-console "==> Pipeline complete for batch $BATCH_ID. See ./output/summary_report.csv."
+console "==> Pipeline complete for batch $BATCH_ID. See ./output/$SUMMARY_FILE."

@@ -6,7 +6,7 @@
 # See summary-report.py for the join/verdict logic and its design notes.
 #
 # USAGE:
-#   ./summary-report.sh
+#   ./summary-report.sh [--report-type=technical|business|dlrm]
 
 set -euo pipefail
 
