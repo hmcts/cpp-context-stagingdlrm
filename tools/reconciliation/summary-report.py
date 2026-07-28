@@ -19,9 +19,13 @@ overall_status=NEVER_INGESTED can no longer be detected (see join strategy
 below) — everything else (staging/pcf/listing reconciliation) proceeds
 unaffected. A missing dlrm_storage.csv prints a warning, not an error.
 
-Writes output/summary_report.csv (creating the output/ directory if it
-doesn't exist). If that file already exists from a previous run, it's
-renamed with a timestamp suffix first.
+Writes output/summary_report.csv by default (creating the output/ directory
+if it doesn't exist). Pass --report-type=business or --report-type=dlrm to
+instead write a narrower column projection of the same case rows to
+output/summary_report_business.csv / output/summary_report_dlrm.csv — see
+REPORT_TYPES below for exact columns. Whichever file is written, if it
+already exists from a previous run it's renamed with a timestamp suffix
+first.
 
 Join strategy: funcapp and staging are joined on submission_id via a full
 outer join (union of both keys) — not a left join from staging — so a case
@@ -77,7 +81,7 @@ treated as unallocated, since there's no hearing to classify. Does not
 affect overall_status.
 
 USAGE:
-  ./summary-report.py
+  ./summary-report.py [--report-type=technical|business|dlrm]
 """
 
 import csv
@@ -86,7 +90,7 @@ import json
 import sys
 from pathlib import Path
 
-OUTPUT_COLUMNS = [
+TECHNICAL_COLUMNS = [
     "batch_id", "submission_id", "case_urn", "case_id",
     "funcapp_outcome_success", "funcapp_outcome_description",
     "staging_status", "staging_description", "azure_location",
@@ -98,6 +102,30 @@ OUTPUT_COLUMNS = [
     "overall_status", "overall_description",
 ]
 
+BUSINESS_COLUMNS = [
+    "case_urn", "defendant_count", "material_count",
+    "hearing_status", "overall_status", "overall_description",
+]
+
+DLRM_COLUMNS = [
+    "batch_id", "azure_location", "case_urn", "defendant_count", "material_count",
+    "hearing_status", "overall_status", "overall_description",
+]
+
+REPORT_TYPES = {
+    "technical": ("summary_report.csv", TECHNICAL_COLUMNS),
+    "business": ("summary_report_business.csv", BUSINESS_COLUMNS),
+    "dlrm": ("summary_report_dlrm.csv", DLRM_COLUMNS),
+}
+
+# The internal row dict keeps its own build-up key names (unchanged
+# regardless of --report-type); this maps the requirements' un-namespaced
+# business/DLRM column names onto those internal keys. Anything not listed
+# here (e.g. material_count) already matches its internal key directly.
+FIELD_ALIASES = {
+    "defendant_count": "staging_defendant_count",
+}
+
 STUCK_AT_STAGINGDLRM_STATUSES = {
     "ERROR", "RECEIVED", "DUPLICATE", "CASE_ALREADY_EXISTS", "PROCESSED_FAILED", "UNKNOWN",
 }
@@ -106,6 +134,24 @@ STUCK_AT_STAGINGDLRM_STATUSES = {
 def read_csv(path):
     with open(path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
+
+
+def parse_report_type(argv):
+    report_type = "technical"
+    for arg in argv:
+        if arg.startswith("--report-type="):
+            report_type = arg.split("=", 1)[1]
+        else:
+            print(f"Usage: {sys.argv[0]} [--report-type=technical|business|dlrm]", file=sys.stderr)
+            sys.exit(1)
+    if report_type not in REPORT_TYPES:
+        print(f"Error: unknown --report-type '{report_type}' (expected one of: {', '.join(REPORT_TYPES)})", file=sys.stderr)
+        sys.exit(1)
+    return report_type
+
+
+def project_row(row, columns):
+    return {column: row.get(FIELD_ALIASES.get(column, column), "") for column in columns}
 
 
 def archive_if_exists(path: Path):
@@ -195,9 +241,8 @@ def derive_hearing_flags(hearings_raw):
 
 
 def main():
-    if len(sys.argv) != 1:
-        print("Usage: ./summary-report.py", file=sys.stderr)
-        sys.exit(1)
+    report_type = parse_report_type(sys.argv[1:])
+    filename, columns = REPORT_TYPES[report_type]
 
     output_dir = Path.cwd() / "output"
     funcapp_path = output_dir / "dlrm_storage.csv"
@@ -314,13 +359,14 @@ def main():
     out_rows.sort(key=lambda r: r["case_urn"])
 
     output_dir.mkdir(exist_ok=True)
-    out_path = output_dir / "summary_report.csv"
+    out_path = output_dir / filename
     archive_if_exists(out_path)
 
+    projected_rows = [project_row(row, columns) for row in out_rows]
     with open(out_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=OUTPUT_COLUMNS)
+        writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
-        writer.writerows(out_rows)
+        writer.writerows(projected_rows)
 
     print(f"==> Combining {funcapp_path} + {staging_path} + {pcf_path} + {listing_path} into {out_path}...", file=sys.stderr)
     print(f"==> Done. Wrote {len(out_rows)} case row(s) to {out_path}.", file=sys.stderr)
