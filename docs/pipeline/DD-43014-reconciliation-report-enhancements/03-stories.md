@@ -53,25 +53,25 @@ FR8 changes it to report counts (`allocated_hearing=2`) via `sum()` instead — 
 consuming that column.
 
 ### Acceptance criteria
-- [ ] AC001: Given a batch with cases carrying non-zero `material_count` values, when
+- [x] AC001: Given a batch with cases carrying non-zero `material_count` values, when
       `summary-report.py` runs with no `--report-type` flag, then `summary_report.csv`
       contains a `material_count` column matching `stagingdlrm_report.csv`'s value for
       each case.
-- [ ] AC002: Given a case whose `material_count` is `"0"` in `stagingdlrm_report.csv`,
+- [x] AC002: Given a case whose `material_count` is `"0"` in `stagingdlrm_report.csv`,
       when the summary report is generated, then `material_count` is `"0"` (not blank) —
       matching the existing "0 is a real fact" convention documented for that column.
-- [ ] AC003: Given a case with a blank `material_count` (an `ERROR`-status row in
+- [x] AC003: Given a case with a blank `material_count` (an `ERROR`-status row in
       `stagingdlrm_report.csv`), when the summary report is generated, then
       `material_count` is blank too.
-- [ ] AC004: All other existing columns/values in `summary_report.csv` are byte-for-byte
+- [x] AC004: All other existing columns/values in `summary_report.csv` are byte-for-byte
       unchanged for a batch already reconciled today (regression check).
-- [ ] AC005 (delivers AC6): Given a case with, e.g., 2 week-commencing hearings and 1
+- [x] AC005 (delivers AC6): Given a case with, e.g., 2 week-commencing hearings and 1
       unallocated hearing in `listing_report.csv`'s `hearings` array, when
       `derive_hearing_flags` runs, then `hearing_status` reads `week_commencing_hearing=2;
       unallocated_hearing=1` — `; `-separated counts, categories with a zero count omitted
       entirely, applied uniformly across all four categories (`allocated_hearing`,
       `unscheduled_hearing`, `week_commencing_hearing`, `unallocated_hearing`).
-- [ ] AC006: Given a case with an empty/unparseable `hearings` array (no listing data
+- [x] AC006: Given a case with an empty/unparseable `hearings` array (no listing data
       found, or JSON fails to parse), when `derive_hearing_flags` runs, then
       `hearing_status` is blank — unchanged from today's behaviour (regression check for
       the rewrite).
@@ -85,17 +85,17 @@ consuming that column.
   "unscheduled", etc.) — only counting vs. boolean presence changes.
 
 ### Definition of done
-- [ ] Code reviewed and approved.
-- [ ] `material_count` added to the technical report's column list, sourced from the
+- [x] Code reviewed and approved.
+- [x] `material_count` added to the technical report's column list, sourced from the
       existing internal row dict (already carries `s.get(...)` for staging fields).
-- [ ] `derive_hearing_flags` rewritten per `02-design.md`: `sum()` counts replace `any()`
+- [x] `derive_hearing_flags` rewritten per `02-design.md`: `sum()` counts replace `any()`
       checks for all four categories; `; ` join separator unchanged; zero-count categories
       still omitted.
-- [ ] `tools/reconciliation/README.md`'s field reference updated: `material_count` moved
+- [x] `tools/reconciliation/README.md`'s field reference updated: `material_count` moved
       out of the "deliberately omits" note into the column table, and `hearing_status`'s
       description updated to the count format with a worked example (partial fulfilment of
       FR7 — full FR7 completes in RSE03).
-- [ ] Manually verified against the existing fixture CSVs already checked into
+- [x] Manually verified against the existing fixture CSVs already checked into
       `reconciliation/output/` from a prior real run (or a small synthetic fixture set),
       including at least one case with multiple hearings of the same type to confirm
       counting (not just presence) works.
@@ -121,24 +121,24 @@ same shared field, just projected into fewer columns). This is the core logic st
 RSE03 only wires the orchestrator script and docs around it.
 
 ### Acceptance criteria
-- [ ] AC007 (delivers AC1): Given no `--report-type` flag, when the script runs, then
+- [x] AC007 (delivers AC1): Given no `--report-type` flag, when the script runs, then
       behaviour is identical to today plus `material_count`/`hearing_status` counts
       (RSE01) — output remains `output/summary_report.csv` with the full technical
       column set.
-- [ ] AC008 (delivers AC2): Given `--report-type=business`, when the script runs, then
+- [x] AC008 (delivers AC2): Given `--report-type=business`, when the script runs, then
       `output/summary_report_business.csv` is written containing exactly `case_urn,
       defendant_count, material_count, hearing_status, overall_status,
       overall_description`, one row per case, in that column order.
-- [ ] AC009 (delivers AC3): Given `--report-type=dlrm`, when the script runs, then
+- [x] AC009 (delivers AC3): Given `--report-type=dlrm`, when the script runs, then
       `output/summary_report_dlrm.csv` is written containing exactly `batch_id,
       azure_location, case_urn, defendant_count, material_count, hearing_status,
       overall_status, overall_description`, in that column order.
-- [ ] AC010 (delivers AC5): Given `--report-type=foo` (unrecognised), when the script
+- [x] AC010 (delivers AC5): Given `--report-type=foo` (unrecognised), when the script
       runs, then it exits non-zero with a clear stderr message before writing any file.
-- [ ] AC011 (delivers NFR3): Given the same batch, the business and DLRM reports contain
+- [x] AC011 (delivers NFR3): Given the same batch, the business and DLRM reports contain
       the same set of cases (by `case_urn`) as the technical report for that run — no rows
       silently dropped by the column projection.
-- [ ] AC012: Given `--report-type=business` or `=dlrm`, when a case's underlying
+- [x] AC012: Given `--report-type=business` or `=dlrm`, when a case's underlying
       `staging_defendant_count` value is used, then it appears under the `defendant_count`
       header (the un-namespaced alias per `02-design.md`), not `staging_defendant_count`.
       `hearing_status` in these reports already reflects RSE01's count format with no
@@ -149,14 +149,14 @@ RSE03 only wires the orchestrator script and docs around it.
 - README updates beyond what RSE01 already covers (RSE03 completes FR7).
 
 ### Definition of done
-- [ ] Code reviewed and approved.
-- [ ] `TECHNICAL_COLUMNS`/`BUSINESS_COLUMNS`/`DLRM_COLUMNS`/`REPORT_TYPES` (or equivalent)
+- [x] Code reviewed and approved.
+- [x] `TECHNICAL_COLUMNS`/`BUSINESS_COLUMNS`/`DLRM_COLUMNS`/`REPORT_TYPES` (or equivalent)
       added; CLI parsing for `--report-type=` added with validation and clear error
       message.
-- [ ] Manual verification: run the script three times (once per `--report-type`) against
+- [x] Manual verification: run the script three times (once per `--report-type`) against
       the same fixture batch and diff the outputs against the column lists in
       `01-requirements.md`.
-- [ ] Regression-checked: `--report-type=technical` output is unchanged from RSE01's
+- [x] Regression-checked: `--report-type=technical` output is unchanged from RSE01's
       output for the same fixture batch (AC007).
 
 ### Notes / open questions
@@ -179,18 +179,18 @@ FR5, FR6 (archive side), FR7. Depends on RSE02 (the flag being wired through mus
 already exist in `summary-report.py`). Completes the initiative.
 
 ### Acceptance criteria
-- [ ] AC013 (delivers AC4): Given `run-all.sh <batch_id> --report-type=business`, when
+- [x] AC013 (delivers AC4): Given `run-all.sh <batch_id> --report-type=business`, when
       the pipeline runs, then step 5/5 produces `output/summary_report_business.csv` and
       the overall run still exits 0.
-- [ ] AC014: Given `run-all.sh <batch_id>` with no `--report-type` (existing usage,
+- [x] AC014: Given `run-all.sh <batch_id>` with no `--report-type` (existing usage,
       possibly combined with `--archive=<tag>` in either order), when the pipeline runs,
       then behaviour is unchanged from today (technical report, default filename).
-- [ ] AC015: Given `run-all.sh <batch_id> --archive=<tag>` where a prior run already
+- [x] AC015: Given `run-all.sh <batch_id> --archive=<tag>` where a prior run already
       produced `summary_report_business.csv` and/or `summary_report_dlrm.csv`, when the
       archive step runs, then both files (if present) are relocated to
       `output/<tag>_summary_report_business.csv` / `_dlrm.csv`, matching existing
       behaviour for `summary_report.csv`.
-- [ ] AC016: `README.md`'s "Report field reference" documents all three report types
+- [x] AC016: `README.md`'s "Report field reference" documents all three report types
       (columns + output filenames), the `hearing_status` count format (FR8), and the
       "Usage" section shows `--report-type=` on both `summary-report.sh` and `run-all.sh`
       invocations (completes FR7).
@@ -199,12 +199,12 @@ already exist in `summary-report.py`). Completes the initiative.
 - Any change to `summary-report.py`'s internal logic (RSE01/RSE02 already complete it).
 
 ### Definition of done
-- [ ] Code reviewed and approved.
-- [ ] `run-all.sh`'s arg-parsing loop, `OUTPUT_FILENAMES` array, header comment
+- [x] Code reviewed and approved.
+- [x] `run-all.sh`'s arg-parsing loop, `OUTPUT_FILENAMES` array, header comment
       (`USAGE:`/`--archive=<tag>` doc block/`Usage Example`), and final console message
       updated.
-- [ ] `README.md` updated per AC016.
-- [ ] End-to-end manual run against a small real/test batch with
+- [x] `README.md` updated per AC016.
+- [x] End-to-end manual run against a small real/test batch with
       `--report-type=business` and `--report-type=dlrm`, confirming AC013–AC015.
 
 ### Notes / open questions

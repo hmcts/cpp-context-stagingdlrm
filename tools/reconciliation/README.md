@@ -92,17 +92,28 @@ cd reconciliation
 source ../tools/reconciliation/env.sh <envname>   # sets required DB/storage env vars — see Environment variables above
 ../tools/reconciliation/run-all.sh <batch_id>
 ../tools/reconciliation/run-all.sh <batch_id> --archive=<tag>   # tag+rename any pre-existing output CSVs first
+../tools/reconciliation/run-all.sh <batch_id> --report-type=business   # business-friendly column set (see Report types below)
+../tools/reconciliation/run-all.sh <batch_id> --archive=<tag> --report-type=dlrm   # either order is fine
 ```
 
 This runs, in sequence, failing fast on the first non-zero exit:
 
 ```
-run-all.sh <batch_id>
+run-all.sh <batch_id> [--report-type=technical|business|dlrm]
   ├─ 1/5  function-app-report.sh <batch_id>            → dlrm_storage.csv, dlrm_logqueue.csv
   ├─ 2/5  stagingdlrm-report.sh <batch_id>              → stagingdlrm_report.csv
   ├─ 3/5  pcfdlrm-report.sh    [stagingdlrm_report.csv] → pcfdlrm_report.csv
   ├─ 4/5  listing-report.sh    [stagingdlrm_report.csv] → listing_report.csv
-  └─ 5/5  summary-report.sh    (no args — reads the four files above) → summary_report.csv
+  └─ 5/5  summary-report.sh    [--report-type=...] (reads the four files above) → summary_report.csv / summary_report_business.csv / summary_report_dlrm.csv
+```
+
+`summary-report.sh` can also be run directly (e.g. to regenerate just the summary without
+re-running the whole pipeline), forwarding `--report-type=` the same way:
+
+```bash
+../tools/reconciliation/summary-report.sh                       # technical (default)
+../tools/reconciliation/summary-report.sh --report-type=business
+../tools/reconciliation/summary-report.sh --report-type=dlrm
 ```
 
 Scripts 3 and 4 both key off Script 2's output independently (not off each other) — they
@@ -229,6 +240,24 @@ the only optional input (a missing one just blanks the `funcapp_*` columns and d
 This summary deliberately omits columns available in the per-script CSVs (`latest_event`,
 `last_updated`, `funcapp_anomaly`, `staging_duplicate_submissions_received`, pcf's
 non-fatal diagnostic detail columns) — go to the individual reports above for that detail.
+
+### Report types (`--report-type=`)
+
+`summary-report.py`/`summary-report.sh` (and `run-all.sh`, which forwards the flag) accept
+`--report-type=technical|business|dlrm`, defaulting to `technical` when omitted. All three
+project the exact same set of case rows and join/derivation logic — only the column
+selection differs, so no report type ever drops a case the others include.
+
+| Report type | Output file | Columns (in order) |
+|---|---|---|
+| `technical` (default) | `output/summary_report.csv` | All columns listed in the field reference above. |
+| `business` | `output/summary_report_business.csv` | `case_urn, defendant_count, material_count, hearing_status, overall_status, overall_description` |
+| `dlrm` | `output/summary_report_dlrm.csv` | `batch_id, azure_location, case_urn, defendant_count, material_count, hearing_status, overall_status, overall_description` |
+
+`defendant_count` in the `business`/`dlrm` reports is the same value as `technical`'s
+`staging_defendant_count` column, just un-namespaced. An unrecognised `--report-type`
+value (e.g. `--report-type=foo`) exits non-zero with a stderr message before writing any
+file.
 
 ## Known limitations
 
