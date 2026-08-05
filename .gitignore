@@ -45,6 +45,10 @@ Thumbs.db
 # Maven
 target/
 
+# Python bytecode — tools/schema-gen and tools/reconciliation are stdlib scripts, never packages
+__pycache__/
+*.py[cod]
+
 # Subversion
 .svn/
 
