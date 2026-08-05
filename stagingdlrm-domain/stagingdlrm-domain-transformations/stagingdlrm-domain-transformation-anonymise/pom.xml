@@ -3,7 +3,7 @@
     <parent>
         <artifactId>stagingdlrm-domain-transformations</artifactId>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
-        <version>17.104.30-DLRM8-SNAPSHOT</version>
+        <version>17.104.31-LIBRA1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
