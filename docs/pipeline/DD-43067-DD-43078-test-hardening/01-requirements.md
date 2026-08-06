@@ -1,32 +1,38 @@
 # Requirements — LIBRA enabler: test hardening
 
 > Stage 1 artefact (requirements). Source: [`00-input-brief.md`](./00-input-brief.md).
-> Requirements altitude — nothing here prescribes a class layout. Implementation **tasks**,
-> including the per-repo split, come from the design / story-writer stage.
+> Requirements altitude — nothing here prescribes a class layout. Implementation **tasks** come
+> from the design / story-writer stage.
+>
+> **Scoped to `cpp-context-stagingdlrm`.** The PCFDLRM half is
+> [DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening).
+> FR5b, FR6, FR7 and AC4/AC5 moved there; their numbers are left as gaps rather than renumbered,
+> so existing references stay valid.
 
 ## Story
 
 **[DD-43078](https://tools.hmcts.net/jira/browse/DD-43078) — Pin XHIBIT behaviour and make the
-DLRM test suites LIBRA-extensible**
+stagingDLRM test suites LIBRA-extensible**
 
 | | |
 |---|---|
 | Epic | [DD-43067](https://tools.hmcts.net/jira/browse/DD-43067) — LIBRA enabler |
 | Size | M |
-| Repos | `cpp-context-stagingdlrm`, `cpp-context-prosecution-casefile-dlrm` |
-| Depends on | nothing — no external blockers, can start immediately |
+| Repo | `cpp-context-stagingdlrm` |
+| Depends on | ADR-001 approved before stage 5. No other blocker — can start immediately |
+| Sibling story | [DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening) — same hardening in PCFDLRM, independently deliverable |
 | Production changes | **none** — test, fixture and test-support code only |
 
 ### Summary (JIRA summary line)
 
-`[LIBRA enabler] Harden stagingDLRM + PCFDLRM tests: exhaustive whole-payload XHIBIT unit coverage, representative XHIBIT-only ITs`
+`[LIBRA enabler] Harden stagingDLRM tests: exhaustive whole-payload XHIBIT unit coverage, schema constraint pins, representative XHIBIT-only ITs`
 
 ### User story
 
 As a **developer about to relax `case-details.json` for LIBRA**,
-I want **the stagingDLRM and PCFDLRM unit suites to assert complete payloads for XHIBIT across
-every scenario that matters, the integration tests to prove the same journeys for XHIBIT only at
-representative depth, and the source system to be a scenario parameter throughout**,
+I want **the stagingDLRM unit suites to assert complete payloads for XHIBIT across every scenario
+that matters, the integration tests to prove the same journeys for XHIBIT only at representative
+depth, and the source system to be a scenario parameter throughout**,
 so that **removing schema constraints cannot silently change what XHIBIT sends downstream, and
 LIBRA scenarios can later be added as scenario data rather than as new test classes**.
 
@@ -39,22 +45,13 @@ LIBRA scenarios can later be added as scenario data rather than as new test clas
 
 ## Scope
 
-`cpp-context-stagingdlrm`:
-
 - `stagingdlrm-azure-functions` — `EventGridTriggerJava`, `TimerTriggerJava`, `EventGridMonitor`
 - `stagingdlrm-command/stagingdlrm-command-handler`
 - `stagingdlrm-domain/stagingdlrm-domain-aggregate` — `MigratedCaseSubmissionAggregate`
+- `stagingdlrm-domain/stagingdlrm-domain-value-schema` — the canonical schemas the relaxation touches
 - `stagingdlrm-event/stagingdlrm-event-processor` — `StagingDlrmEventProcessor`,
   `PcfDlrmEventProcessor`, `MigratedCaseConvertor`
 - `stagingdlrm-integration-test` — representative depth only
-
-`cpp-context-prosecution-casefile-dlrm`:
-
-- `pcfdlrm-command-handler` — `MigratedCaseFileHandler`
-- `pcfdlrm-domain-aggregate` — `MigratedCaseFileAggregate`
-- `pcfdlrm-event-processor`
-- Validation rules — `CcProsecutionValidationRuleProvider` and the rule sets it selects
-- `pcfdlrm-integration-test` — representative depth only
 
 ## Requirements
 
@@ -97,27 +94,16 @@ LIBRA scenarios can later be added as scenario data rather than as new test clas
   need a scenario proving a payload carrying them is **accepted**, and an XHIBIT scenario proving
   nothing about XHIBIT's handling changed. This is the one relaxation-adjacent case where the
   failure mode is acceptance, not rejection.
-- **FR5b — Cover the partial-officer-block rejection.** Five fields are `exists_mandatory` in
-  Progression's payload schema — `policeOfficerRank`, `policeWorkerReferenceNumber`,
-  `policeWorkerLocationCode`, officer `surname` and officer `address1`. They are mandatory *if the
-  officer block is sent at all*, so a LIBRA case with a partial block is rejected downstream. Pin
-  that as a rejection scenario when DD-43081 FR13 lands, rather than discovering it in an
-  environment.
-- **FR6 — Pin the three XHIBIT-only behaviours (PCFDLRM).** Each currently no-ops or is
-  suppressed for non-XHIBIT sources, and each is a decision point once LIBRA arrives (analysis
-  §3.4, §5 Q6). Assert current XHIBIT behaviour **and** current non-XHIBIT behaviour, so changing
-  either is a visible, deliberate test change:
-  1. `ExhibitFiileTypeValidationRule` — materials / Court Record Sheet file-type check; no-ops
-     for any non-XHIBIT source.
-  2. `MigratedCaseFileAggregate`'s hearing/defendant-matching check — condition computed for
-     every case, problem surfaced only for XHIBIT.
-  3. `ProsecutionCaseFileHelper.applyRuleToDefendantFields()` — defaults/normalises gender,
-     language and ethnicity codes after a validation failure, XHIBIT only.
-- **FR7 — Pin rule-set selection (PCFDLRM).** Assert which rule set
-  `CcProsecutionValidationRuleProvider` selects for a given `initiationCode`. Today every migrated
-  case lands in the generic default set because stagingDLRM forces `"O"`; once the enum is dropped,
-  real codes will route into the existing `SUMMONS`/`REQUISITION`/`SJP` sets, and that change must
-  be observable rather than incidental.
+- **FR5b — moved to [DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening) FR8.**
+  The partial-officer-block rejection is enforced against Progression's payload schema, so it is
+  PCFDLRM's to pin.
+- **FR6 — moved to DD-43099 FR5.** The three XHIBIT-only behaviours
+  (`ExhibitFiileTypeValidationRule`, the aggregate's hearing/defendant-matching check,
+  `ProsecutionCaseFileHelper.applyRuleToDefendantFields()`) all live in PCFDLRM.
+- **FR7 — moved to DD-43099 FR6.** Rule-set selection by `initiationCode` is
+  `CcProsecutionValidationRuleProvider`, in PCFDLRM. Note the *cause* is here: once this story's
+  FR5 pin on the `initiationCode` enum is relaxed by DD-43081, real codes reach PCFDLRM for the
+  first time.
 - **FR8 — Cover the outcome path (stagingDLRM).** The EventGrid outcome is the uploader's only
   feedback, so success **and** failure outcome payloads are asserted whole. If the
   `MigratedCaseValidationRules` extension point and `MigratedCaseSubmissionRejected` wiring do not
@@ -133,20 +119,19 @@ LIBRA scenarios can later be added as scenario data rather than as new test clas
   not constraint enforcement. It never descends into `defendants`, `hearings` or `offences`.
 - **FR10 — Integration tests cover XHIBIT exclusively, at representative depth.** The IT layer
   proves the wiring and boundary payloads; it does **not** replicate the unit matrix.
-  - Every IT journey runs with `migrationSourceSystemName = XHIBIT`. **Both repos currently use
-    LIBRA in their ITs.** In stagingDLRM three fixtures do —
-    `stagingdlrm.receive-migrated-case-submission.json` (the **default/base** fixture),
+  - Every IT journey runs with `migrationSourceSystemName = XHIBIT`. Three fixtures currently do
+    not — `stagingdlrm.receive-migrated-case-submission.json` (the **default/base** fixture),
     `-with-multiple-hearing.json`, `-without-materials.json` — so the base journey runs as LIBRA
     today. Each is re-pointed at XHIBIT or gains an XHIBIT equivalent; convert-vs-duplicate is a
     design decision, but LIBRA-only coverage of a journey is not an acceptable XHIBIT baseline.
-  - Journeys kept at IT level — stagingDLRM: successful submission through to the pcfdlrm call;
-    the terminal 4xx rejection with its outcome file; the processing-output/outcome-publication
-    path. PCFDLRM: case file received and processed through to the public event; material
-    addition. Field-level variants and the FR6 behaviours stay at unit level.
+  - Journeys kept at IT level: successful submission through to the pcfdlrm call; the terminal 4xx
+    rejection with its outcome file; the processing-output/outcome-publication path. Field-level
+    variants stay at unit level.
   - Boundary payloads are still asserted **whole** per FR2 — a thinner assertion would defeat the
     point of the layer.
 - **NFR1 — No production code changes.** Any production defect found is raised as a separate
-  ticket, not fixed here.
+  ticket, not fixed here. A new **test-scoped** module is permitted (see ADR-001 §2) since it
+  changes no `src/main` file and no deployable artefact.
 - **NFR2 — Runtime stays acceptable, per layer.** Unit suites stay in the normal `mvn test` run;
   whole-payload comparison must not push them into a separate profile. ITs stay in their existing
   profile and must not become materially slower — the constraint that keeps FR10 representative.
@@ -160,29 +145,25 @@ LIBRA scenarios can later be added as scenario data rather than as new test clas
   method body.
 - **AC3** Given each field in FR5, when the suites run, then both the accepted and the rejected
   case are covered for XHIBIT.
-- **AC4** Given each behaviour in FR6, when the suites run, then both the XHIBIT and the
-  non-XHIBIT path are asserted explicitly, not by omission.
-- **AC5** Given an `initiationCode` value per FR7, when a migrated case is processed, then the
-  test asserts which rule set was selected.
+- **AC4** — moved to DD-43099 AC4 (with FR6).
+- **AC5** — moved to DD-43099 AC5 (with FR7).
 - **AC6** Given a deliberate experimental change that drops a field from an outbound payload,
   when the suites run, then at least one test fails. Demonstrated once at review; the experiment
   is not committed.
 - **AC7** Given the IT suites, when they run, then no journey resolves `migrationSourceSystemName`
   to `LIBRA`, and the fixtures named in FR10 no longer provide LIBRA-only coverage.
-- **AC8** Given `mvn clean install` in each repo, when it completes, then all unit suites pass, the
-  ITs pass in their profile without a material runtime increase, and no production source file has
-  changed.
+- **AC8** Given `mvn clean install`, when it completes, then all unit suites pass, the ITs pass in
+  their profile without a material runtime increase, and no production source file has changed.
 
 ## Out of scope
 
 None of the following is part of this story:
 
 - `cpp-apitests`, and any LIBRA scenario at either test layer.
-- The schema relaxation itself.
+- The schema relaxation itself (DD-43081).
+- Anything in `cpp-context-prosecution-casefile-dlrm` — that is
+  [DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening).
 - Creating the `MigratedCaseValidationRules` strategy or wiring `MigratedCaseSubmissionRejected`.
-- Adding a source-system axis to PCFDLRM's rule provider.
-- Wiring the orphaned `pcf-policeOfficerInCase.json` or the abandoned
-  `getDlrmDefendantValidationRules()` stub.
 - `tools/reconciliation/`.
 - Turning the ITs into a scenario matrix.
 
@@ -195,26 +176,24 @@ None of the following is part of this story:
 - Defendant UUIDs are minted in the command-handler then **discarded and regenerated** in the
   event-processor (analysis §4). Exclusion lists must handle that without excluding so much that
   the assertion stops meaning anything.
-- FR6 asserts absences ("no-ops for non-XHIBIT"), which is easy to write vacuously. Worth
-  explicit review attention.
-- **The LIBRA fixtures in both IT suites are a finding, not just a chore.** The stagingDLRM
-  default IT journey has never run as XHIBIT. If re-pointing it changes the result, that is a real
-  behavioural difference between the two source systems — surfaced before the relaxation rather
-  than after — and should be raised immediately.
+- **The LIBRA fixtures in this IT suite are a finding, not just a chore.** The default IT journey
+  has never run as XHIBIT. If re-pointing it changes the result, that is a real behavioural
+  difference between the two source systems — surfaced before the relaxation rather than after —
+  and should be raised immediately, on the epic rather than on this story alone.
 
 ## Notes for the design stage
 
-1. **Agree the scenario-DSL convention once, here.** Two developers in parallel repos will
-   otherwise invent two dialects. Capture it as an ADR under `docs/pipeline/adrs/`: how a scenario
-   is named, where fixtures live, how exclusions are declared.
-2. **"Whole payload" needs a definition the team agrees on.** Suggested: compare the entire JSON
-   of the payload under test, with every excluded path listed individually and a comment saying
-   why. No wildcard or prefix exclusions.
+1. **The scenario-DSL convention is settled** — [ADR-001](../adrs/001-dlrm-scenario-test-dsl.md),
+   authored at stage 2 of this story and shared with DD-43099. It fixes how a scenario is named,
+   where fixtures live, and how exclusions are declared. Do not re-derive it; DD-43099 links to it
+   rather than holding a copy.
+2. **"Whole payload" is defined in ADR-001 §1**: compare the entire JSON of the payload under
+   test, with every excluded path listed individually and a comment saying why. No wildcard or
+   prefix exclusions, and an exclusion that never matches fails the test.
 3. **Resist scope creep at the IT layer.** FR10 caps the ITs deliberately. Once they are open, the
    temptation is to port unit scenarios into them — little gain, Docker runtime cost on every
    build.
 4. **AC6 (the deliberate-break check) is the only real proof** that FR2 was achieved. Keep it as
    an explicit review step rather than folding it into a task.
-5. **The per-repo split is the natural task boundary**, and the two halves are independent — no
-   shared code, different repos — so they can run in parallel once the DSL convention in note 1 is
-   agreed.
+5. **DD-43099 runs in parallel.** No shared code and no ordering constraint, so the only sync point
+   is ADR-001 being approved before either reaches stage 5.

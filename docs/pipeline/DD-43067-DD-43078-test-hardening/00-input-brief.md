@@ -7,7 +7,9 @@
 | | |
 |---|---|
 | Epic | [DD-43067](https://tools.hmcts.net/jira/browse/DD-43067) — LIBRA enabler |
-| Story | [DD-43078](https://tools.hmcts.net/jira/browse/DD-43078) — test hardening |
+| Story | [DD-43078](https://tools.hmcts.net/jira/browse/DD-43078) — stagingDLRM test hardening |
+| Repo | `cpp-context-stagingdlrm` |
+| Sibling story | [DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening) — the same hardening in `cpp-context-prosecution-casefile-dlrm` |
 
 ## The epic this story belongs to
 
@@ -21,15 +23,27 @@ strategies inside the shared path, not duplicated schemas, endpoints, or command
 rejected separate-schema alternative and the reasoning are in
 [`libra-ingestion-analysis.md`](../../analysis/libra-ingestion/libra-ingestion-analysis.md) §7.
 
-**Repos in scope for this story:** `cpp-context-stagingdlrm`,
-`cpp-context-prosecution-casefile-dlrm`. Progression and `cpp.platform.core.domain` are not
-expected to change (analysis §3.5).
+**Repo in scope for this story:** `cpp-context-stagingdlrm`. Progression and
+`cpp.platform.core.domain` are not expected to change (analysis §3.5).
+
+## Why the PCFDLRM half is a separate story
+
+The two halves of the hardening are **fully independent**: no shared code, no shared fixtures, no
+ordering constraint, different repos, separate CI runs. Either can merge first and either can slip
+a sprint without stranding the other. Under the team workflow's slice test that makes them two
+stories, not one story spanning two repos — so DD-43078 (this story) keeps the stagingDLRM work and
+[DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening)
+carries PCFDLRM.
+
+**One thing is genuinely shared**: the scenario-DSL and whole-payload assertion convention, so that
+two developers working in parallel do not invent two dialects. It is recorded once, as
+[ADR-001](../adrs/001-dlrm-scenario-test-dsl.md) in this repo, and linked from DD-43099 — never
+copied. It must be approved before either story starts stage 5.
 
 ## This story's request
 
-Harden the existing tests in **stagingDLRM** (Function App, and the context: handler, aggregate,
-event-processor, rules) and the **PCFDLRM context** (handler, aggregate, event-processor, rules)
-so that:
+Harden the existing tests in **stagingDLRM** — the Function App, and the context: handler,
+aggregate, event-processor, rules — so that:
 
 1. Tests are written with **XHIBIT** as the source system, and **assertions cover whole
    payloads**, because the schema is being relaxed.
@@ -45,10 +59,11 @@ so that:
 
 | Question | Decision |
 |---|---|
-| Repo representation | This Story spans **both repos**; the per-repo split becomes tasks at the design / story-writer stage. |
+| Repo representation | The PCFDLRM work is its **own story** under the epic ([DD-43099](https://github.com/hmcts/cpp-context-prosecution-casefile-dlrm/tree/main/docs/pipeline/DD-43067-DD-43099-pcfdlrm-test-hardening)), not a task on this one — the two halves are independently deliverable. |
 | Test scope | Unit/component **and** in-repo integration tests, at different depths (below). `cpp-apitests` out of scope. |
 | Artefact layout | One pipeline directory per story, named `<epicKey>-<storyKey>-<slug>`, each self-contained. |
 | Story independence | Stories under this epic are **independent** — this one carries no cross-story dependency and can be picked up on its own. |
+| Shared convention | [ADR-001](../adrs/001-dlrm-scenario-test-dsl.md) lives in this repo and is linked from DD-43099, not copied; approved before either story starts stage 5. |
 
 ## Depth model — the two test layers are not held to the same bar
 
@@ -88,16 +103,16 @@ it can start immediately.
 
 ## What the current IT layer actually looks like
 
-Checked, not assumed — **both repos already use LIBRA in their ITs**:
+Checked, not assumed. Three IT classes — `ReceiveCaseFileSubmissionIT`,
+`ReceiveErrorCaseSubmissionIT`, `CaseSubmissionProcessedIT` — with 11 XHIBIT fixtures and
+**3 LIBRA fixtures**.
 
-| Repo | IT classes | XHIBIT / LIBRA usage |
-|---|---|---|
-| `cpp-context-stagingdlrm` | `ReceiveCaseFileSubmissionIT`, `ReceiveErrorCaseSubmissionIT`, `CaseSubmissionProcessedIT` | 11 XHIBIT fixtures, **3 LIBRA fixtures** |
-| `cpp-context-prosecution-casefile-dlrm` | `ReceiveMigratedCaseFileIT`, `AddMaterialIT` | both source systems referenced |
+The three LIBRA fixtures are `stagingdlrm.receive-migrated-case-submission.json` (the
+**default/base** fixture), `-with-multiple-hearing.json` and `-without-materials.json` — so the
+base IT journey runs as LIBRA today and has never run as XHIBIT.
 
-In stagingDLRM the three LIBRA fixtures are `stagingdlrm.receive-migrated-case-submission.json`
-(the **default/base** fixture), `-with-multiple-hearing.json` and `-without-materials.json` — so
-the base IT journey runs as LIBRA today and has never run as XHIBIT.
+For contrast, PCFDLRM's base IT journey is already XHIBIT and only three of its 24 command fixtures
+carry LIBRA, so DD-43099's equivalent work is smaller and carries no comparable canary.
 
 ## Terminology note
 
