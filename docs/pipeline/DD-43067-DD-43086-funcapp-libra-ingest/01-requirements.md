@@ -6,7 +6,7 @@
 
 ## Story
 
-**[DD-43082](https://tools.hmcts.net/jira/browse/DD-43082) — Accept and route LIBRA blobs through the Azure Function App**
+**[DD-43086](https://tools.hmcts.net/jira/browse/DD-43086) — Accept and route LIBRA blobs through the Azure Function App**
 
 | | |
 |---|---|

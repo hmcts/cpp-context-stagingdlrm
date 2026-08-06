@@ -146,7 +146,7 @@ GATE_OUT_OF_SCOPE = "not-validated-at-gate"  # below the depth this gate validat
 # reading. `full` assumes the generated LIBRA schema is used at its own depth — 113 leaves against
 # the XHIBIT gate's 8 — which buys earlier rejection at the cost of turning every blank or `TBC`
 # Format cell in the workbook into a false rejection at the cheapest, least diagnosable point in
-# the chain. That trade-off is a story decision (DD-43082), so it is a flag, not a constant.
+# the chain. That trade-off is a story decision (DD-43086), so it is a flag, not a constant.
 GATE_DEPTHS = {
     "case-details": ("$.migratedCase.caseDetails",),
     "full": ("$.migratedCase",),
