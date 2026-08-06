@@ -48,6 +48,14 @@ This service implements the **Staging DLRM** context — it ingests migrated cri
 
 For a full source-cited trace of every stage (payload assembly, retry/dead-letter rules, outcome file writers) see `docs/architecture/dlrm-flow-reference.md`. `docs/architecture/material-file-flow.md` continues the trace of material (document) files past pcfdlrm into Material/Alfresco/Progression.
 
+`docs/architecture/` holds only settled reference material for the service as it is today. Pre-pipeline investigation — feasibility studies, schema deltas, sizing drafts — lives in `docs/analysis/<topic>/`; this is the "supporting analysis" that story `00-input-brief.md` files link to. Each topic folder is **self-contained**: the write-ups, the source data they derive from, and the generated artefacts all sit together. `docs/analysis/libra-ingestion/` is the worked example — `libra-ingestion-analysis.md` and `libra-schema-impact.md`, the source `.xlsx` workbook, the generated `schema/` tree, and `libra-schema-impact.csv`.
+
+`tools/schema-gen/` generates those LIBRA artefacts (Python 3 stdlib only, no `openpyxl`). Three scripts: `flatten-canonical-schema.py` inlines a multi-file schema set into one diffable document — run once for the canonical `stagingdlrm-domain-value-schema` and once for the func-app's own copies under `stagingdlrm-azure-functions/src/main/resources`; `generate-dlrm-schema.py` emits the LIBRA schema from the workbook; `build-schema-impact.py` produces `libra-schema-impact.csv`, one row per payload field with its status in each schema (func-app / canonical / pcfdlrm / Progression) and the change each needs.
+
+**Only LIBRA is generated from the workbook.** XHIBIT is already in production, so its contract is read from the two live schema sets rather than re-derived; the func-app's resources are the XHIBIT gate and are not modified by this tooling.
+
+Every script takes its inputs as parameters (`--workbook`, `--source`, `--root`, `--canonical`, `--funcapp`, `--pcfdlrm`, …) with the committed locations as defaults, and **writes to the current directory unless given `--out-dir`/`--out`** — so an ad-hoc run never touches the repo. To refresh what is committed, run `./tools/schema-gen/regenerate.sh`, which runs all four steps in dependency order against `docs/analysis/libra-ingestion/`. Regeneration is deterministic: a clean run reproduces the committed artefacts byte-for-byte. The curated pcfdlrm/core claims in `build-schema-impact.py` are re-verified against the sibling repo checkouts on every run and a stale claim fails the run, so the CSV cannot quietly rot.
+
 ### End-to-End Flow
 
 ```
@@ -172,7 +180,16 @@ local overrides needed for that part of the codebase.
   should scope tests to Python's stdlib `unittest` (no new dependency); `ci-orchestrator`'s
   Maven-triggered CI does not cover this directory — verification is a manual run against
   a real batch in a dev/sandbox environment.
-- Pipeline artefacts go to `docs/pipeline/<JIRA-TICKET>-<slug>/` (created on first use, no
-  pre-scaffolding required): `00-input-brief.md` → `01-requirements.md` → `02-design.md` →
-  `03-stories.md`, plus a shared `docs/pipeline/adrs/` for any architecturally-significant
-  decision.
+- Pipeline artefacts go to one directory **per story**, named
+  `docs/pipeline/<EPIC-KEY>-<STORY-KEY>-<slug>/` (created on first use, no pre-scaffolding
+  required): `00-input-brief.md` → `01-requirements.md` → `02-design.md` → `03-stories.md`,
+  plus a shared `docs/pipeline/adrs/` for any architecturally-significant decision. Both Jira
+  keys sit in the directory name, so an epic's stories sort together and either key is
+  greppable without opening a file — e.g. `DD-43067-DD-43078-test-hardening/`. A ticket with no
+  parent epic keeps the single-key form (`DD-43014-reconciliation-report-enhancements/`), and
+  existing directories are not renamed retroactively.
+- **Each story directory is self-contained.** An SDLC stage run against one story must not need
+  another story's files — epic-level framing (the epic's goal, cross-cutting design decisions,
+  links to supporting analysis) is repeated in that story's `00-input-brief.md`. Decisions that
+  several stories share go in `docs/pipeline/adrs/` once and are linked, not restated. There is
+  no epic-level artefact directory.
