@@ -200,7 +200,7 @@ pre-validation strength.
 The matrix does not presume an answer. `funcapp_libra_action` defaults to the `case-details` depth
 the XHIBIT gate uses today, which is the conservative reading; pass
 `--funcapp-libra-depth full` to `build-schema-impact.py` for the other view. The decision belongs to
-the Function App story (DD-43082).
+the Function App story (DD-43086).
 
 ### stagingDLRM canonical (`stagingdlrm-domain-value-schema`)
 

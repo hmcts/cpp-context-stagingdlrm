@@ -7,7 +7,7 @@
 | | |
 |---|---|
 | Epic | [DD-43067](https://tools.hmcts.net/jira/browse/DD-43067) — LIBRA enabler |
-| Story | [DD-43082](https://tools.hmcts.net/jira/browse/DD-43082) — Function App LIBRA ingest |
+| Story | [DD-43086](https://tools.hmcts.net/jira/browse/DD-43086) — Function App LIBRA ingest |
 
 ## The epic this story belongs to
 
