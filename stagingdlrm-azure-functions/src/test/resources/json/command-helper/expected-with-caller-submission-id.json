@@ -1,0 +1,40 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "initiationCode": "H"
+    },
+    "hearings": [
+      { "hearingType": "FHG" }
+    ],
+    "defendants": [
+      { "offences": [ { "offenceCode": "CA03013" } ] }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "{{SOURCE_SYSTEM}}-1234567890"
+    }
+  },
+  "materials": [
+    {
+      "id": "GENERATED-AT-RUNTIME",
+      "fileType": "1",
+      "documentType": 5,
+      "azureLocation": "{{SOURCE_SYSTEM}}/20082025/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/11111111-2222-3333-4444-555555555555/test.pdf",
+      "fileName": "test.pdf"
+    },
+    {
+      "id": "GENERATED-AT-RUNTIME",
+      "fileType": "2",
+      "documentType": 1,
+      "azureLocation": "{{SOURCE_SYSTEM}}/20082025/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/11111111-2222-3333-4444-555555555555/test1.pdf",
+      "fileName": "test1.pdf"
+    }
+  ],
+  "metadata": {
+    "id": "GENERATED-AT-RUNTIME",
+    "numberOfMaterials": 2
+  },
+  "submissionId": "11111111-2222-3333-4444-555555555555",
+  "azureLocation": "{{SOURCE_SYSTEM}}/20082025/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/11111111-2222-3333-4444-555555555555"
+}

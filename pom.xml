@@ -53,6 +53,7 @@
         <module>stagingdlrm-datatypes-common</module>
         <module>stagingdlrm-event-sources</module>
         <module>stagingdlrm-healthchecks</module>
+        <module>stagingdlrm-test-support</module>
         <module>stagingdlrm-azure-functions</module>
         <module>stagingdlrm-testharness</module>
     </modules>

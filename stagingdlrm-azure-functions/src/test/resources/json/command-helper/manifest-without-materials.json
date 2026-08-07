@@ -1,0 +1,6 @@
+{
+  "migrationSourceSystem": {
+    "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+    "migrationSourceSystemCaseIdentifier": "{{SOURCE_SYSTEM}}-1234567890"
+  }
+}

@@ -70,8 +70,13 @@ reappear as a source-system rule, or it is a silent XHIBIT regression.
   optional: `hearings[].dateOfHearing`, `hearings[].timeOfHearing`,
   `personalInformation.forename`. Plus LIBRA's `initiationCode` value set, once agreed (FR15).
 - **FR7 — Source-system rule strategy.** A `MigratedCaseValidationRules` implementation per
-  `MigrationSourceSystemName`, resolved from a map and invoked before the aggregate call — not
-  branching inside the handler or aggregate.
+  `MigrationSourceSystemName`, selected on the source system the submission already carries and
+  evaluated **within the aggregate**, as part of the command it guards. No `if`/`else` on source
+  system anywhere — selection is the strategy's job, not a branch. Enforcement belongs to the
+  aggregate because FR8 applies the rejection event from there, and an aggregate that emits a
+  rejection decided somewhere else is not enforcing its own invariant. The command handler stays
+  a pass-through and gains no source-system awareness. See design-stage note 8 for the reference
+  implementation.
 - **FR8 — Rejection flow to the uploader.** Extend the dormant `MigratedCaseSubmissionRejected`
   event (it currently lacks `submissionId` and any reason/errors field), apply it from the
   aggregate on rule failure, and handle it in the event processor so the outcome reaches Blob
@@ -293,3 +298,15 @@ case model**, so adding them achieves nothing.
 7. **Sequencing against the Function App story.** Nothing in this story can be proven end to end
    until a LIBRA blob can reach stagingDLRM, which is the Function App story's job. Unit and
    component coverage does not depend on it; AC1 does.
+8. **FR7 has a reference implementation in `cpp-context-results`.**
+   `HearingFinancialResultsAggregate.updateFinancialResults` calls a static factory
+   (`ResultNotificationRuleEngine.resultNotificationRuleEngine()`) inline in the command method;
+   the engine self-registers its rules and each rule selects itself. Three properties are the
+   reason to follow it. It needs **no injected collaborator** — an event-sourced aggregate is
+   reconstructed by `AggregateService` and replayed, so it cannot hold one. It leaves the
+   **command signature unchanged**, since the source system is already inside the submission —
+   which is what stops DD-43078's aggregate scenarios from being rewritten when this lands. And it
+   keeps the rules in the domain module, where FR8's rejection event is raised. One deliberate
+   divergence to confirm at design: results dispatches by per-rule `appliesTo(input)` predicate,
+   whereas source-system selection here is strictly one-of-N, so a map keyed on
+   `MigrationSourceSystemName` is the simpler fit.

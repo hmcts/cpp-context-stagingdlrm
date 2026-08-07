@@ -1,6 +1,7 @@
 package uk.gov.moj.cpp.stagingdlrm.azure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -14,23 +15,48 @@ import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.stream.Stream;
+
 import java.util.logging.Logger;
 
 import com.azure.core.http.rest.Response;
 import com.azure.storage.queue.models.SendMessageResult;
 import com.microsoft.azure.functions.ExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * DD-43078 FR3/FR9 — the Function App's blob-path gate as scenario rows of
+ * ({@code dlrm_folder_name}, {@code dlrm_batch_name}, blob path, accepted?), so a new source system
+ * or folder/batch configuration is one {@code arguments(...)} and never a new test method
+ * (DD-43078 AC2, T2 AC8).
+ *
+ * <p>Verified against {@code EventGridTriggerJava.run}: {@code dlrm_batch_name} is a comma-separated
+ * list, trimmed, matched case-insensitively, with a leading {@code *} meaning "match anything".
+ * {@code dlrm_folder_name} is none of those — a single {@code trim().equalsIgnoreCase()} — so a
+ * comma-separated folder list does not work today. The row saying so is what flips when DD-43086
+ * adds support.
+ */
 @ExtendWith(MockitoExtension.class)
 class EventGridTriggerJavaTest {
+
+    private static final String CONTAINER = "dlrmcontainer";
+    private static final String CASE_ID = "a1b2c3d4-0000-0000-0000-000000000001";
+    private static final String SUBMISSION_ID = "a1b2c3d4-0000-0000-0000-000000000002";
+
+    /** Leading whitespace is deliberate: it pins that the env var is trimmed. */
+    private static final String FOLDER_ENV = " XHIBIT";
+    private static final String BATCH_ENV = " batch0001,batch0002";
 
     @Mock
     private static StorageCloudClient storageCloudClient;
@@ -55,186 +81,98 @@ class EventGridTriggerJavaTest {
     @BeforeEach
     public void setup() {
         setField(eventGridTriggerJava, "storageCloudClient", storageCloudClient);
-        setField(eventGridTriggerJava, "folderName", " XHIBIT");
-        setField(eventGridTriggerJava, "batchName", " batch0001,batch0002");
+        setField(eventGridTriggerJava, "folderName", FOLDER_ENV);
+        setField(eventGridTriggerJava, "batchName", BATCH_ENV);
     }
 
-    @Test
-    void shouldTestRunSuccessfully() {
+    private static String blobUrl(final String path) {
+        return "https://stedlrmsa.blob.core.windows.net/" + CONTAINER + "/" + path;
+    }
 
-        final String caseUrn = "T00123456789";
+    private static String submissionPath(final String folder, final String batch) {
+        return "%s/%s/%s/%s/test1.json".formatted(folder, batch, CASE_ID, SUBMISSION_ID);
+    }
 
-        final String subscriptionId = UUID.randomUUID().toString();
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/XHIBIT/Batch0001/" + caseUrn + "/" +subscriptionId + "/test1.json";
-
+    private static EventGridSchema event(final String url) {
         final Map<String, Object> data = new HashMap<>();
-
         data.put("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
-        when(context.getLogger()).thenReturn(logger);
-
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
-        when(storageCloudClient.sendMessageToTheQueue(eq(subscriptionId), stringArgumentCaptor.capture())).thenReturn(response);
-
-        when(response.getValue()).thenReturn(sendMessageResult);
-
-        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
-
-        assertEquals("XHIBIT/Batch0001/"+caseUrn+"/"+subscriptionId, stringArgumentCaptor.getValue());
-
+        return new EventGridSchema(new Date(), data);
     }
 
-    @Test
-    void shouldExtractPathSuccessfully() {
-
-        final String migrationSourceSystemName = "XHIBIT";
-
-        final String batchIdentifier = "Batch0001";
-
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/%s/%s/%s/%s/test1.json"
-                .formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final String expected = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final Map<String, Object> data = Map.of("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
-        when(context.getLogger()).thenReturn(logger);
-
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
-        when(storageCloudClient.sendMessageToTheQueue(eq(submissionId), stringArgumentCaptor.capture())).thenReturn(response);
-
-        when(response.getValue()).thenReturn(sendMessageResult);
-
-        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
-
-        assertEquals(expected, stringArgumentCaptor.getValue());
-
+    static Stream<Arguments> pathValidationScenarios() {
+        return Stream.of(
+                arguments("FR9 an XHIBIT submission in the first configured batch is enqueued (XHIBIT)",
+                        FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
+                arguments("FR9 a comma-separated batch list matches its second member (XHIBIT)",
+                        FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT", "Batch0002"), true),
+                arguments("FR9 a batch outside the configured list is dropped (XHIBIT)",
+                        FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT", "Batch0003"), false),
+                arguments("FR9 batch matching is case-insensitive (XHIBIT)",
+                        FOLDER_ENV, "BATCH0001", submissionPath("XHIBIT", "batch0001"), true),
+                arguments("FR9 a leading wildcard batch matches anything (XHIBIT)",
+                        FOLDER_ENV, "*", submissionPath("XHIBIT", "Batch0009"), true),
+                arguments("FR9 a wildcard first entry short-circuits the rest of the list (XHIBIT)",
+                        FOLDER_ENV, "*,batch0001", submissionPath("XHIBIT", "anything-at-all"), true),
+                arguments("FR9 folder matching is case-insensitive and trimmed (XHIBIT)",
+                        "  xhibit  ", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
+                arguments("FR9 a folder other than the configured one is dropped",
+                        FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT1", "Batch0001"), false),
+                // Flips when DD-43086 adds source-system-keyed folders.
+                arguments("FR9 a comma-separated folder list is NOT supported yet — pins today's gap",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false),
+                arguments("FR9 a path with fewer than four tokens is dropped",
+                        FOLDER_ENV, BATCH_ENV, "test1.json", false));
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("pathValidationScenarios")
+    void shouldValidateBlobPath(final String scenario,
+                                final String folderNameEnv,
+                                final String batchNameEnv,
+                                final String blobPath,
+                                final boolean enqueued) {
+
+        setField(eventGridTriggerJava, "folderName", folderNameEnv);
+        setField(eventGridTriggerJava, "batchName", batchNameEnv);
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.getDlrmContainer()).thenReturn(CONTAINER);
+
+        if (enqueued) {
+            when(storageCloudClient.sendMessageToTheQueue(eq(SUBMISSION_ID), stringArgumentCaptor.capture()))
+                    .thenReturn(response);
+            when(response.getValue()).thenReturn(sendMessageResult);
+        }
+
+        eventGridTriggerJava.run(event(blobUrl(blobPath)), context, "test".getBytes());
+
+        if (enqueued) {
+            final String[] tokens = blobPath.split("/");
+            assertEquals("%s/%s/%s/%s".formatted(tokens[0], tokens[1], tokens[2], tokens[3]),
+                    stringArgumentCaptor.getValue(),
+                    () -> scenario + " — the queue message is the first four path tokens");
+        } else {
+            verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
+        }
+    }
+
+    /** Not a row: {@code run} returns before the storage client is touched, so the stubbing differs. */
     @Test
+    @DisplayName("FR9 null content is dropped before the blob path is examined")
     void shouldReturnWhenContentIsNull() {
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), new HashMap<>());
-
         when(context.getLogger()).thenReturn(logger);
 
-        eventGridTriggerJava.run(eventGridSchema, context, null);
+        eventGridTriggerJava.run(event(blobUrl(submissionPath("XHIBIT", "Batch0001"))), context, null);
 
         verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 
     @Test
-    void shouldReturnWhenTokenIsEmpty() {
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/test1.json";
-
-        final Map<String, Object> data = Map.of("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
+    @DisplayName("FR9 empty content is dropped before the blob path is examined")
+    void shouldReturnWhenContentIsEmpty() {
         when(context.getLogger()).thenReturn(logger);
 
-        eventGridTriggerJava.run(eventGridSchema, context, new byte[]{});
-
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
-    }
-
-    @Test
-    void shouldReturnWhenMigrationSourceSystemNameIsDifferent() {
-
-        final String migrationSourceSystemName = "XHIBIT1";
-
-        final String batchIdentifier = "Batch0001";
-
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/%s/%s/%s/%s/test1.json"
-                .formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final Map<String, Object> data = Map.of("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
-        when(context.getLogger()).thenReturn(logger);
-
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
-        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
-
-        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
-    }
-
-    @Test
-    void shouldExtractPathSuccessfullyWhenBatchNameIsSetAsWildcard() {
-
-        setField(eventGridTriggerJava, "batchName", "*");
-
-        final String migrationSourceSystemName = "XHIBIT";
-
-        final String batchIdentifier = "Batch0003";
-
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/%s/%s/%s/%s/test1.json"
-                .formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final Map<String, Object> data = Map.of("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
-        final String message = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        when(context.getLogger()).thenReturn(logger);
-
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
-        when(storageCloudClient.sendMessageToTheQueue(submissionId, message)).thenReturn(response);
-
-        when(response.getValue()).thenReturn(sendMessageResult);
-
-        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
-
-        verify(storageCloudClient).sendMessageToTheQueue(submissionId, message);
-    }
-
-    @Test
-    void shouldReturnWhenBatchIdentifierIsDifferent() {
-
-        final String migrationSourceSystemName = "XHIBIT";
-
-        final String batchIdentifier = "Batch0003";
-
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final String url = "https://stedlrmsa.blob.core.windows.net/dlrmcontainer/%s/%s/%s/%s/test1.json"
-                .formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final Map<String, Object> data = Map.of("url", url);
-
-        final EventGridSchema eventGridSchema = new EventGridSchema(new Date(), data);
-
-        when(context.getLogger()).thenReturn(logger);
-
-        when(storageCloudClient.getDlrmContainer()).thenReturn("dlrmcontainer");
-
-        eventGridTriggerJava.run(eventGridSchema, context, "test".getBytes());
+        eventGridTriggerJava.run(event(blobUrl(submissionPath("XHIBIT", "Batch0001"))), context, new byte[]{});
 
         verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }

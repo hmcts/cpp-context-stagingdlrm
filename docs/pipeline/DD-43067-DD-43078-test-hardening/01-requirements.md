@@ -113,10 +113,13 @@ LIBRA scenarios can later be added as scenario data rather than as new test clas
   validation and the local-schema validation path are covered for XHIBIT such that a later
   comma-separated folder list and source-system-keyed schema selection are scenario additions,
   not a rewrite.
-  Note the gate is a **presence check only** — its `caseDetails` declares 8 properties, all
-  `required`, and carries no patterns, lengths or enums at all, with `additionalProperties: true`.
-  So the pinnable behaviour there is *which fields must be present* and *that unknown fields pass*,
-  not constraint enforcement. It never descends into `defendants`, `hearings` or `offences`.
+  Note the gate checks **presence and declared JSON type, and nothing else** — its `caseDetails`
+  declares 8 properties, all `required`, each with a `type`, but no patterns, lengths or enums, and
+  `additionalProperties: true`. So the pinnable behaviour is *which fields must be present*, *that
+  their declared type is enforced* (`retrialIndicator` must be a boolean), and *that unknown fields
+  pass*. It never descends into `defendants`, `hearings` or `offences`.
+  *(Corrected during T2 — this originally read "presence check only", which understated the gate;
+  `JsonSchemaValidatorTest.shouldEnforceADeclaredType` is the pin.)*
 - **FR10 — Integration tests cover XHIBIT exclusively, at representative depth.** The IT layer
   proves the wiring and boundary payloads; it does **not** replicate the unit matrix.
   - Every IT journey runs with `migrationSourceSystemName = XHIBIT`. Three fixtures currently do

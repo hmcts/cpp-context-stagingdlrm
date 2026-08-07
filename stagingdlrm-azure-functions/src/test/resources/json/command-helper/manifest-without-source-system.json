@@ -1,0 +1,14 @@
+{
+  "files": [
+    {
+      "fileName": "test.pdf",
+      "fileType": "1",
+      "documentType": 5
+    },
+    {
+      "fileName": "test1.pdf",
+      "fileType": "2",
+      "documentType": 1
+    }
+  ]
+}

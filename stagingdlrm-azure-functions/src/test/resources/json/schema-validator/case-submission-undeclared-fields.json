@@ -1,0 +1,37 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "NOT-IN-THE-CANONICAL-ENUM",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "dateReceived": "not-even-a-date",
+      "retrialIndicator": false,
+      "receiptType": "Commital for sentence",
+      "receivingCourt": "B01LY00",
+      "informant": "a field the canonical schema does not declare",
+      "writtenChargePostingDate": "2024-01-15",
+      "prosecutorCosts": 42
+    },
+    "hearings": [
+      {
+        "thisIsNotAHearing": true,
+        "durationMinutes": "sixty minutes, as a string"
+      }
+    ],
+    "defendants": [
+      {
+        "offences": [
+          {
+            "offenceDateCode": 9999
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}"
+    }
+  }
+}

@@ -83,6 +83,13 @@
             <version>2.4.1</version>
             <scope>test</scope>
         </dependency>
+        <!-- DD-43078 T1 — FixtureLoader and WholePayloadMatcher; brings hamcrest with it. -->
+        <dependency>
+            <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
+            <artifactId>stagingdlrm-test-support</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-client</artifactId>

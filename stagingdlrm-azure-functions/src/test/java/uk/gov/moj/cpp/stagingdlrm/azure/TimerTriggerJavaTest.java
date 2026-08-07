@@ -1,9 +1,9 @@
 package uk.gov.moj.cpp.stagingdlrm.azure;
 
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -14,13 +14,19 @@ import static org.mockito.Mockito.when;
 import static uk.gov.justice.services.test.utils.common.reflection.ReflectionUtils.setField;
 import static uk.gov.moj.cpp.stagingdlrm.azure.TimerTriggerJava.ERROR_MIGRATED_CASE_SUBMISSION_PATH;
 import static uk.gov.moj.cpp.stagingdlrm.azure.TimerTriggerJava.MIGRATED_CASE_SUBMISSION_PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.emptyJson;
+import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
+import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
+import uk.gov.justice.services.messaging.JsonObjects;
 import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
 
+import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +79,17 @@ class TimerTriggerJavaTest {
     @Captor
     private ArgumentCaptor<String> stringArgumentCaptor;
 
+    /** DD-43078 T2 AC11 — what the trigger hands the assembler, asserted whole. */
+    @Captor
+    private ArgumentCaptor<JsonObject> caseJsonObjectCaptor;
+
+    @Captor
+    private ArgumentCaptor<JsonObject> manifestJsonObjectCaptor;
+
+    private static final String FIXTURES = "json/timer-trigger/";
+
+    private static final String CASE_REFERENCE = "CASEREF-0001";
+
     private final Logger logger = Logger.getLogger(TimerTriggerJava.class.getName());
 
     private static final String stagingDlrmUserId = UUID.randomUUID().toString();
@@ -92,31 +109,29 @@ class TimerTriggerJavaTest {
     @Test
     void shouldTestTimerTriggerSuccessfully() {
         final String timerInfo = "timerInfo";
-        final String queueMessage = "28DI10000175";
-        final JsonObject caseJsonObject = getCaseJsonObject(queueMessage);
-        final String caseJsonPayload = getCaseJsonPayload();
+        final String queueMessage = "CASEREF-0001";
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
 
-        final String manifestJsonPayload = getManifestJsonPayload();
-        final JsonObject manifestJsonObject = getManifestJsonObject();
+        final String manifestJsonPayload = emptyJson();
 
         final JsonObject migratedCaseSubmissionJsonObject = createObjectBuilder()
                 .add("metadata", createObjectBuilder().add("numberOfMaterials", 2))
                 .build();
 
-        final List<String> listBlobNames = List.of("28DI10000175/test.pdf", "28DI10000175/test1.pdf", "28DI10000175/case.json", "28DI10000175/manifest.json");
+        final List<String> listBlobNames = List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf", "CASEREF-0001/case.json", "CASEREF-0001/manifest.json");
         final Map<String, QueueMessage> messageMap = new HashMap<>();
         messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
 
         when(context.getLogger()).thenReturn(logger);
         when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
-        when(storageCloudClient.downloadBlobContents(anyString(), eq("28DI10000175/case.json"))).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(anyString(), eq("CASEREF-0001/case.json"))).thenReturn(caseJsonPayload);
         when(caseJsonSchemaValidator.validate(anyString(), eq(caseJsonPayload))).thenReturn(Set.of());
-        when(storageCloudClient.downloadBlobContents(anyString(), eq("28DI10000175/manifest.json"))).thenReturn(manifestJsonPayload);
+        when(storageCloudClient.downloadBlobContents(anyString(), eq("CASEREF-0001/manifest.json"))).thenReturn(manifestJsonPayload);
         when(manifestJsonSchemaValidator.validate(anyString(), eq(manifestJsonPayload))).thenReturn(Set.of());
         when(stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
-                eq(caseJsonObject),
-                eq(List.of("28DI10000175/test.pdf", "28DI10000175/test1.pdf")),
-                eq(manifestJsonObject),
+                caseJsonObjectCaptor.capture(),
+                eq(List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf")),
+                manifestJsonObjectCaptor.capture(),
                 stringArgumentCaptor.capture(),
                 eq(queueMessage)))
                 .thenReturn(migratedCaseSubmissionJsonObject);
@@ -130,7 +145,7 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
+        assertHandedToAssemblerWhole();
         verify(storageCloudClient).deleteQueueMessage(anyString());
     }
 
@@ -154,11 +169,9 @@ class TimerTriggerJavaTest {
         final String caseFile = path + "/case.json";
         final String manifestFile = path + "/manifest.json";
 
-        final JsonObject caseJsonObject = getCaseJsonObject("28DI10000175");
-        final String caseJsonPayload = getCaseJsonPayload();
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
 
-        final String manifestJsonPayload = getManifestJsonPayload();
-        final JsonObject manifestJsonObject = getManifestJsonObject();
+        final String manifestJsonPayload = emptyJson();
 
         final String timerInfo = "timerInfo";
 
@@ -176,9 +189,9 @@ class TimerTriggerJavaTest {
         when(storageCloudClient.downloadBlobContents(submissionId, manifestFile)).thenReturn(manifestJsonPayload);
         when(manifestJsonSchemaValidator.validate(submissionId, manifestJsonPayload)).thenReturn(Set.of());
         when(stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
-                eq(caseJsonObject),
+                caseJsonObjectCaptor.capture(),
                 eq(List.of(testFile, test1File)),
-                eq(manifestJsonObject),
+                manifestJsonObjectCaptor.capture(),
                 stringArgumentCaptor.capture(),
                 eq(queueMessage)))
                 .thenReturn(migratedCaseSubmissionJsonObject);
@@ -192,27 +205,24 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
-        assertEquals(stringArgumentCaptor.getValue(), submissionId);
+        assertHandedToAssemblerWhole();
+        assertEquals(submissionId, stringArgumentCaptor.getValue());
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
     }
 
     @Test
     void shouldDeleteMessageFromQueueWhenTimerTriggerReturnsClientErrorForMigratedCaseSubmission() {
         final String submissionId = UUID.randomUUID().toString();
-        final String queueMessage = "XHIBIT/2026-05-20/28DI10000175/"+submissionId;
+        final String queueMessage = "XHIBIT/2026-05-20/CASEREF-0001/"+submissionId;
         final JsonObject migratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).add("metadata", createObjectBuilder().add("numberOfMaterials", 2)).build();
         final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
 
-        final String caseJsonPayload = getCaseJsonPayload();
-        final JsonObject caseJsonObject = getCaseJsonObject(queueMessage);
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
         final JsonObject metaDataJsonObject = getMetaJsonObject();
 
         final String timerInfo = "timerInfo";
 
-        final String responseString = """
-                {"error":"Some Description"}
-                """;
+        final String responseString = fixture(FIXTURES + "error-response.json");
 
         final List<String> listBlobNames = List.of(queueMessage+"/test.pdf", queueMessage+"/test1.pdf", queueMessage+"/case.json", queueMessage+"/manifest.json");
         final Map<String, QueueMessage> messageMap = new HashMap<>();
@@ -238,7 +248,7 @@ class TimerTriggerJavaTest {
         when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
                 any(JsonObject.class),
                 eq(submissionId),
-                eq("28DI10000175"),
+                eq("CASEREF-0001"),
                 eq(queueMessage),
                 eq(responseString)))
                 .thenReturn(errorMigratedCaseSubmissionJsonObject);
@@ -253,7 +263,6 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
 
     }
@@ -272,21 +281,21 @@ class TimerTriggerJavaTest {
     }
 
     @Test
-    void shouldNotDeleteMessageFromQueueWhenTimerTriggerReturnsClientErrorForErrorMigratedCaseSubmission() {
+    void shouldDeleteMessageFromQueueWhenTimerTriggerReturnsClientErrorForErrorMigratedCaseSubmission() {
         final String submissionId = UUID.randomUUID().toString();
-        final String queueMessage = "XHIBIT/2026-05-20/28DI10000175/"+submissionId;
+        final String queueMessage = "XHIBIT/2026-05-20/CASEREF-0001/"+submissionId;
         final JsonObject migratedCaseSubmissionJsonObject = createObjectBuilder()
                 .add("submissionId", submissionId)
                 .add("metadata", createObjectBuilder().add("numberOfMaterials", 2))
                 .build();
         final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
 
-        final JsonObject caseJsonObject = getCaseJsonObject(queueMessage);
+        final JsonObject caseJsonObject = readJson(casePayload(queueMessage));
         final JsonObject metaDataJsonObject = getMetaJsonObject();
 
         final String timerInfo = "timerInfo";
 
-        final String responseString = "{}";
+        final String responseString = emptyJson();
 
         final List<String> listBlobNames = List.of(queueMessage+"/test.pdf", queueMessage+"/test1.pdf", queueMessage+"/case.json", queueMessage+"/manifest.json");
         final Map<String, QueueMessage> messageMap = new HashMap<>();
@@ -322,7 +331,6 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
 
     }
@@ -331,7 +339,7 @@ class TimerTriggerJavaTest {
     @Test
     void shouldReturnTimerTriggerWhenCaseOrManifestJsonNotAvailable() {
         final String timerInfo = "timerInfo";
-        final String queueMessage = "28DI10000175";
+        final String queueMessage = "CASEREF-0001";
         final List<String> listBlobNames = List.of("test.pdf", "test1.pdf", "case.json", "manifest.json");
         final Map<String, QueueMessage> messageMap = new HashMap<>();
         messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
@@ -348,10 +356,10 @@ class TimerTriggerJavaTest {
     @Test
     void shouldDeleteMessageFromQueueWhenTimerTriggerReturnsServerError() {
         final String submissionId = UUID.randomUUID().toString();
-        final String queueMessage = "XHIBIT/2026-05-20/28DI10000175/"+submissionId;
+        final String queueMessage = "XHIBIT/2026-05-20/CASEREF-0001/"+submissionId;
         final JsonObject migratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).add("metadata", createObjectBuilder().add("numberOfMaterials", 2)).build();
 
-        final JsonObject caseJsonObject = getCaseJsonObject(queueMessage);
+        final JsonObject caseJsonObject = readJson(casePayload(queueMessage));
         final JsonObject metaDataJsonObject = getMetaJsonObject();
 
         final String timerInfo = "timerInfo";
@@ -379,15 +387,14 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
     }
 
     private static Stream<Arguments> arguments() {
         return Stream.of(
-                Arguments.of(List.of("28DI10000175/test.pdf", "28DI10000175/test1.pdf", "28DI10000175/case.json")),
-                Arguments.of(List.of("28DI10000175/test.pdf", "28DI10000175/test1.pdf", "28DI10000175/manifest.json")),
-                Arguments.of(List.of("28DI10000175/test.pdf", "28DI10000175/test1.pdf"))
+                Arguments.of(List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf", "CASEREF-0001/case.json")),
+                Arguments.of(List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf", "CASEREF-0001/manifest.json")),
+                Arguments.of(List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf"))
         );
     }
 
@@ -398,7 +405,7 @@ class TimerTriggerJavaTest {
         objectBuilder.add("content", "Test Content");
 
         final String timerInfo = "timerInfo";
-        final String queueMessage = "28DI10000175";
+        final String queueMessage = "CASEREF-0001";
 
         final Map<String, QueueMessage> messageMap = new HashMap<>();
         messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
@@ -408,8 +415,9 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
         verify(storageCloudClient, never()).downloadBlobContents(anyString(), anyString());
+        verify(stagingDlrmCommandHelper, never()).generateMigratedCaseSubmissionPayload(
+                any(JsonObject.class), anyList(), any(JsonObject.class), anyString(), anyString());
     }
 
     @Test
@@ -430,7 +438,7 @@ class TimerTriggerJavaTest {
         final String caseFile = path + "/case.json";
         final String manifestFile = path + "/manifest.json";
 
-        final JsonObject caseJsonObject = getCaseJsonObject("DL838641927");
+        final JsonObject caseJsonObject = readJson(casePayload("CASEREF-0002"));
 
         final JsonObject metaData = getMetaJsonObject();
 
@@ -448,9 +456,9 @@ class TimerTriggerJavaTest {
         when(storageCloudClient.downloadBlobContents(submissionId, caseFile)).thenReturn(caseJsonObject.toString());
         when(storageCloudClient.downloadBlobContents(submissionId, manifestFile)).thenReturn(metaData.toString());
         when(stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
-                eq(caseJsonObject),
+                caseJsonObjectCaptor.capture(),
                 eq(List.of()),
-                eq(metaData),
+                manifestJsonObjectCaptor.capture(),
                 stringArgumentCaptor.capture(),
                 eq(queueMessage)))
                 .thenReturn(migratedCaseSubmissionJsonObject);
@@ -464,42 +472,44 @@ class TimerTriggerJavaTest {
 
         timerTrigger.run(timerInfo, context);
 
-        assertNotNull(messageMap);
-        assertEquals(stringArgumentCaptor.getValue(), submissionId);
+        assertHandedToAssemblerWhole("CASEREF-0002", getMetaJsonObject().toString());
+        assertEquals(submissionId, stringArgumentCaptor.getValue());
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
     }
 
-    private JsonObject getCaseJsonObject(String prosecutorCaseReference) {
-        return createObjectBuilder()
-                .add("migratedCase", createObjectBuilder()
-                        .add("caseDetails", createObjectBuilder()
-                                .add("prosecutorCaseReference", prosecutorCaseReference)
-                                .build())).build();
+    /**
+     * DD-43078 FR2 / T2 AC11 — asserts whole the two payloads handed to
+     * {@code generateMigratedCaseSubmissionPayload}, the hand-off from "read and validate the blobs"
+     * to "assemble the command body".
+     */
+    private void assertHandedToAssemblerWhole() {
+        assertHandedToAssemblerWhole(CASE_REFERENCE, emptyJson());
     }
 
-    private String getCaseJsonPayload() {
-        return """
-                {
-                    "migratedCase": {
-                        "caseDetails": {
-                            "prosecutorCaseReference": "%s"
-                        }
-                    }
-                }
-                """.formatted("28DI10000175");
+    /**
+     * Expected is the input fixture rebound to the same reference — which <i>is</i> the assertion,
+     * since this hand-off copies the parsed blob through untouched.
+     */
+    private void assertHandedToAssemblerWhole(final String caseReference, final String expectedManifest) {
+        assertThat("case payload handed to the assembler",
+                caseJsonObjectCaptor.getValue().toString(),
+                matchesWholePayload(casePayload(caseReference), List.of()));
+
+        assertThat("manifest handed to the assembler",
+                manifestJsonObjectCaptor.getValue().toString(),
+                matchesWholePayload(expectedManifest, List.of()));
+    }
+
+    private static JsonObject readJson(final String json) {
+        return JsonObjects.createReader(new ByteArrayInputStream(json.getBytes(UTF_8))).readObject();
+    }
+
+    private static String casePayload(final String prosecutorCaseReference) {
+        return fixture(FIXTURES + "case.json",
+                Map.of("CASE_REFERENCE", prosecutorCaseReference));
     }
 
     private JsonObject getMetaJsonObject() {
         return createObjectBuilder().add("content", "Test Content").build();
-    }
-
-    private JsonObject getManifestJsonObject() {
-        return createObjectBuilder().build();
-    }
-
-    private String getManifestJsonPayload() {
-        return """
-                {}
-                """;
     }
 }
