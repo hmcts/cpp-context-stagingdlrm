@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>stagingdlrm-parent</artifactId>
+        <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
+        <version>17.104.33-LIBRA1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>stagingdlrm-test-support</artifactId>
+    <packaging>jar</packaging>
+
+    <name>stagingdlrm Context - Test Support</name>
+    <description>
+        Fixture loading and whole-payload JSON comparison for the stagingdlrm test suites.
+        Consumed at test scope only (ADR-001 section 2) - this module is never deployed and no WAR
+        depends on it.
+    </description>
+
+    <dependencies>
+        <!-- compile scope so WholePayloadMatcher's own dependency travels with this module.
+             stagingdlrm-azure-functions only gets hamcrest transitively via a persistence test
+             artefact it has no other use for; see 03-stories.md finding F7. -->
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.skyscreamer</groupId>
+            <artifactId>jsonassert</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

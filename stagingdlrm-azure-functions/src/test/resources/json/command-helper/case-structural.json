@@ -1,0 +1,47 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "cps",
+      "caseId": "51cac7fb-387c-4d19-9c80-8963fa8cf222",
+      "initiationCode": "H",
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtRoom": "01",
+        "durationMinutes": 120,
+        "weekCommencingDate": "",
+        "listedDefendants": [
+          "a9860e1a-8695-4fd4-8046-c1c4fe6c7f80"
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "surname": "Smith",
+            "address": {
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          }
+        },
+        "offences": [
+          {
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      },
+      {
+        "offences": [ { "offenceCode": "DA03014" } ]
+      }
+    ]
+  }
+}

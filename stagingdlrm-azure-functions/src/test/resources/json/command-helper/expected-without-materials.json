@@ -1,0 +1,24 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "initiationCode": "H"
+    },
+    "hearings": [
+      { "hearingType": "FHG" }
+    ],
+    "defendants": [
+      { "offences": [ { "offenceCode": "CA03013" } ] }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "{{SOURCE_SYSTEM}}-1234567890"
+    }
+  },
+  "metadata": {
+    "id": "GENERATED-AT-RUNTIME",
+    "numberOfMaterials": 0
+  },
+  "submissionId": "11111111-2222-3333-4444-555555555555",
+  "azureLocation": "batch-0001"
+}

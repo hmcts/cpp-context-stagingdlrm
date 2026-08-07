@@ -1,0 +1,7 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "{{CASE_REFERENCE}}"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "dateReceived": "2024-01-15",
+      "retrialIndicator": false,
+      "receiptType": "Commital for sentence",
+      "receivingCourt": "B01LY00"
+    },
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}"
+    }
+  },
+  "submissionId": "a sibling of migratedCase at the root"
+}

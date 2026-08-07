@@ -1,0 +1,14 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "initiationCode": "H"
+    },
+    "hearings": [
+      { "hearingType": "FHG" }
+    ],
+    "defendants": [
+      { "offences": [ { "offenceCode": "CA03013" } ] }
+    ]
+  }
+}
