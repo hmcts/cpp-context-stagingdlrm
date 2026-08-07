@@ -299,9 +299,9 @@ Numbered in execution order.
 | T1 | `stagingdlrm-test-support` module — `FixtureLoader`, `WholePayloadMatcher` | ADR-001 approved |
 | T2 | Func-app: fixtures, path rows, presence-and-declared-type contract (FR9) | T1 |
 | T3 | Aggregate + command-handler: de-mock, scenario rows, whole-payload | T1 |
-| T4 | ITs: convert 3 LIBRA fixtures, whole boundary payloads (FR10) | T1 |
+| T4 | Convertor + event-processors: whole-payload at the component seam | T1 |
 | T5 | Schema-contract suite — the 11 FR5 pins | T1 |
-| T6 | Convertor + event-processors: whole-payload | T1 |
+| T6 | ITs: convert 3 LIBRA fixtures, whole boundary payloads (FR10) | T1 |
 
 **The func-app work is taken first**, at the story owner's request. It is the most self-contained
 task in the story — `stagingdlrm-azure-functions` shares no test code or fixtures with the
@@ -311,8 +311,14 @@ with `WholePayloadMatcher`, so it cannot literally be first. If ADR-001 approval
 T2 that can start without T1 is lifting the inline text blocks in `JsonSchemaValidatorTest` out to
 `json/<component-slug>/` fixture files.
 
-T3 closes the largest gap (finding 2) and T4 carries the behavioural-difference canary — both sit
-early enough that neither is scheduled last.
+T3 closes the largest gap (finding 2). T6 carries the behavioural-difference canary, but T4 retires
+most of it first: the convertor and event processor produce the same `ReceiveMigratedCaseFile`
+payload the IT asserts at the WireMock boundary, so a difference between the two source systems
+surfaces in a unit run with a field-level diff before the IT layer is touched.
+
+**T4 and T6 were swapped after this design was gated** — this table reflects the revised order; see
+`03-stories.md` § Sequence for the reasoning. The task *content* is unchanged from what was gated,
+apart from T4's scope reduction recorded there.
 
 DD-43099's tasks run in parallel in its own repo. The only sync point is ADR-001.
 
