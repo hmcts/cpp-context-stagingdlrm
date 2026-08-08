@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-prosecutor.json",
+  "type": "object",
+  "description": "Prosecutor Details (LIBRA)",
+  "properties": {
+    "prosecutingAuthority": {
+      "type": "string",
+      "description": "Identifies the Prosecuting Organisation responsible for initiating the case. Valid CJS OU Code."
+    }
+  },
+  "required": [
+    "prosecutingAuthority"
+  ],
+  "additionalProperties": true
+}

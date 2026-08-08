@@ -1,0 +1,80 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "summonsCode": "A",
+      "informant": "PC Smith",
+      "writtenChargePostingDate": "2024-01-15",
+      "cpsOrganisation": "G94DV00",
+      "caseMarkers": [
+        {
+          "markerTypeCode": "DV"
+        }
+      ]
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 60,
+        "courtRoomId": 60,
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "listedOffences": [
+              "LIBRA-offence-id-1"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04",
+            "laidDate": "2015-04-04"
+          }
+        ],
+        "postingDate": "2018-09-10"
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "This is from {{SOURCE_SYSTEM}}"
+    }
+  }
+}

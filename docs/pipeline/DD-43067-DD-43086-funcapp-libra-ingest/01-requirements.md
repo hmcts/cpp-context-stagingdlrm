@@ -33,18 +33,18 @@ rejected at the edge rather than consuming a terminal downstream rejection**.
 
 ### A. Accept LIBRA blobs
 
-- **FR1 — `dlrm_folder_name` accepts a comma-separated list.** Generalise the membership check
+- [x] **FR1 — `dlrm_folder_name` accepts a comma-separated list.** Generalise the membership check
   `validateBatchNames` already implements (`EventGridTriggerJava:119`) so both fields share one
   helper. Deployment config becomes `dlrm_folder_name=XHIBIT,LIBRA`.
   **The folder-name check must not support the `*` wildcard.** Unlike batch name, folder name *is*
   the source-system gate; wildcarding it would accept any legacy system's blobs. Pass the
   wildcard capability as a parameter so the two fields differ by configuration, not by duplicated
   code.
-- **FR2 — Verify and if necessary widen the EventGrid subscription path filter.** If the Blob
+- [ ] **FR2 — Verify and if necessary widen the EventGrid subscription path filter.** *(Deferred — infra/Terraform outside this repo, no code-level action; still needs the infra owner.)* If the Blob
   Storage EventGrid subscription is scoped to `XHIBIT/*`, no LIBRA blob will trigger the Function
   App however this module changes. Terraform/ARM outside this repo — raise with the infra owner and
   record the answer in this story. Currently **unverified** (analysis §5 Q4).
-- **NFR1 — No change to XHIBIT path acceptance.** A blob under an unconfigured folder is still
+- [x] **NFR1 — No change to XHIBIT path acceptance.** A blob under an unconfigured folder is still
   rejected, and the queue message format, path parsing and submission-id extraction are unchanged —
   they already treat the folder token as opaque data.
 
@@ -54,7 +54,7 @@ The Function App **owns its own normalised schema for each source system** and d
 `stagingdlrm-domain-value-schema`. This is a deliberate decision (see `00-input-brief.md`),
 overriding analysis §3.2's build-time-unpack proposal.
 
-- **FR3 — Author the LIBRA normalised schema.** A LIBRA-specific case-submission schema alongside
+- [x] **FR3 — Author the LIBRA normalised schema.** A LIBRA-specific case-submission schema alongside
   the existing XHIBIT one, which is **not modified**. Do not derive it by editing a copy of the
   XHIBIT file — derive it from the matrix, which now carries a per-field instruction for exactly
   this task. Filter `libra-schema-impact.csv` on `funcapp_libra_action`:
@@ -76,7 +76,7 @@ overriding analysis §3.2's build-time-unpack proposal.
   Note also that `initiationCode is not restricted to "O"` is trivially satisfied here — **the gate
   carries no constraints at all** (no enums, patterns or lengths, see FR6). The enum relaxation is
   canonical-side work in DD-43081, not this story's.
-- **FR3a — Decide how deep the LIBRA gate validates.** Not a detail; it changes the failure profile:
+- [x] **FR3a — Decide how deep the LIBRA gate validates.** Not a detail; it changes the failure profile:
 
   | Gate | Leaves validated | Branches |
   |---|---:|---|
@@ -92,14 +92,14 @@ overriding analysis §3.2's build-time-unpack proposal.
   canonical schema remain the deep validator; revisit once a real LIBRA sample exists. The matrix
   defaults to that reading — pass `--funcapp-libra-depth full` to `build-schema-impact.py` for the
   other view.
-- **FR4 — Source-system-keyed schema selection.** A table-driven lookup — a
+- [x] **FR4 — Source-system-keyed schema selection.** A table-driven lookup — a
   `Map<sourceSystem, {caseValidator, manifestValidator}>`-shaped structure — resolved once and
   cached, not branching logic scattered through `TimerTriggerJava`. Adding a third source system
   later must be one map entry.
-- **FR5 — The manifest schema, submission URL and content type stay shared.** Only the case schema
+- [x] **FR5 — The manifest schema, submission URL and content type stay shared.** Only the case schema
   varies by source system. stagingDLRM exposes one endpoint regardless (epic design decision), so
   nothing about routing changes.
-- **FR6 — Drift detection between the Function App and canonical.** *Proposed mitigation — see the
+- [x] **FR6 — Drift detection between the Function App and canonical.** *Proposed mitigation — see the
   consequence noted in `00-input-brief.md`; drop it if the team prefers to carry the risk.* A check
   that fails the build when a Function App schema is **more lenient** than canonical for a field
   both declare — the direction that produces a terminal 4xx. The local `case-details.json` is in
@@ -114,14 +114,14 @@ overriding analysis §3.2's build-time-unpack proposal.
   canonical" check will fire on every constrained field unless it is scoped to fields both declare
   *and* to `required`/`additionalProperties` rather than full constraint parity. Worth scoping
   deliberately, or FR6 will report 100+ findings on day one.
-- **FR7 — Derive the source system from one shared helper.** The token is already validated by
+- [x] **FR7 — Derive the source system from one shared helper.** The token is already validated by
   `EventGridTriggerJava` and re-extracted in `TimerTriggerJava`; the splitting logic is currently
   duplicated. One helper, used by both, so the value the schema selection keys on is provably the
   value the gate checked.
 
 ### C. Outcome path
 
-- **FR8 — Outcome files land under the correct source-system folder for LIBRA.** `EventGridMonitor`
+- [x] **FR8 — Outcome files land under the correct source-system folder for LIBRA.** `EventGridMonitor`
   writes the outcome JSON the uploader polls — the only feedback channel, since there is no
   synchronous response. Confirm the LIBRA outcome path is derived from the submission rather than
   from a configured constant, and that a **Function App-level rejection** still produces a usable
@@ -130,36 +130,36 @@ overriding analysis §3.2's build-time-unpack proposal.
 
 ### D. Tests
 
-- **FR9 — Extend the DD-43078 Function App suites, don't fork them.** LIBRA scenarios added as
+- [x] **FR9 — Extend the DD-43078 Function App suites, don't fork them.** LIBRA scenarios added as
   scenario data on the existing structure. Unit level: folder-gate accept/reject per configured
   value, wildcard explicitly *not* widening the folder gate, schema selection per source system,
   both schemas' accept and reject paths, and the outcome file for an edge rejection. XHIBIT
   scenarios stay green.
-- **NFR2 — Material bytes are still never downloaded.** The Function App assembles blob *paths*
+- [x] **NFR2 — Material bytes are still never downloaded.** The Function App assembles blob *paths*
   only; nothing here may start streaming material content.
-- **NFR3 — No new runtime dependency on the WildFly side.** The Function App remains standalone;
+- [x] **NFR3 — No new runtime dependency on the WildFly side.** The Function App remains standalone;
   FR6's check is build/test-time only.
 
 ## Acceptance criteria
 
-- **AC1** Given `dlrm_folder_name=XHIBIT,LIBRA`, when a blob lands under either folder, then it is
+- [x] **AC1** Given `dlrm_folder_name=XHIBIT,LIBRA`, when a blob lands under either folder, then it is
   accepted; and when it lands under any other folder, then it is rejected and logged.
-- **AC2** Given `dlrm_folder_name=*`, when a blob lands under any folder, then it is **rejected** —
+- [x] **AC2** Given `dlrm_folder_name=*`, when a blob lands under any folder, then it is **rejected** —
   the wildcard must not widen the source-system gate.
-- **AC3** Given a LIBRA `case.json` that omits `receiptType`, `receivingCourt`, `dateReceived`,
+- [x] **AC3** Given a LIBRA `case.json` that omits `receiptType`, `receivingCourt`, `dateReceived`,
   `retrialIndicator` and both of `dateOfSending`/`dateOfCommittal`, when `TimerTriggerJava`
   validates it, then it passes the LIBRA normalised schema.
-- **AC4** Given the same payload, when validated against the XHIBIT normalised schema, then it
+- [x] **AC4** Given the same payload, when validated against the XHIBIT normalised schema, then it
   fails — proving the two schemas are genuinely distinct and the selection is doing work.
-- **AC5** Given a LIBRA submission folder, when `TimerTriggerJava` processes it, then the payload is
+- [x] **AC5** Given a LIBRA submission folder, when `TimerTriggerJava` processes it, then the payload is
   POSTed to the same stagingDLRM endpoint and content type as an XHIBIT submission.
-- **AC6** Given a submission whose blob path names a source system with no configured schema, when
+- [x] **AC6** Given a submission whose blob path names a source system with no configured schema, when
   processed, then it fails with a clear diagnostic rather than a null-pointer or a silent default.
-- **AC7** Given a Function App-level validation failure for LIBRA, when the outcome is written,
+- [x] **AC7** Given a Function App-level validation failure for LIBRA, when the outcome is written,
   then an outcome file appears under the LIBRA path and its content is asserted whole.
-- **AC8** Given FR6 is implemented, when a Function App schema is made more lenient than canonical
+- [x] **AC8** Given FR6 is implemented, when a Function App schema is made more lenient than canonical
   for a shared field, then the build fails.
-- **AC9** Given `mvn clean install`, when it completes, then all Function App suites pass including
+- [x] **AC9** Given `mvn clean install`, when it completes, then all Function App suites pass including
   the DD-43078 XHIBIT scenarios, unchanged.
 
 ## Out of scope

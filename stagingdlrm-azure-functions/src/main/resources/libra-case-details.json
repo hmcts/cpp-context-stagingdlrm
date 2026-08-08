@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-case-details.json",
+  "type": "object",
+  "description": "Prosecution Case File Details (LIBRA)",
+  "properties": {
+    "prosecutorCaseReference": {
+      "type": "string"
+    },
+    "originatingOrganisation": {
+      "type": "string"
+    },
+    "prosecutor": {
+      "$ref": "libra-prosecutor.json"
+    },
+    "initiationCode": {
+      "type": "string"
+    },
+    "summonsCode": {
+      "type": "string",
+      "description": "Mandatory if Initiation Code is S. Not applicable: SJP Referral, Charge, Postal Requisition."
+    },
+    "informant": {
+      "type": "string",
+      "description": "Name of the person to be named as the informant in this case."
+    },
+    "writtenChargePostingDate": {
+      "type": "string",
+      "description": "Date on which notice was posted to the defendant."
+    },
+    "cpsOrganisation": {
+      "type": "string",
+      "description": "Identifies the CPS office responsible for prosecuting the case."
+    },
+    "caseMarkers": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-case-marker.json"
+      }
+    }
+  },
+  "required": [
+    "prosecutorCaseReference",
+    "originatingOrganisation",
+    "initiationCode",
+    "prosecutor"
+  ],
+  "additionalProperties": false
+}

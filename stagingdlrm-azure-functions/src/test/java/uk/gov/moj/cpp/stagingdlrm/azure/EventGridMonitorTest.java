@@ -68,6 +68,36 @@ class EventGridMonitorTest {
         verify(helper).processEvent(eventData, azureLocation, "outcome.json");
     }
 
+    /**
+     * DD-43086 FR8 — the outcome path is derived from {@code azureLocation} (ultimately, the
+     * submission's own blob path), not a hardcoded/configured source system, so this is identical
+     * to the XHIBIT test above except for the folder name. Confirms LIBRA outcomes land under
+     * {@code LIBRA/...}, not silently under an XHIBIT-only path.
+     */
+    @Test
+    void shouldWriteLibraOutcomeUnderTheLibraPathNotAConfiguredConstant() {
+        final String migrationSourceSystemName = "LIBRA";
+        final String batchIdentifier = "20082025";
+        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
+        final String submissionId = UUID.randomUUID().toString();
+        final String azureLocation = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
+
+        final Map<String, Object> eventData = Map.of(
+                "caseUrn", "",
+                "success", "false",
+                "description", "Function App-level validation failure",
+                "azureLocation", azureLocation
+        );
+        final EventGridEvent eventGridEvent = new EventGridEvent(new Date(), eventData);
+
+        when(context.getLogger()).thenReturn(logger);
+
+        eventGridMonitor.run(eventGridEvent, context);
+
+        verify(helper).processEvent(eventData, migrationSourceSystemName, "outcome/outcome-" + submissionId + ".json");
+        verify(helper).processEvent(eventData, azureLocation, "outcome.json");
+    }
+
     @Test
     void shouldUseAzureLocationAsMigrationSourceSystemNameWhenItDoesNotHaveFourParts() {
         final String azureLocation = "XHIBIT/20082025";

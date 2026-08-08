@@ -5,6 +5,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 import uk.gov.moj.cpp.stagingdlrm.azure.event.EventGridSchema;
+import uk.gov.moj.cpp.stagingdlrm.azure.event.SubmissionPathTokens;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 
@@ -62,7 +63,7 @@ public class EventGridTriggerJava {
 
         final String message = url.substring(startIndex + storageCloudClient.getDlrmContainer().length() + 1);
 
-        final List<String> tokens = List.of(message.split("/"));
+        final List<String> tokens = SubmissionPathTokens.split(message);
 
         if (tokens.size() < 4) {
             loggerHelper.logInfo(context, "Received invalid number of tokens. {0}", tokens);
@@ -81,7 +82,15 @@ public class EventGridTriggerJava {
 
         requireNonNull(folderName, "dlrm_folder_name env var not configured.");
 
-        if (!folderName.trim().equalsIgnoreCase(tokens.get(0))) {
+        final List<String> folderNames = Arrays.stream(folderName.split(","))
+                .map(s -> s.trim().toLowerCase())
+                .toList();
+
+        // DD-43086 FR7 — the same shared helper TimerTriggerJava's schema selection calls, so the
+        // value that selection keys on is provably the value this gate already checked.
+        final boolean validFolderName = validateConfiguredNames(folderNames, SubmissionPathTokens.sourceSystem(message), false);
+
+        if (!validFolderName) {
             loggerHelper.logInfo(context, submissionId, "Received invalid dlrm folder name : {0}", tokens.get(0));
             return;
         }
@@ -94,7 +103,7 @@ public class EventGridTriggerJava {
                 .map(s -> s.trim().toLowerCase())
                 .toList();
 
-        boolean validBatchName = validateBatchNames(batchNames, tokens.get(1).toLowerCase());
+        final boolean validBatchName = validateConfiguredNames(batchNames, tokens.get(1).toLowerCase(), true);
 
         if (!validBatchName) {
             loggerHelper.logInfo(context, submissionId, "Received invalid dlrm batch name : {0}", tokens.get(1));
@@ -116,13 +125,20 @@ public class EventGridTriggerJava {
         loggerHelper.logInfo(context, submissionId, "EventGridTriggerJava processing complete.");
     }
 
-    private boolean validateBatchNames(final List<String> batchNames, String token) {
+    /**
+     * Shared membership check for both {@code dlrm_folder_name} and {@code dlrm_batch_name}: is
+     * {@code token} in the configured (already lower-cased) list? {@code wildcardAllowed} is the
+     * one behavioural difference between the two fields — batch name treats a leading {@code *} as
+     * "match anything"; folder name never does, since it is the source-system gate itself and
+     * wildcarding it would accept any legacy system's blobs.
+     */
+    private boolean validateConfiguredNames(final List<String> configuredNames, final String token, final boolean wildcardAllowed) {
 
-        if (batchNames.get(0).equalsIgnoreCase("*")) {
+        if (wildcardAllowed && configuredNames.get(0).equalsIgnoreCase("*")) {
             return true;
         }
 
-        return batchNames.contains(token);
+        return configuredNames.contains(token);
     }
 
     private void setStorageCloudClient(final ExecutionContext context) {

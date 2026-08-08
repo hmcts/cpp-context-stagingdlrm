@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-case-marker.json",
+  "type": "object",
+  "description": "Case Marker (LIBRA)",
+  "properties": {
+    "markerTypeCode": {
+      "type": "string",
+      "description": "CJS agreed case marker type code, e.g. DV for Domestic Violence."
+    }
+  },
+  "additionalProperties": true
+}

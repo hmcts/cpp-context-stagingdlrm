@@ -6,11 +6,13 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
 import uk.gov.justice.services.messaging.JsonObjects;
 import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
+import uk.gov.moj.cpp.stagingdlrm.azure.event.SubmissionPathTokens;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
+import uk.gov.moj.cpp.stagingdlrm.azure.validator.SourceSystemValidators;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +42,12 @@ public class TimerTriggerJava {
 
     public static final String ERROR_MIGRATED_CASE_SUBMISSION_PATH = "/stagingdlrm-command-api/command/api/rest/stagingdlrm/receive-error-migrated-case-submission";
 
+    // DD-43086 FR4 — table-driven, keyed on the lower-cased source-system token. Adding a third
+    // source system is one more entry in setSourceSystemValidators(), not a code branch.
+    private static final String XHIBIT = "xhibit";
+
+    private static final String LIBRA = "libra";
+
     private static final String CASE_URN = "caseUrn";
 
     private static final String DESCRIPTION = "description";
@@ -62,9 +70,7 @@ public class TimerTriggerJava {
 
     private String stagingDlrmBaseUri;
 
-    private JsonSchemaValidator caseJsonSchemaValidator;
-
-    private JsonSchemaValidator manifestJsonSchemaValidator;
+    private Map<String, SourceSystemValidators> sourceSystemValidators;
 
     private EventGridMonitorHelper eventGridMonitorHelper;
 
@@ -127,6 +133,19 @@ public class TimerTriggerJava {
             return;
         }
 
+        // DD-43086 FR7 — the same shared helper EventGridTriggerJava's folder-name gate calls, so
+        // this lookup provably keys on the value that gate already checked.
+        final String sourceSystem = SubmissionPathTokens.sourceSystem(queueMessage);
+
+        final SourceSystemValidators validators = sourceSystemValidators.get(sourceSystem);
+
+        if (isNull(validators)) {
+            loggerHelper.logSevere(context, submissionId, "No schema configured for source system: {0}", sourceSystem);
+            storageCloudClient.deleteQueueMessage(queueMessage);
+            storageCloudClient.sendMessageToTheLogQueue(queueMessage);
+            return;
+        }
+
         final List<String> materialFiles = getMaterialFiles(message.listOfBlobNames());
         loggerHelper.logInfo(context, submissionId, "Number of material files found: {0}", materialFiles.size());
 
@@ -134,9 +153,9 @@ public class TimerTriggerJava {
 
         final String manifestJsonContent = getJsonContent(submissionId, queueMessage +"/"+"manifest.json");
 
-        final Set<ValidationMessage> caseValidationMessages = caseJsonSchemaValidator.validate(submissionId, caseJsonContent);
+        final Set<ValidationMessage> caseValidationMessages = validators.caseValidator().validate(submissionId, caseJsonContent);
 
-        final Set<ValidationMessage> manifestValidationMessages = manifestJsonSchemaValidator.validate(submissionId, manifestJsonContent);
+        final Set<ValidationMessage> manifestValidationMessages = validators.manifestValidator().validate(submissionId, manifestJsonContent);
 
         final List<String> baseUriArray = Arrays.stream(stagingDlrmBaseUri.split(",")).toList();
 
@@ -370,15 +389,20 @@ public class TimerTriggerJava {
         }
     }
 
-    private void setJsonSchemaValidator() {
-        if(isNull(this.caseJsonSchemaValidator)) {
-            final String jsonSchema = "stagingdlrm.case-submission.json";
-            this.caseJsonSchemaValidator = new JsonSchemaValidator(context, jsonSchema);
-        }
+    /**
+     * DD-43086 FR4 — resolved once, cached, and keyed on the lower-cased source-system token
+     * (FR1/FR7: the same token EventGridTriggerJava already gated on). The manifest validator
+     * instance is shared across every entry (FR5) — only the case validator differs.
+     */
+    private void setSourceSystemValidators() {
+        if (isNull(this.sourceSystemValidators)) {
+            final JsonSchemaValidator manifestValidator = new JsonSchemaValidator(context, "stagingdlrm.manifest.json");
 
-        if(isNull(this.manifestJsonSchemaValidator)) {
-            final String jsonSchema = "stagingdlrm.manifest.json";
-            this.manifestJsonSchemaValidator = new JsonSchemaValidator(context, jsonSchema);
+            this.sourceSystemValidators = Map.of(
+                    XHIBIT, new SourceSystemValidators(
+                            new JsonSchemaValidator(context, "stagingdlrm.case-submission.json"), manifestValidator),
+                    LIBRA, new SourceSystemValidators(
+                            new JsonSchemaValidator(context, "libra.case-submission.json"), manifestValidator));
         }
     }
 
@@ -390,7 +414,7 @@ public class TimerTriggerJava {
         setStagingDlrmUserId();
         setStagingDlrmMigratedCaseSubmissionContentType();
         setStagingDlrmErrorMigratedCaseSubmissionContentType();
-        setJsonSchemaValidator();
+        setSourceSystemValidators();
         setRetryCount();
         setLoggerHelper();
     }
