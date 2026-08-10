@@ -1,8 +1,13 @@
 package uk.gov.moj.cpp.stagingdlrm.event.processor;
 
+import static java.util.List.of;
+import static java.util.UUID.fromString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static uk.gov.moj.cpp.stagingdlrm.event.processor.ObjectBuilder.createMigratedCaseFileProcessedPublicEvent;
+import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
+import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
 import uk.gov.justice.services.core.sender.Sender;
 import uk.gov.justice.services.messaging.Envelope;
@@ -23,6 +28,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class PcfDlrmEventProcessorTest {
 
+    private static final UUID SUBMISSION_ID = fromString("11111111-2222-3333-4444-555555555555");
+    private static final UUID CASE_ID = fromString("aaaaaaaa-1111-2222-3333-444444444444");
+    private static final String CASE_URN = "TVL55117DFXXV";
+
     @Mock
     private Sender sender;
 
@@ -33,28 +42,16 @@ class PcfDlrmEventProcessorTest {
     private ArgumentCaptor<Envelope<JsonObject>> envelopeArgumentCaptor;
 
     @Test
-    void shouldHandleRecordSubmissionProcessingOutput() {
-
-        final UUID caseId = UUID.randomUUID();
-        final String caseUrn = UUID.randomUUID().toString();
-        final String description = "Test Description";
-        final Boolean processingIsSuccessful = false;
-        final UUID submissionId = UUID.randomUUID();
-
-        final JsonEnvelope jsonEnvelope = createMigratedCaseFileProcessedPublicEvent(submissionId, caseId, caseUrn, processingIsSuccessful, description);
+    void shouldForwardRecordSubmissionProcessingOutputWholePayload() {
+        final JsonEnvelope jsonEnvelope = createMigratedCaseFileProcessedPublicEvent(SUBMISSION_ID, CASE_ID, CASE_URN, false, "Test Description");
 
         pcfDlrmEventProcessor.handleRecordSubmissionProcessingOutput(jsonEnvelope);
 
         verify(sender).send(envelopeArgumentCaptor.capture());
+        final Envelope<JsonObject> forwarded = envelopeArgumentCaptor.getValue();
 
-        final Envelope<JsonObject> jsonObjectEnvelope = envelopeArgumentCaptor.getValue();
-
-        final JsonObject payload = jsonObjectEnvelope.payload();
-        assertEquals(caseId.toString(), payload.getString("caseId"));
-        assertEquals(submissionId.toString(), payload.getString("submissionId"));
-        assertEquals(caseUrn, payload.getString("caseUrn"));
-        assertEquals(processingIsSuccessful, payload.getBoolean("processingIsSuccessful"));
-        assertEquals(description, payload.getString("description"));
+        assertEquals("stagingdlrm.command.handler.record-submission-processing-output", forwarded.metadata().name());
+        assertThat(forwarded.payload().toString(),
+                matchesWholePayload(fixture("json/pcf-dlrm/record-submission-processing-output.json"), of()));
     }
-
 }
