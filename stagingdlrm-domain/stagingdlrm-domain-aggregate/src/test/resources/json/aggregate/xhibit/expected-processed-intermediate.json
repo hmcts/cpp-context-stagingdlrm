@@ -1,0 +1,10 @@
+{
+  "azureLocation" : "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555",
+  "migratedCaseSubmissionProcessed" : {
+    "caseId" : "11111111-2222-3333-4444-555555555555",
+    "caseUrn" : "TVL55117DFXXV",
+    "description" : "Processed",
+    "processingIsSuccessful" : true,
+    "submissionId" : "11111111-2222-3333-4444-555555555555"
+  }
+}

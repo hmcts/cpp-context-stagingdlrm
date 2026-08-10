@@ -423,7 +423,7 @@ canary was not scheduled last; retiring the canary at unit level serves that int
 |---|---|---|
 | **T1** | **done** | `stagingdlrm-test-support` in the reactor; 18 tests; no WAR depends on it; no `results-domain-common` on any test classpath |
 | **T2** | **done** | `stagingdlrm-azure-functions`: **78 tests** (was 54), 1 `@Disabled` — see [Handover](#handover--picking-up-t3-onwards); 19 fixtures; 0 inline JSON text blocks; 0 stray `LIBRA` literals |
-| T3 | **not started** — refined, ready | scope and ACs revised 2026-08-07; start at `StagingdlrmCommandHandlerTest.shouldReceiveMigratedCaseSubmission` (F10, F21) |
+| T3 | **done** | aggregate: 6 scenario rows + fixture round-trip pin (7 tests, 0 `RETURNS_DEEP_STUBS`); handler: 4 tests, `shouldReceiveMigratedCaseSubmission` now pins the captured submission whole (F10, F21); 15 fixtures; `mvn test` green on both modules. Two deviations: (a) AC5's inline exclusion comments omitted (repo rule: comment-free test classes); (b) NFR1 relaxed — `MigratedCaseSubmissionAggregate` had four query getters (`getSubmissionId`, `isCaseSubmissionDuplicated`, `isCaseAlreadyProcessedAndExistsInProgression`, `getMigratedCaseSubmissionProcessedOutput`) plus their backing fields and `apply` branches, made dead by the move to whole-payload assertions and removed; `submissionId` and its handler stay (drive duplicate detection). Full reactor compiles; no other caller existed |
 | T4–T6 | **not started** | T4 revised 2026-08-07; T5 and T6 as gated |
 
 **T2 is not yet raised as a PR**, and two things must land in it before it goes: the `DD-XXXXX`
