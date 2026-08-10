@@ -1,0 +1,9 @@
+{
+  "migratedCaseSubmissionProcessed" : {
+    "caseId" : "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+    "caseUrn" : "TVL55117DFXXV",
+    "description" : "Case Already exists in progression",
+    "processingIsSuccessful" : false,
+    "submissionId" : "11111111-2222-3333-4444-555555555555"
+  }
+}
