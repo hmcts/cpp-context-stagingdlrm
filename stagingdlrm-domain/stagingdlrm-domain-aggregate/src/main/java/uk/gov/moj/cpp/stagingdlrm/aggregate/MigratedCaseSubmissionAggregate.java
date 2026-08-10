@@ -16,9 +16,6 @@ import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndE
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmissionProcessedOutput;
-import uk.gov.moj.stagingdlrm.domain.event.CaseAlreadyProcessedAndExistsInProgression;
-import uk.gov.moj.stagingdlrm.domain.event.DuplicatedMigratedCaseSubmissionReceived;
-import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionReceived;
 
 import java.io.Serial;
@@ -36,12 +33,6 @@ public class MigratedCaseSubmissionAggregate implements Aggregate {
 
     private UUID submissionId;
 
-    private MigratedCaseSubmissionProcessedOutput migratedCaseSubmissionProcessedOutput;
-
-    private boolean isCaseSubmissionDuplicated;
-
-    private boolean caseAlreadyProcessedAndExistsInProgression;
-
     private final Map<UUID, String> azureLocation = new HashMap<>();
 
     @Override
@@ -52,12 +43,6 @@ public class MigratedCaseSubmissionAggregate implements Aggregate {
                             this.submissionId = e.getMigratedCaseSubmission().getSubmissionId();
                             this.azureLocation.put(this.submissionId, e.getMigratedCaseSubmission().getAzureLocation());
                         }),
-                when(MigratedCaseSubmissionProcessed.class)
-                        .apply(e -> this.migratedCaseSubmissionProcessedOutput = e.getMigratedCaseSubmissionProcessed()),
-                when(DuplicatedMigratedCaseSubmissionReceived.class)
-                        .apply(e -> isCaseSubmissionDuplicated = true),
-                when(CaseAlreadyProcessedAndExistsInProgression.class)
-                        .apply(e -> caseAlreadyProcessedAndExistsInProgression = true),
                 otherwiseDoNothing());
     }
 
@@ -113,21 +98,5 @@ public class MigratedCaseSubmissionAggregate implements Aggregate {
                 .withAzureLocation(azureLocation.get(migratedCaseSubmission.getSubmissionId()))
                 .build());
         return apply(builder.build());
-    }
-
-    public MigratedCaseSubmissionProcessedOutput getMigratedCaseSubmissionProcessedOutput() {
-        return migratedCaseSubmissionProcessedOutput;
-    }
-
-    public boolean isCaseSubmissionDuplicated() {
-        return isCaseSubmissionDuplicated;
-    }
-
-    public boolean isCaseAlreadyProcessedAndExistsInProgression() {
-        return caseAlreadyProcessedAndExistsInProgression;
-    }
-
-    public UUID getSubmissionId() {
-        return submissionId;
     }
 }

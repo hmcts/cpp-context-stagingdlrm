@@ -1,23 +1,18 @@
 package uk.gov.moj.cpp.stagingdlrm.command.handler;
 
-import static com.jayway.jsonpath.matchers.JsonPathMatchers.withJsonPath;
 import static java.util.UUID.fromString;
-import static java.util.UUID.nameUUIDFromBytes;
-import static java.util.UUID.randomUUID;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.services.messaging.Envelope.envelopeFrom;
 import static uk.gov.justice.services.test.utils.core.helper.EventStreamMockHelper.verifyAppendAndGetArgumentFrom;
-import static uk.gov.justice.services.test.utils.core.matchers.JsonEnvelopeMatcher.jsonEnvelope;
-import static uk.gov.justice.services.test.utils.core.matchers.JsonEnvelopeMetadataMatcher.metadata;
-import static uk.gov.justice.services.test.utils.core.matchers.JsonEnvelopeStreamMatcher.streamContaining;
+import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
+import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
+import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
+import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
 import uk.gov.justice.services.core.aggregate.AggregateService;
 import uk.gov.justice.services.core.enveloper.Enveloper;
 import uk.gov.justice.services.eventsourcing.source.core.EventSource;
@@ -26,7 +21,6 @@ import uk.gov.justice.services.messaging.Envelope;
 import uk.gov.justice.services.messaging.JsonEnvelope;
 import uk.gov.justice.services.messaging.Metadata;
 import uk.gov.justice.services.test.utils.core.enveloper.EnveloperFactory;
-import uk.gov.justice.services.test.utils.core.matchers.JsonEnvelopePayloadMatcher;
 import uk.gov.moj.cpp.stagingdlrm.aggregate.MigratedCaseSubmissionAggregate;
 import uk.gov.moj.cpp.stagingdlrm.command.handler.service.CaseIdGenerator;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
@@ -37,9 +31,16 @@ import uk.gov.moj.stagingdlrm.domain.event.CaseAlreadyProcessedAndExistsInProgre
 import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -51,6 +52,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class StagingdlrmCommandHandlerTest {
+
+    private static final String FIXTURES = "json/handler/";
+
+    private static final UUID SUBMISSION_ID = fromString("11111111-2222-3333-4444-555555555555");
+
+    private static final UUID ERROR_SUBMISSION_ID = fromString("99999999-8888-7777-6666-555555555555");
+
+    private static final UUID PROCESSED_SUBMISSION_ID = fromString("77777777-6666-5555-4444-333333333333");
+
+    private static final UUID PROGRESSION_CASE_ID = fromString("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProducer().objectMapper();
+
+    private static final JsonObjectToObjectConverter CONVERTER =
+            new JsonObjectToObjectConverter(new ObjectMapperProducer().objectMapper());
 
     @InjectMocks
     private StagingdlrmCommandHandler stagingdlrmCommandHandler;
@@ -65,190 +81,143 @@ class StagingdlrmCommandHandlerTest {
     @Mock
     private MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate;
 
-
     @Mock
     private Envelope<MigratedCaseSubmission> migratedCaseSubmissionEnvelope;
-
-    @Mock(answer = RETURNS_DEEP_STUBS)
-    private MigratedCaseSubmission migratedCaseSubmission;
-
-    @Mock(answer = RETURNS_DEEP_STUBS)
-    private MigratedCaseSubmission caseAlreadyProcessedMigratedCaseSubmission;
 
     @Mock
     private CaseIdGenerator caseIdGenerator;
 
     @Captor
-    private ArgumentCaptor<java.util.stream.Stream<uk.gov.justice.services.messaging.JsonEnvelope>> eventCaptor;
+    private ArgumentCaptor<java.util.stream.Stream<JsonEnvelope>> eventCaptor;
 
     @Spy
     private final Enveloper enveloper = EnveloperFactory.createEnveloperWithEvents(
             CaseAlreadyProcessedAndExistsInProgression.class, ErrorMigratedCaseSubmissionReceived.class, MigratedCaseSubmissionProcessed.class);
 
-
     @Test
     void shouldReceiveMigratedCaseSubmission() throws Exception {
-        final String urn = "caseURN";
+        final MigratedCaseSubmission input = submission("submission-with-materials.json");
 
-        final UUID submissionId = fromString("f0d12b0f-5a44-4ba4-9429-accd7aa9be56");
-
-        final UUID caseId = nameUUIDFromBytes(urn.concat(submissionId.toString()).getBytes());
-
-        when(migratedCaseSubmissionEnvelope.payload()).thenReturn(migratedCaseSubmission);
-        when(migratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn(urn);
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(submissionId);
-        when(eventSource.getStreamById(submissionId)).thenReturn(eventStream);
+        when(migratedCaseSubmissionEnvelope.payload()).thenReturn(input);
+        when(eventSource.getStreamById(SUBMISSION_ID)).thenReturn(eventStream);
         when(aggregateService.get(eventStream, MigratedCaseSubmissionAggregate.class)).thenReturn(migratedCaseSubmissionAggregate);
-        ArgumentCaptor<MigratedCaseSubmission> migratedCaseSubmissionCaptor = forClass(MigratedCaseSubmission.class);
+
+        final ArgumentCaptor<MigratedCaseSubmission> migratedCaseSubmissionCaptor = forClass(MigratedCaseSubmission.class);
 
         stagingdlrmCommandHandler.receiveMigratedCaseSubmission(migratedCaseSubmissionEnvelope);
 
         verify(migratedCaseSubmissionAggregate).receiveMigratedCaseSubmission(migratedCaseSubmissionCaptor.capture());
-//        assertThat("The Case Id should match", migratedCaseSubmissionCaptor.getValue().getMigratedCase().getCaseDetails().getCaseId().equals(caseId)); // to think
+
+        assertThat(serialise(migratedCaseSubmissionCaptor.getValue()), matchesWholePayload(
+                fixture(FIXTURES + "expected-captured-submission.json"),
+                List.of("migratedCase.defendants[0].id",
+                        "migratedCase.defendants[1].id")));
     }
 
     @Test
     void shouldReceiveErrorMigratedCaseSubmission() throws Exception {
-
-        final UUID submissionId = UUID.randomUUID();
-
-        final String payload = "sample text";
-
         final ErrorMigratedCaseSubmission errorMigratedCaseSubmission = ErrorMigratedCaseSubmission
                 .errorMigratedCaseSubmission()
-                .withSubmissionId(submissionId)
-                .withPayload(payload)
+                .withSubmissionId(ERROR_SUBMISSION_ID)
+                .withPayload("sample text")
                 .build();
 
-        final Metadata metadata = Envelope
-                .metadataBuilder()
+        final Metadata metadata = Envelope.metadataBuilder()
                 .withName("stagingdlrm.command.handler.receive-error-case-submission")
-                .withId(randomUUID())
+                .withId(UUID.randomUUID())
                 .build();
 
-        final Envelope<ErrorMigratedCaseSubmission> errorMigratedCaseSubmissionEnvelope = envelopeFrom(metadata, errorMigratedCaseSubmission);
+        withRealAggregateStream(ERROR_SUBMISSION_ID);
 
-        when(eventSource.getStreamById(submissionId)).thenReturn(eventStream);
+        stagingdlrmCommandHandler.receiveErrorMigratedCaseSubmission(envelopeFrom(metadata, errorMigratedCaseSubmission));
 
-        when(aggregateService.get(eventStream, MigratedCaseSubmissionAggregate.class)).thenReturn(new MigratedCaseSubmissionAggregate());
+        final List<JsonEnvelope> events = verifyAppendAndGetArgumentFrom(eventStream).toList();
 
-        when(eventStream.append(eventCaptor.capture())).thenReturn(1L);
-
-        stagingdlrmCommandHandler.receiveErrorMigratedCaseSubmission(errorMigratedCaseSubmissionEnvelope);
-
-        final Stream<JsonEnvelope> envelopeStream = verifyAppendAndGetArgumentFrom(eventStream);
-
-        assertThat(envelopeStream, streamContaining(
-                        jsonEnvelope(
-                                metadata()
-                                        .withName("stagingdlrm.events.error-migrated-case-submission-received"),
-                                JsonEnvelopePayloadMatcher.payload().isJson(allOf(
-                                                withJsonPath("$.errorMigratedCaseSubmission", notNullValue()),
-                                                withJsonPath("$.errorMigratedCaseSubmission.submissionId", is(submissionId.toString())),
-                                                withJsonPath("$.errorMigratedCaseSubmission.payload", is(payload))
-                                        )
-                                )
-                        )
-                )
-        );
+        assertThat(events.size(), is(1));
+        assertEvent(events.get(0),
+                "stagingdlrm.events.error-migrated-case-submission-received",
+                "expected-error.json");
     }
 
     @Test
     void shouldRecordMigratedCaseSubmissionOutput() throws Exception {
-
-        final UUID submissionId = UUID.randomUUID();
-
         final MigratedCaseSubmissionProcessedOutput migratedCaseSubmissionProcessedOutput = MigratedCaseSubmissionProcessedOutput
                 .migratedCaseSubmissionProcessedOutput()
                 .withProcessingIsSuccessful(true)
-                .withCaseId(submissionId)
-                .withSubmissionId(submissionId)
+                .withCaseId(PROCESSED_SUBMISSION_ID)
+                .withSubmissionId(PROCESSED_SUBMISSION_ID)
                 .withCaseUrn("caseUrn")
                 .build();
 
-        final Metadata metadata = Envelope
-                .metadataBuilder()
+        final Metadata metadata = Envelope.metadataBuilder()
                 .withName("stagingdlrm.command.handler.record-submission-processing-output")
-                .withId(randomUUID())
+                .withId(UUID.randomUUID())
                 .build();
 
-        final Envelope<MigratedCaseSubmissionProcessedOutput> outputEnvelope = envelopeFrom(metadata, migratedCaseSubmissionProcessedOutput);
+        withRealAggregateStream(PROCESSED_SUBMISSION_ID);
 
-        when(eventSource.getStreamById(submissionId)).thenReturn(eventStream);
+        stagingdlrmCommandHandler.recordMigratedCaseSubmissionOutput(envelopeFrom(metadata, migratedCaseSubmissionProcessedOutput));
 
-        when(aggregateService.get(eventStream, MigratedCaseSubmissionAggregate.class)).thenReturn(new MigratedCaseSubmissionAggregate());
+        final List<JsonEnvelope> events = verifyAppendAndGetArgumentFrom(eventStream).toList();
 
-        when(eventStream.append(eventCaptor.capture())).thenReturn(1L);
-
-        stagingdlrmCommandHandler.recordMigratedCaseSubmissionOutput(outputEnvelope);
-
-        final Stream<JsonEnvelope> envelopeStream = verifyAppendAndGetArgumentFrom(eventStream);
-
-        assertThat(envelopeStream, streamContaining(
-                        jsonEnvelope(
-                                metadata()
-                                        .withName("stagingdlrm.events.migrated-case-submission-processed"),
-                                JsonEnvelopePayloadMatcher.payload().isJson(allOf(
-                                                withJsonPath("$.migratedCaseSubmissionProcessed", notNullValue()),
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.submissionId", is(submissionId.toString())),
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.caseId", is(submissionId.toString()))
-                                        )
-                                )
-                        )
-                )
-        );
+        assertThat(events.size(), is(1));
+        assertEvent(events.get(0),
+                "stagingdlrm.events.migrated-case-submission-processed",
+                "expected-processed.json");
     }
 
     @Test
     void shouldReceiveCaseAlreadyProcessed() throws Exception {
-        final UUID submissionId = randomUUID();
-        final UUID caseId = randomUUID();
-        final String caseUrn = "T20000001";
-
-        when(caseAlreadyProcessedMigratedCaseSubmission.getSubmissionId()).thenReturn(submissionId);
-        when(caseAlreadyProcessedMigratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn(caseUrn);
+        final MigratedCaseSubmission input = submission("submission-with-materials.json");
 
         final CaseAlreadyProcessedAndExistsInProgressionCommand command = CaseAlreadyProcessedAndExistsInProgressionCommand
                 .caseAlreadyProcessedAndExistsInProgressionCommand()
-                .withCaseId(caseId)
-                .withMigratedCaseSubmission(caseAlreadyProcessedMigratedCaseSubmission)
+                .withCaseId(PROGRESSION_CASE_ID)
+                .withMigratedCaseSubmission(input)
                 .build();
 
         final Metadata metadata = Envelope.metadataBuilder()
                 .withName("stagingdlrm.command.handler.case-already-exists-in-progression")
-                .withId(randomUUID())
+                .withId(UUID.randomUUID())
                 .build();
 
-        final Envelope<CaseAlreadyProcessedAndExistsInProgressionCommand> commandEnvelope = envelopeFrom(metadata, command);
+        withRealAggregateStream(SUBMISSION_ID);
 
-        when(eventSource.getStreamById(submissionId)).thenReturn(eventStream);
+        stagingdlrmCommandHandler.receiveCaseAlreadyProcessed(envelopeFrom(metadata, command));
+
+        final List<JsonEnvelope> events = verifyAppendAndGetArgumentFrom(eventStream).toList();
+
+        assertThat(events.size(), is(2));
+        assertEvent(events.get(0),
+                "stagingdlrm.events.case-already-processed-and-exists-in-progression",
+                "expected-case-already.json");
+        assertEvent(events.get(1),
+                "stagingdlrm.events.migrated-case-submission-processed",
+                "expected-processed-already.json");
+    }
+
+    private void withRealAggregateStream(final UUID streamId) throws uk.gov.justice.services.eventsourcing.source.core.exception.EventStreamException {
+        when(eventSource.getStreamById(streamId)).thenReturn(eventStream);
         when(aggregateService.get(eventStream, MigratedCaseSubmissionAggregate.class)).thenReturn(new MigratedCaseSubmissionAggregate());
         when(eventStream.append(eventCaptor.capture())).thenReturn(1L);
+    }
 
-        stagingdlrmCommandHandler.receiveCaseAlreadyProcessed(commandEnvelope);
+    private static void assertEvent(final JsonEnvelope event, final String expectedName, final String expectedFixture) {
+        assertThat(event.metadata().name(), is(expectedName));
+        assertThat(event.payloadAsJsonObject().toString(), matchesWholePayload(fixture(FIXTURES + expectedFixture), List.of()));
+    }
 
-        final Stream<JsonEnvelope> envelopeStream = verifyAppendAndGetArgumentFrom(eventStream);
+    private static MigratedCaseSubmission submission(final String fixtureName) {
+        final JsonObject json = Json.createReader(
+                new ByteArrayInputStream(fixture(FIXTURES + fixtureName).getBytes(StandardCharsets.UTF_8))).readObject();
+        return CONVERTER.convert(json, MigratedCaseSubmission.class);
+    }
 
-        assertThat(envelopeStream, streamContaining(
-                        jsonEnvelope(
-                                metadata()
-                                        .withName("stagingdlrm.events.case-already-processed-and-exists-in-progression"),
-                                JsonEnvelopePayloadMatcher.payload().isJson(
-                                        withJsonPath("$.migratedCaseSubmission", notNullValue())
-                                )
-                        ),
-                        jsonEnvelope(
-                                metadata()
-                                        .withName("stagingdlrm.events.migrated-case-submission-processed"),
-                                JsonEnvelopePayloadMatcher.payload().isJson(allOf(
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.caseId", is(caseId.toString())),
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.submissionId", is(submissionId.toString())),
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.processingIsSuccessful", is(false)),
-                                                withJsonPath("$.migratedCaseSubmissionProcessed.description", is(MigratedCaseSubmissionAggregate.CASE_ALREADY_EXISTS_IN_PROGRESSION))
-                                        )
-                                )
-                        )
-                )
-        );
+    private static String serialise(final Object value) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (final JsonProcessingException e) {
+            throw new AssertionError("Failed to serialise " + value, e);
+        }
     }
 }

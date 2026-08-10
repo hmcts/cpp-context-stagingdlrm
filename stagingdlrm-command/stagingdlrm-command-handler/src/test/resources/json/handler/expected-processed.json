@@ -1,0 +1,8 @@
+{
+  "migratedCaseSubmissionProcessed" : {
+    "caseId" : "77777777-6666-5555-4444-333333333333",
+    "caseUrn" : "caseUrn",
+    "processingIsSuccessful" : true,
+    "submissionId" : "77777777-6666-5555-4444-333333333333"
+  }
+}
