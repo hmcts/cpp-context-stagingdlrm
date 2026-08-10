@@ -110,12 +110,14 @@ class StagingDlrmEventProcessorTest {
     @Mock
     private ErrorMigratedCaseSubmissionReceivedCounter errorMigratedCaseSubmissionReceivedCounter;
 
+    private static final String XHIBIT_JSON_PATH = "json/event-processor/xhibit/";
+
     static Stream<Arguments> receiveScenarios() {
         return Stream.of(
                 Arguments.of(
                         "FR2 maximal — every optional field populated, collections >= 2 (XHIBIT)",
-                        "json/event-processor/maximal-input.json",
-                        "json/event-processor/maximal-expected.json",
+                        XHIBIT_JSON_PATH + "maximal-input.json",
+                        XHIBIT_JSON_PATH + "maximal-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[1].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId",
@@ -124,20 +126,20 @@ class StagingDlrmEventProcessorTest {
                                 "migratedCaseDetails.defendants[1].offences[1].offenceId")),
                 Arguments.of(
                         "FR2 minimal — only schema-required fields present (XHIBIT)",
-                        "json/event-processor/minimal-input.json",
-                        "json/event-processor/minimal-expected.json",
+                        XHIBIT_JSON_PATH + "minimal-input.json",
+                        XHIBIT_JSON_PATH + "minimal-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId")),
                 Arguments.of(
                         "FR2 branch — empty materials collection is forwarded as [] not omitted (XHIBIT)",
-                        "json/event-processor/empty-materials-input.json",
-                        "json/event-processor/empty-materials-expected.json",
+                        XHIBIT_JSON_PATH + "empty-materials-input.json",
+                        XHIBIT_JSON_PATH + "empty-materials-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId")),
                 Arguments.of(
                         "FR2 branch — individual present without contactDetails (XHIBIT)",
-                        "json/event-processor/no-contact-details-input.json",
-                        "json/event-processor/no-contact-details-expected.json",
+                        XHIBIT_JSON_PATH + "no-contact-details-input.json",
+                        XHIBIT_JSON_PATH + "no-contact-details-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId")));
     }
@@ -173,7 +175,7 @@ class StagingDlrmEventProcessorTest {
         eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
 
         assertThat(serialise(outcomeEventArgumentCaptor.getValue()),
-                matchesWholePayload(fixture("json/event-processor/outcome-success.json"), List.of()));
+                matchesWholePayload(fixture(XHIBIT_JSON_PATH + "outcome-success.json"), List.of()));
         verify(migratedCaseSubmissionProcessedCounter).increment();
     }
 
@@ -185,7 +187,7 @@ class StagingDlrmEventProcessorTest {
         eventProcessor.handleErrorMigratedCaseSubmissionReceived(errorMigratedCaseSubmissionReceivedEnvelope);
 
         assertThat(serialise(outcomeEventArgumentCaptor.getValue()),
-                matchesWholePayload(fixture("json/event-processor/outcome-error.json"), List.of()));
+                matchesWholePayload(fixture(XHIBIT_JSON_PATH + "outcome-error.json"), List.of()));
         verify(errorMigratedCaseSubmissionReceivedCounter).increment();
     }
 
