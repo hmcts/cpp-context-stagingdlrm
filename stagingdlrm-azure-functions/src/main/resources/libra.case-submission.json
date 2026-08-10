@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra.case-submission.json",
+  "type": "object",
+  "description": "LIBRA Migrated Case File Submission (Function App gate)",
+  "properties": {
+    "migratedCase": {
+      "$ref": "libra-migrated-case.json"
+    }
+  },
+  "required": [
+    "migratedCase"
+  ],
+  "additionalProperties": false
+}

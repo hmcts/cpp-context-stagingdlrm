@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-case-details.json",
+  "type": "object",
+  "description": "LIBRA Prosecution Case File Details (Function App gate — structural, presence-only)",
+  "properties": {
+    "prosecutorCaseReference": {
+      "type": "string"
+    },
+    "originatingOrganisation": {
+      "type": "string"
+    },
+    "prosecutor": {
+      "$ref": "libra-prosecutor.json"
+    },
+    "initiationCode": {
+      "type": "string"
+    },
+    "summonsCode": {
+      "type": "string"
+    },
+    "informant": {
+      "type": "string"
+    },
+    "writtenChargePostingDate": {
+      "type": "string"
+    },
+    "cpsOrganisation": {
+      "type": "string"
+    },
+    "caseMarkers": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-case-marker.json"
+      }
+    }
+  },
+  "required": [
+    "prosecutorCaseReference",
+    "originatingOrganisation",
+    "initiationCode",
+    "prosecutor"
+  ],
+  "additionalProperties": false
+}

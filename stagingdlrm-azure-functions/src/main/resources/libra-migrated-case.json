@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-migrated-case.json",
+  "type": "object",
+  "description": "LIBRA Migrated Case File Details (Function App gate)",
+  "properties": {
+    "caseDetails": {
+      "$ref": "libra-case-details.json"
+    }
+  },
+  "required": [
+    "caseDetails"
+  ],
+  "additionalProperties": true
+}

@@ -50,9 +50,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class JsonSchemaValidatorTest {
 
     private static final String XHIBIT = "XHIBIT";
+    private static final String LIBRA = "LIBRA";
     private static final String FIXTURES = "json/schema-validator/";
 
     private static final String VALID_CASE = FIXTURES + "case-submission-valid.json";
+
+    /**
+     * DD-43086 LIBRA02 — a well-formed LIBRA case that omits the six fields LIBRA never supplies
+     * ({@code receiptType}, {@code receivingCourt}, {@code dateReceived}, {@code retrialIndicator},
+     * {@code dateOfSending}, {@code dateOfCommittal}) and carries the {@code declare} fields the
+     * closed LIBRA {@code caseDetails} must accept but not require.
+     */
+    private static final String LIBRA_VALID_CASE = FIXTURES + "libra-case-submission-valid.json";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -62,18 +71,35 @@ class JsonSchemaValidatorTest {
     private JsonSchemaValidator caseValidator;
     private JsonSchemaValidator manifestValidator;
 
+    /**
+     * DD-43086 LIBRA02 — the new, fully independent LIBRA case-submission schema chain
+     * ({@code libra.case-submission.json} → {@code libra-migrated-case.json} →
+     * {@code libra-case-details.json} → {@code libra-prosecutor.json} / {@code libra-case-marker.json}).
+     * The XHIBIT chain above is untouched.
+     */
+    private JsonSchemaValidator libraCaseValidator;
+
     @BeforeEach
     public void setup() {
         caseValidator = new JsonSchemaValidator(context, "stagingdlrm.case-submission.json");
         manifestValidator = new JsonSchemaValidator(context, "stagingdlrm.manifest.json");
+        libraCaseValidator = new JsonSchemaValidator(context, "libra.case-submission.json");
     }
 
     private static String xhibit(final String fixturePath) {
         return fixture(fixturePath, of("SOURCE_SYSTEM", XHIBIT));
     }
 
+    private static String libra(final String fixturePath) {
+        return fixture(fixturePath, of("SOURCE_SYSTEM", LIBRA));
+    }
+
     private Set<ValidationMessage> validateCase(final String payload) {
         return caseValidator.validate(UUID.randomUUID().toString(), payload);
+    }
+
+    private Set<ValidationMessage> validateLibraCase(final String payload) {
+        return libraCaseValidator.validate(UUID.randomUUID().toString(), payload);
     }
 
     static Stream<Arguments> acceptedPayloads() {
@@ -90,6 +116,47 @@ class JsonSchemaValidatorTest {
     void shouldAcceptPayload(final String scenario, final String fixturePath) {
         assertEquals(Set.of(), validateCase(xhibit(fixturePath)),
                 () -> scenario + " — expected no validation messages");
+    }
+
+    /**
+     * DD-43086 LIBRA02/AC3 — a LIBRA case that omits the six fields LIBRA never supplies passes the
+     * new LIBRA schema. This is the whole point of the parallel chain: those six fields are
+     * {@code omit} in {@code libra-schema-impact.csv}, absent from {@code libra-case-details.json}'s
+     * {@code properties}, and (because that object is {@code additionalProperties: false}) would be
+     * rejected if sent — but their <i>absence</i> is fine.
+     */
+    @Test
+    @DisplayName("LIBRA02/AC3 a LIBRA case omitting receiptType/receivingCourt/dateReceived/"
+            + "retrialIndicator/dateOfSending/dateOfCommittal passes the LIBRA schema (LIBRA)")
+    void shouldAcceptLibraCaseOmittingXhibitOnlyFields() {
+        assertEquals(Set.of(), validateLibraCase(libra(LIBRA_VALID_CASE)),
+                () -> "the LIBRA schema must accept a LIBRA payload without the XHIBIT-only fields: "
+                        + validateLibraCase(libra(LIBRA_VALID_CASE)));
+    }
+
+    /**
+     * DD-43086 LIBRA02/AC4 — the same payload fails the existing XHIBIT schema, proving the two
+     * schemas are genuinely distinct and the selection (LIBRA03) is doing real work. XHIBIT's
+     * {@code case-details.json} requires {@code dateReceived}, {@code retrialIndicator},
+     * {@code receiptType} and {@code receivingCourt}; the LIBRA payload omits all four, so exactly
+     * four required-property messages are expected. Asserted whole so a change to either schema
+     * that quietly narrowed this gap would fail here.
+     */
+    @Test
+    @DisplayName("LIBRA02/AC4 the same LIBRA payload fails the XHIBIT schema — the four XHIBIT-required "
+            + "fields it omits are each reported (XHIBIT)")
+    void shouldRejectLibraCaseAgainstXhibitSchema() {
+        final Set<ValidationMessage> messages = validateCase(libra(LIBRA_VALID_CASE));
+
+        final Set<String> reported =
+                messages.stream().map(ValidationMessage::getMessage).collect(java.util.stream.Collectors.toSet());
+
+        assertEquals(4, messages.size(),
+                () -> "expected the four XHIBIT-required-but-LIBRA-omitted fields, got " + reported);
+        assertTrue(reported.stream().anyMatch(m -> m.contains("dateReceived")), () -> reported.toString());
+        assertTrue(reported.stream().anyMatch(m -> m.contains("retrialIndicator")), () -> reported.toString());
+        assertTrue(reported.stream().anyMatch(m -> m.contains("receiptType")), () -> reported.toString());
+        assertTrue(reported.stream().anyMatch(m -> m.contains("receivingCourt")), () -> reported.toString());
     }
 
     /**
@@ -236,6 +303,7 @@ class JsonSchemaValidatorTest {
     @ParameterizedTest(name = "{0} fails unbound")
     @ValueSource(strings = {
             VALID_CASE,
+            LIBRA_VALID_CASE,
             FIXTURES + "manifest-with-files.json"
     })
     void shouldFailWhenSourceSystemIsNotBound(final String fixturePath) {
