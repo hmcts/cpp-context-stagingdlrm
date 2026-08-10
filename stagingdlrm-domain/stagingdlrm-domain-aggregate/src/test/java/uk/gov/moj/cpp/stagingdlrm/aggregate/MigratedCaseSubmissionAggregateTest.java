@@ -38,8 +38,6 @@ class MigratedCaseSubmissionAggregateTest {
 
     private static final String XHIBIT = "XHIBIT";
 
-    private static final String FIXTURES = "json/aggregate/xhibit/";
-
     private static final UUID WITH_MATERIALS_SUBMISSION_ID = UUID.fromString("11111111-2222-3333-4444-555555555555");
 
     private static final UUID STANDALONE_CASE_ID = UUID.fromString("a4391788-f829-4514-a344-61f1d5d9690c");
@@ -64,46 +62,46 @@ class MigratedCaseSubmissionAggregateTest {
                 Arguments.of(
                         "FR2 migrated-case-submission-received carries the whole submission with materials (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission("submission-with-materials.json",
-                                        expect("expected-received-with-materials.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))),
                 Arguments.of(
                         "FR2 migrated-case-submission-received carries the whole submission without materials (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission("submission-without-materials.json",
-                                        expect("expected-received-without-materials.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))),
                 Arguments.of(
                         "FR2 recording a processing output appends migrated-case-submission-processed (XHIBIT)",
                         scenario(XHIBIT)
                                 .recordProcessingOutput(standaloneOutput(),
-                                        expect("expected-processed.json"))),
+                                        expect("json/aggregate/xhibit/expected-processed.json"))),
                 Arguments.of(
                         "FR2 a repeat submission is flagged duplicate then processed unsuccessfully (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission("submission-with-materials.json",
-                                        expect("expected-received-with-materials.json"))
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))
                                 .recordProcessingOutput(duplicateOutput(),
-                                        expect("expected-processed-intermediate.json"))
-                                .receiveSubmission("submission-with-materials.json",
-                                        expect("expected-duplicated.json"),
-                                        expect("expected-processed-duplicate.json"))),
+                                        expect("json/aggregate/xhibit/expected-processed-intermediate.json"))
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-duplicated.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-duplicate.json"))),
                 Arguments.of(
                         "FR2 a case already in progression is recorded then processed unsuccessfully (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission("submission-without-materials.json",
-                                        expect("expected-received-without-materials.json"))
-                                .caseAlreadyProcessed("submission-without-materials.json", PROGRESSION_CASE_ID,
-                                        expect("expected-already-processed.json"),
-                                        expect("expected-processed-already.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))
+                                .caseAlreadyProcessed("json/aggregate/xhibit/submission-without-materials.json", PROGRESSION_CASE_ID,
+                                        expect("json/aggregate/xhibit/expected-already-processed.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-already.json"))),
                 Arguments.of(
                         "FR2 an error submission appends error-migrated-case-submission-received (XHIBIT)",
                         scenario(XHIBIT)
                                 .receiveError(errorSubmission(),
-                                        expect("expected-error.json"))));
+                                        expect("json/aggregate/xhibit/expected-error.json"))));
     }
 
     @Test
     void aggregateInputFixtureRoundTripsUnchanged() {
-        final String json = fixture(FIXTURES + "submission-with-materials.json", of("SOURCE_SYSTEM", XHIBIT));
+        final String json = fixture("json/aggregate/xhibit/submission-with-materials.json", of("SOURCE_SYSTEM", XHIBIT));
 
         final MigratedCaseSubmission submission = CONVERTER.convert(readJson(json), MigratedCaseSubmission.class);
 
@@ -236,9 +234,9 @@ class MigratedCaseSubmissionAggregateTest {
 
         private String bind(final String fixtureName) {
             if (carriesSourceSystem(fixtureName)) {
-                return fixture(FIXTURES + fixtureName, of("SOURCE_SYSTEM", requireSourceSystem()));
+                return fixture(fixtureName, of("SOURCE_SYSTEM", requireSourceSystem()));
             }
-            return fixture(FIXTURES + fixtureName);
+            return fixture(fixtureName);
         }
 
         private String requireSourceSystem() {
@@ -249,9 +247,9 @@ class MigratedCaseSubmissionAggregateTest {
         }
 
         private static boolean carriesSourceSystem(final String fixtureName) {
-            try (InputStream in = SubmissionScenario.class.getClassLoader().getResourceAsStream(FIXTURES + fixtureName)) {
+            try (InputStream in = SubmissionScenario.class.getClassLoader().getResourceAsStream(fixtureName)) {
                 if (in == null) {
-                    throw new AssertionError("Fixture not found on the test classpath: " + FIXTURES + fixtureName);
+                    throw new AssertionError("Fixture not found on the test classpath: " + fixtureName);
                 }
                 return new String(in.readAllBytes(), StandardCharsets.UTF_8).contains("{{SOURCE_SYSTEM}}");
             } catch (final IOException e) {

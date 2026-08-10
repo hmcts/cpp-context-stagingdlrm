@@ -53,8 +53,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class StagingdlrmCommandHandlerTest {
 
-    private static final String FIXTURES = "json/handler/";
-
     private static final UUID SUBMISSION_ID = fromString("11111111-2222-3333-4444-555555555555");
 
     private static final UUID ERROR_SUBMISSION_ID = fromString("99999999-8888-7777-6666-555555555555");
@@ -96,7 +94,7 @@ class StagingdlrmCommandHandlerTest {
 
     @Test
     void shouldReceiveMigratedCaseSubmission() throws Exception {
-        final MigratedCaseSubmission input = submission("submission-with-materials.json");
+        final MigratedCaseSubmission input = submission("json/handler/submission-with-materials.json");
 
         when(migratedCaseSubmissionEnvelope.payload()).thenReturn(input);
         when(eventSource.getStreamById(SUBMISSION_ID)).thenReturn(eventStream);
@@ -109,7 +107,7 @@ class StagingdlrmCommandHandlerTest {
         verify(migratedCaseSubmissionAggregate).receiveMigratedCaseSubmission(migratedCaseSubmissionCaptor.capture());
 
         assertThat(serialise(migratedCaseSubmissionCaptor.getValue()), matchesWholePayload(
-                fixture(FIXTURES + "expected-captured-submission.json"),
+                fixture("json/handler/expected-captured-submission.json"),
                 List.of("migratedCase.defendants[0].id",
                         "migratedCase.defendants[1].id")));
     }
@@ -136,7 +134,7 @@ class StagingdlrmCommandHandlerTest {
         assertThat(events.size(), is(1));
         assertEvent(events.get(0),
                 "stagingdlrm.events.error-migrated-case-submission-received",
-                "expected-error.json");
+                "json/handler/expected-error.json");
     }
 
     @Test
@@ -163,12 +161,12 @@ class StagingdlrmCommandHandlerTest {
         assertThat(events.size(), is(1));
         assertEvent(events.get(0),
                 "stagingdlrm.events.migrated-case-submission-processed",
-                "expected-processed.json");
+                "json/handler/expected-processed.json");
     }
 
     @Test
     void shouldReceiveCaseAlreadyProcessed() throws Exception {
-        final MigratedCaseSubmission input = submission("submission-with-materials.json");
+        final MigratedCaseSubmission input = submission("json/handler/submission-with-materials.json");
 
         final CaseAlreadyProcessedAndExistsInProgressionCommand command = CaseAlreadyProcessedAndExistsInProgressionCommand
                 .caseAlreadyProcessedAndExistsInProgressionCommand()
@@ -190,10 +188,10 @@ class StagingdlrmCommandHandlerTest {
         assertThat(events.size(), is(2));
         assertEvent(events.get(0),
                 "stagingdlrm.events.case-already-processed-and-exists-in-progression",
-                "expected-case-already.json");
+                "json/handler/expected-case-already.json");
         assertEvent(events.get(1),
                 "stagingdlrm.events.migrated-case-submission-processed",
-                "expected-processed-already.json");
+                "json/handler/expected-processed-already.json");
     }
 
     private void withRealAggregateStream(final UUID streamId) throws uk.gov.justice.services.eventsourcing.source.core.exception.EventStreamException {
@@ -204,12 +202,12 @@ class StagingdlrmCommandHandlerTest {
 
     private static void assertEvent(final JsonEnvelope event, final String expectedName, final String expectedFixture) {
         assertThat(event.metadata().name(), is(expectedName));
-        assertThat(event.payloadAsJsonObject().toString(), matchesWholePayload(fixture(FIXTURES + expectedFixture), List.of()));
+        assertThat(event.payloadAsJsonObject().toString(), matchesWholePayload(fixture(expectedFixture), List.of()));
     }
 
     private static MigratedCaseSubmission submission(final String fixtureName) {
         final JsonObject json = Json.createReader(
-                new ByteArrayInputStream(fixture(FIXTURES + fixtureName).getBytes(StandardCharsets.UTF_8))).readObject();
+                new ByteArrayInputStream(fixture(fixtureName).getBytes(StandardCharsets.UTF_8))).readObject();
         return CONVERTER.convert(json, MigratedCaseSubmission.class);
     }
 
