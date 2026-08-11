@@ -24,7 +24,7 @@ class MigratedCaseSubmissionSchemaContractTest {
 
     private static final String XHIBIT = "XHIBIT";
 
-    private static final String BASE_FIXTURE = "json/schema-contract/case-submission-valid.json";
+    private static final String BASE_FIXTURE = "json/schema-contract/xhibit/case-submission-valid.json";
 
     private static final String CASE_DETAILS_MESSAGE = "#/migratedCase/caseDetails: #: only 1 subschema matches out of 2";
 
@@ -92,7 +92,19 @@ class MigratedCaseSubmissionSchemaContractTest {
                         "#/migratedCase/defendants/0/individual/selfDefinedInformation: required key [gender] not found"),
                 Arguments.of("FR5 pin11 offences[*].offenceDateCode maximum 6 — stays enforced (XHIBIT)",
                         mutation(r -> offence0(r).put("offenceDateCode", 7)),
-                        "#/migratedCase/defendants/0/offences/0/offenceDateCode: 7.0 is not less or equal to 6"));
+                        "#/migratedCase/defendants/0/offences/0/offenceDateCode: 7.0 is not less or equal to 6"),
+                Arguments.of("DEFENSIVE migrated-defendant.documentationLanguage required — not a DD-43081 relax target, stays enforced (XHIBIT)",
+                        mutation(r -> defendant0(r).remove("documentationLanguage")),
+                        "#/migratedCase/defendants/0: required key [documentationLanguage] not found"),
+                Arguments.of("DEFENSIVE migrated-defendant.hearingLanguage required — not a DD-43081 relax target, stays enforced (XHIBIT)",
+                        mutation(r -> defendant0(r).remove("hearingLanguage")),
+                        "#/migratedCase/defendants/0: required key [hearingLanguage] not found"),
+                Arguments.of("DEFENSIVE migrated-defendant.prosecutorDefendantId required — not a DD-43081 relax target, stays enforced (XHIBIT)",
+                        mutation(r -> defendant0(r).remove("prosecutorDefendantId")),
+                        "#/migratedCase/defendants/0: required key [prosecutorDefendantId] not found"),
+                Arguments.of("DEFENSIVE migrated-defendant.offences required — not a DD-43081 relax target, stays enforced (XHIBIT)",
+                        mutation(r -> defendant0(r).remove("offences")),
+                        "#/migratedCase/defendants/0: required key [offences] not found"));
     }
 
     private String payload(final Consumer<JSONObject> mutation) throws IOException {
