@@ -104,7 +104,7 @@ reproduced here: the CSV is the artefact, this document is the reasoning around 
 
 | Column | Meaning |
 |---|---|
-| `libra_field`, `jsonpath`, `container` | the field as the sheet names it, where it sits in the payload |
+| `libra_field`, `jsonpath`, `container` | the **mapped canonical property name** for the sheet's field, and where it sits in the payload — *not* the sheet's own label where the two differ (see below) |
 | `funcapp_xhibit_status` | what the **existing hardwired XHIBIT gate schema** enforces here today, and it is not changing: `required` · `optional` · `not_validated` · `rejected_as_additional` |
 | `funcapp_libra_action` | what the **new source-system-selected LIBRA gate schema** should do: `require` · `declare` · `omit` · `not-validated-at-gate` |
 | `canonical_field`, `canonical_status` | the canonical name, and how LIBRA compares to it |
@@ -114,7 +114,35 @@ reproduced here: the CSV is the artefact, this document is the reasoning around 
 | `change_type` | the classification below |
 | `change_detail` | the concrete action, per schema, prefixed `Canonical:` / `Func-app:` / `PCFDLRM:` / `Guard:` |
 | `tier` | downstream tier, for the 44 added fields only; `n/a-already-in-canonical` on the other 121 |
-| `notes` | sheet row, constraint quotes, blockers — the only column that is legitimately blank |
+| `notes` | sheet row, constraint quotes, blockers — the only column that is legitimately blank. Sheet rows are carried only for the 44 **added** fields; 57 of the 113 LIBRA-supplied rows have none. The generated schema in `schema/libra/` does record the sheet row in every field's `description` if you need the provenance for one of those |
+
+### Searching the CSV by the sheet's own field name will sometimes fail
+
+`libra_field` reports the canonical property the sheet's field maps to, because that is what the
+comparison is against. For **13 of the 109 mapped fields** the two names differ, so a text search
+for the workbook's label finds nothing. The curated mapping is `MAPPING` in
+`tools/schema-gen/generate-dlrm-schema.py`; the divergences are:
+
+| Sheet section / field | `libra_field` in the CSV |
+|---|---|
+| Case Marker → `caseMarker` | `markerTypeCode` |
+| Listed Offences → `offenceID` | `listedOffences` |
+| Defendant → `forename2`, `forename3` | `middleName`, `middleName2` |
+| Defendant → `companyTelephoneNumber` | `telephoneNumberBusiness` |
+| Defendant → `workTelephoneNumber`, `homeTelephoneNumber`, `mobileTelephoneNumber` | `work`, `home`, `mobile` |
+| Defendant → `selfDefinedEthnicity` | `ethnicity` |
+| Offence → `cjsOffenceCode` | `offenceCode` |
+| Offence → `offenceSequenceNo` | `offenceSequenceNumber` |
+| Offence → `allocationDecision`, `allocationDecisionRecordedDate` | `allocationDecisionCode`, `allocationDecisionDate` |
+
+`Listed Offences → offenceID` is also the one that collapses rather than renaming: canonical models
+`listedDefendant.listedOffences` as an `array of string(36)`, so the offence IDs **are** the array
+items. There is no `listedOffences[*].offenceID` JSONPath, and the CSV is keyed by JSONPath, so the
+whole of sheet row 48 is a single row reading `exists_same_constraint` / `change_type: none`.
+
+That row is correct about the array and says nothing about the relationship it carries — see §6,
+where `listedOffences` is the reference whose target, `offence.prosecutorOffenceId`, the sheet never
+declares.
 
 **No cell is blank except `notes`.** A column that does not apply to a row says `n/a` rather than
 being left empty, because a blank in a spreadsheet reads as "not filled in" as readily as "does not
@@ -211,7 +239,7 @@ the Function App story (DD-43086).
 | Relax `required` where the sheet says optional/CM | `caseMarkers[*].markerTypeCode`, `selfDefinedInformation.gender` |
 | Drop `required` on fields the sheet omits | `offence.prosecutorOffenceId`, `hearing.durationMinutes`, `hearing.weekCommencingDate.startDate`, `personalInformation.address.address1`, and the three `parentGuardianInformation` equivalents |
 | Relax the enum | `caseDetails.initiationCode` — `enum: ["O"]`, LIBRA supplies C/J/Q/S |
-| Widen one bound | `offence.offenceDateCode` — canonical 1–6, LIBRA 0–9 |
+| ~~Widen one bound~~ | ~~`offence.offenceDateCode` — canonical 1–6, LIBRA 0–9~~ — **withdrawn: tooling artefact, no change needed.** LIBRA's own row-130 description enumerates the same six values canonical enforces; the `0–9` is inferred from the Format cell `N1`. See the known-noise note in §9 |
 | Decide, then act (§4) | `hearing.hearingType`, `offence.arrestDate`, `personalInformation.observedEthnicity` |
 | Add 41 optional fields | §5 — 18 clean, 23 blocked at pcfdlrm |
 
@@ -545,6 +573,18 @@ computed.
 
 - `minimum: 0` is added to generated `N<n>` integers where the live schema omits it. This is a
   generator artefact; the tool strips it before comparing, so it never appears as a difference.
+- **`maximum` on `N<n>` integers is the *same* artefact, and the tool does not strip it — so it can
+  appear as a false `relax-constraint`.** `generate-dlrm-schema.py` derives *both* bounds from the
+  Format cell's digit count in one expression
+  (`{"minimum": 0, "maximum": int("9" * n)}`), but `libra_constraints()` filters only the
+  `minimum`. An all-9s `maximum` therefore means "n digits", not "LIBRA sends up to that value",
+  and comparing it against a semantic canonical bound is invalid.
+  **One row is affected today: `offence.offenceDateCode`**, reported as
+  `relax-constraint` "widen maximum to 9 (canonical 6)". Discount it — the sheet's own row-130
+  description enumerates `1 = on or in … 6 = on or before`, exactly canonical's range, so canonical
+  needs no change. Any future `N<n>` integer whose canonical bound is semantic rather than
+  digit-derived will report the same false positive until `libra_constraints()` also drops an
+  all-9s `maximum`.
 - The six `parentGuardian*` definitions exist only in the generated schema. The generator
   deliberately gives parent-guardian its own definitions instead of reusing the shared
   `personalInformation`/`address`/`contactDetails`, because the sheet's mandatoriness for those rows

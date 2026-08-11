@@ -143,7 +143,7 @@ Build agents require `centos8-j17` capability (Java 17).
 
 ### Reconciliation Tooling
 
-`tools/reconciliation/` holds standalone bash/Python/SQL scripts (not part of the Maven build) that cross-reference a migration batch across Blob Storage → stagingdlrm → pcfdlrm → Listing to produce a per-case CSV reconciliation report — see `docs/reconciliation/reconciliation-plan.md` for the design and `docs/reconciliation/*-csv-fields.md` for each report's column reference. Run `./tools/reconciliation/run-all.sh <batch_id>` to execute the full pipeline; each stage script is independently runnable. All CSV output goes to `reconciliation/output/` (gitignored); `reconciliation/archived/` holds manually filed-away past runs.
+`tools/reconciliation/` holds standalone bash/Python/SQL scripts (not part of the Maven build) that cross-reference a migration batch across Blob Storage → stagingdlrm → pcfdlrm → Listing to produce a per-case CSV reconciliation report — see `tools/reconciliation/README.md`, the single authoritative reference for this directory: `## Key design facts` for the design, `## Report field reference` for each report's columns, plus environment variables, usage and known limitations. Run `./tools/reconciliation/run-all.sh <batch_id>` to execute the full pipeline; each stage script is independently runnable. All CSV output goes to `reconciliation/output/` (gitignored); `reconciliation/archived/` holds manually filed-away past runs.
 
 ### Key Dependencies (from parent POM)
 
