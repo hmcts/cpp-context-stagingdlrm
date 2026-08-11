@@ -1,0 +1,121 @@
+{
+  "channel" : "DLRM_MIGRATION",
+  "materials" : [ {
+    "azureLocation" : "http://inazure/secrets/1",
+    "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+    "documentType" : 3,
+    "fileName" : "Audio Recording one",
+    "fileType" : ".pdf",
+    "id" : "550e8400-e29b-41d4-a716-446655440001"
+  }, {
+    "azureLocation" : "http://inazure/secrets/2",
+    "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+    "documentType" : 3,
+    "fileName" : "Audio Recording two",
+    "fileType" : ".pdf",
+    "id" : "550e8400-e29b-41d4-a716-446655440000"
+  } ],
+  "migratedCaseDetails" : {
+    "caseDetails" : {
+      "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+      "dateOfCommittal" : "2024-01-15",
+      "dateOfSending" : "2024-08-23",
+      "dateReceived" : "2024-01-15",
+      "initiationCode" : "O",
+      "originatingOrganisation" : "G94DV00",
+      "prosecutor" : {
+        "prosecutingAuthority" : "GAEAA01"
+      },
+      "prosecutorCaseReference" : "TVL55117DFXXV",
+      "receiptType" : "Either way case",
+      "receivingCourt" : "B01LY00",
+      "retrialIndicator" : false,
+      "sendingCourt" : "C50EX00"
+    },
+    "defendants" : [ {
+      "documentationLanguage" : "W",
+      "hearingLanguage" : "W",
+      "id" : "57209d41-912f-44bc-8983-7708f6775172",
+      "individual" : {
+        "personalInformation" : {
+          "address" : {
+            "address1" : "armagaddon house",
+            "postcode" : "M60 1NW"
+          },
+          "contactDetails" : { },
+          "firstName" : "John",
+          "lastName" : "Smith",
+          "title" : "Baron"
+        },
+        "selfDefinedInformation" : {
+          "ethnicity" : "W1",
+          "gender" : "MALE"
+        }
+      },
+      "offences" : [ {
+        "chargeDate" : "2015-04-04",
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceDateCode" : 1,
+        "offenceId" : "2737234b-2b94-4a56-b9c2-cde9741330ad",
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "prosecutorOffenceId" : "XHIBIT-offence-id-1"
+      } ],
+      "prosecutorDefendantId" : "XHIBIT-defendant-id-1"
+    }, {
+      "documentationLanguage" : "W",
+      "hearingLanguage" : "W",
+      "id" : "6e4b7a95-88b1-4fdd-969e-4256bc1277fd",
+      "individual" : {
+        "personalInformation" : {
+          "address" : {
+            "address1" : "armagaddon house",
+            "postcode" : "M60 1NW"
+          },
+          "contactDetails" : { },
+          "firstName" : "John",
+          "lastName" : "Smith",
+          "title" : "Baron"
+        },
+        "selfDefinedInformation" : {
+          "ethnicity" : "W1",
+          "gender" : "FEMALE"
+        }
+      },
+      "offences" : [ {
+        "chargeDate" : "2015-04-04",
+        "offenceCode" : "DA03014",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceDateCode" : 1,
+        "offenceId" : "f4db7532-102e-43e4-b71a-50cb0ca51b35",
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "prosecutorOffenceId" : "XHIBIT-offence-id-2"
+      } ],
+      "prosecutorDefendantId" : "XHIBIT-defendant-id-2"
+    } ],
+    "hearings" : [ {
+      "courtHearingLocation" : "B01LY01",
+      "courtRoomId" : 60,
+      "dateOfHearing" : "2024-11-10",
+      "durationMinutes" : 60,
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "XHIBIT-offence-id-1" ],
+        "prosecutorDefendantId" : "XHIBIT-defendant-id-1"
+      }, {
+        "listedOffences" : [ "XHIBIT-offence-id-2" ],
+        "prosecutorDefendantId" : "XHIBIT-defendant-id-2"
+      } ],
+      "timeOfHearing" : "10:05:01"
+    } ],
+    "migrationSourceSystem" : {
+      "migrationSourceSystemCaseIdentifier" : "xhibit-case-identifier-0001",
+      "migrationSourceSystemName" : "XHIBIT"
+    }
+  },
+  "submissionId" : "11111111-2222-3333-4444-555555555555"
+}

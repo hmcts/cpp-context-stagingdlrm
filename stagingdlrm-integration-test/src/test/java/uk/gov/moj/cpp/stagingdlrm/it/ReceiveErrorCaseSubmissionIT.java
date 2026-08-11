@@ -1,13 +1,13 @@
 package uk.gov.moj.cpp.stagingdlrm.it;
 
-import static org.hamcrest.CoreMatchers.notNullValue;
+import static java.util.List.of;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.services.integrationtest.utils.jms.JmsMessageConsumerClientProvider.newPrivateJmsMessageConsumerClientProvider;
-
 import static uk.gov.moj.cpp.stagingdlrm.helper.FileUtil.getStringFromResource;
 import static uk.gov.moj.cpp.stagingdlrm.helper.QueueUtil.retrieveMessageBody;
 import static uk.gov.moj.cpp.stagingdlrm.helper.StubUtil.setupUsersGroupQueryStub;
+import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
 import uk.gov.justice.services.integrationtest.utils.jms.JmsMessageConsumerClient;
 import uk.gov.moj.cpp.stagingdlrm.helper.AbstractTestHelper;
@@ -41,7 +41,8 @@ class ReceiveErrorCaseSubmissionIT extends AbstractTestHelper {
 
         final Optional<JsonObject> envelope = retrieveMessageBody(consumerClient);
 
-        assertThat(envelope, is(notNullValue()));
-
+        assertTrue(envelope.isPresent());
+        assertThat(envelope.get().toString(),
+                matchesWholePayload(getStringFromResource("expected/error-migrated-case-submission-received.json"), of()));
     }
 }

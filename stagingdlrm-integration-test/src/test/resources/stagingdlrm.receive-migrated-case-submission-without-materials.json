@@ -24,15 +24,15 @@
         "hearingType": "",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "XHIBIT-offence-id-1"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-2",
             "listedOffences": [
-              "LIBRA-offence-id-2"
+              "XHIBIT-offence-id-2"
             ]
           }
         ]
@@ -48,15 +48,15 @@
         "hearingType": "",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "XHIBIT-offence-id-1"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-2",
             "listedOffences": [
-              "LIBRA-offence-id-2"
+              "XHIBIT-offence-id-2"
             ]
           }
         ]
@@ -64,7 +64,7 @@
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "prosecutorDefendantId": "XHIBIT-defendant-id-1",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -85,7 +85,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "prosecutorOffenceId": "XHIBIT-offence-id-1",
             "offenceCode": "CA03013",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -97,7 +97,7 @@
         ]
       },
       {
-        "prosecutorDefendantId":"LIBRA-defendant-id-2",
+        "prosecutorDefendantId":"XHIBIT-defendant-id-2",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -118,7 +118,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-2",
+            "prosecutorOffenceId": "XHIBIT-offence-id-2",
             "offenceCode": "DA03014",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -131,8 +131,8 @@
       }
     ],
     "migrationSourceSystem": {
-      "migrationSourceSystemName": "LIBRA",
-      "migrationSourceSystemCaseIdentifier": "This is from Libra"
+      "migrationSourceSystemName": "XHIBIT",
+      "migrationSourceSystemCaseIdentifier": "xhibit-case-identifier-0001"
     }
   },
   "metadata": {

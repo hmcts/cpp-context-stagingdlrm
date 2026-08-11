@@ -14,6 +14,7 @@ import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelpe
 import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelper.verifyPrivateEvents;
 import static uk.gov.moj.cpp.stagingdlrm.helper.QueueUtil.retrieveMessageBody;
 import static uk.gov.moj.cpp.stagingdlrm.helper.WiremockTestHelper.createCommonMockEndpoints;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileBody;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileNotRequestedFor;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequested;
 
@@ -34,7 +35,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 
@@ -66,8 +67,18 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     public static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
     private static final String XHIBIT_UNMAPPED_SYSTEM_ID_MAPPER_FIXTURE = "stagingdlrm.receive-migrated-case-submission-from-xhibit-unmapped-system-id-mapper.json";
 
-    @BeforeAll
-    static void setUp() {
+    private static final List<String> FORWARDED_BODY_EXCLUSIONS = List.of(
+            "submissionId",
+            "migratedCaseDetails.caseDetails.caseId",
+            "materials[0].caseId",
+            "materials[1].caseId",
+            "migratedCaseDetails.defendants[0].id",
+            "migratedCaseDetails.defendants[1].id",
+            "migratedCaseDetails.defendants[0].offences[0].offenceId",
+            "migratedCaseDetails.defendants[1].offences[0].offenceId");
+
+    @BeforeEach
+    void setUp() {
         createCommonMockEndpoints();
     }
 
@@ -78,38 +89,17 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission.json").replace("SUBMISSION_ID", submissionId);
 
-        final JsonObject jsonPayload = readJson(payload);
-
         makePostCall(
                 getWriteUrl("/receive-migrated-case-submission"),
                 "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
                 payload);
 
-        final Optional<JsonObject> message = retrieveMessageBody(consumerClient);
+        assertTrue(retrieveMessageBody(consumerClient).isPresent());
 
-        assertTrue(message.isPresent());
-        final JsonObject migratedCaseSubmission = message.get().getJsonObject("migratedCaseSubmission");
-        final JsonObject messageMigrateCaseDetails = migratedCaseSubmission.getJsonObject("migratedCase");
-        final JsonObject commandMigrateCaseDetails = jsonPayload.getJsonObject("migratedCase");
-        final JsonArray commandMigrateDefendantDetails = commandMigrateCaseDetails.getJsonArray("defendants");
-        final JsonArray messageMigrateDefendantDetails = messageMigrateCaseDetails.getJsonArray("defendants");
-
-        final List<Defendant> migratedDefendantList = getDefendantList(commandMigrateDefendantDetails);
-
-        final List<Defendant> messageDefendantList = getDefendantList(messageMigrateDefendantDetails);
-
-        final List<String> stringList = new ArrayList<>();
-        stringList.add(submissionId);
-        stringList.add("DLRM_MIGRATION");
-        stringList.add("LIBRA");
-        verifyReceiveCaseFileRequested(stringList);
-
-        assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
-        commonDefendantMatches(migratedDefendantList, messageDefendantList);
-        assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("materials"), is(messageMigrateCaseDetails.getJsonObject("materials")));
-        assertThat(commandMigrateCaseDetails.getJsonArray("hearings"), is(messageMigrateCaseDetails.getJsonArray("hearings")));
-
+        verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        verifyReceiveCaseFileBody(submissionId,
+                getStringFromResource("expected/receive-migrated-case-file.json"),
+                FORWARDED_BODY_EXCLUSIONS);
     }
 
     @Test
@@ -210,7 +200,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("materials"), is(messageMigrateCaseDetails.getJsonObject("materials")));
         assertThat(commandMigrateCaseDetails.getJsonArray("hearings"), is(messageMigrateCaseDetails.getJsonArray("hearings")));
         assertThat(migratedDefendantList.get(0).getIndividual().getCustodyStatus(), is(messageDefendantList.get(0).getIndividual().getCustodyStatus()));
         assertThat(migratedDefendantList.get(0).getIndividual().getCustodyTimeLimit(), is(messageDefendantList.get(0).getIndividual().getCustodyTimeLimit()));
@@ -254,7 +243,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(migratedDefendantList.get(0).getIndividual().getSelfDefinedInformation().getGender(), is(messageDefendantList.get(0).getIndividual().getSelfDefinedInformation().getGender()));
         assertThat(migratedDefendantList.get(0).getHearingLanguage(), is(messageDefendantList.get(0).getHearingLanguage()));
         assertThat(migratedDefendantList.get(0).getDocumentationLanguage(), is(messageDefendantList.get(0).getDocumentationLanguage()));
-        assertThat(commandMigrateCaseDetails.getJsonObject("materials"), is(messageMigrateCaseDetails.getJsonObject("materials")));
         assertThat(commandMigrateCaseDetails.get("receiptType"), is(messageMigrateCaseDetails.get("receiptType")));
 
     }
@@ -290,14 +278,13 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         final List<String> stringList = new ArrayList<>();
         stringList.add(submissionId);
         stringList.add("DLRM_MIGRATION");
-        stringList.add("LIBRA");
+        stringList.add("XHIBIT");
         verifyReceiveCaseFileRequested(stringList);
 
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertEquals(2, messageMigrateCaseDetails.getJsonArray("hearings").size());
         assertThat(commandMigrateCaseDetails.getJsonArray("hearings"), is(messageMigrateCaseDetails.getJsonArray("hearings")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("materials"), is(messageMigrateCaseDetails.getJsonObject("materials")));
     }
 
 
@@ -332,14 +319,14 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         final List<String> stringList = new ArrayList<>();
         stringList.add(submissionId);
         stringList.add("DLRM_MIGRATION");
-        stringList.add("LIBRA");
+        stringList.add("XHIBIT");
         verifyReceiveCaseFileRequested(stringList);
 
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertEquals(2, messageMigrateCaseDetails.getJsonArray("hearings").size());
         assertThat(commandMigrateCaseDetails.getJsonArray("hearings"), is(messageMigrateCaseDetails.getJsonArray("hearings")));
-        assertNull(migratedCaseSubmission.getJsonObject("materials"));
+        assertNull(migratedCaseSubmission.get("materials"));
 
     }
 
@@ -377,7 +364,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("caseMarkers"), is(messageMigrateCaseDetails.getJsonObject("caseMarkers")));
 
     }
 
@@ -417,7 +403,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("plea"), is(messageMigrateCaseDetails.getJsonObject("plea")));
 
     }
 
@@ -459,7 +444,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("verdict"), is(messageMigrateCaseDetails.getJsonObject("verdict")));
 
     }
 
@@ -497,8 +481,6 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
         assertThat(commandMigrateCaseDetails.getJsonObject("migrationSourceSystem"), is(messageMigrateCaseDetails.getJsonObject("migrationSourceSystem")));
-        assertThat(commandMigrateCaseDetails.getJsonObject("dateOfSending"), is(messageMigrateCaseDetails.getJsonObject("2024-08-23")));
-        assertNull(commandMigrateCaseDetails.getJsonObject("dateOfCommittal"));
     }
 
     @Test
@@ -534,13 +516,14 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertThat(commandMigrateCaseDetails.get("caseId"), is(messageMigrateCaseDetails.get("caseId")));
         commonDefendantMatches(migratedDefendantList, messageDefendantList);
-        assertNull(commandMigrateCaseDetails.getJsonObject("sendingCourt"));
 
     }
 
     @Test
     void shouldAcceptXhibitCaseWhenMappingExistsInSystemIdMapper() {
-        SystemIdMapperStub.stubGetCaseIdByURN("TVL55117DFXXV", UUID.fromString("51cac7fb-387c-4d19-9c80-8963fa8cf222"));
+        final UUID mappedCaseId = UUID.fromString("51cac7fb-387c-4d19-9c80-8963fa8cf222");
+        SystemIdMapperStub.stubGetCaseIdByURN("TVL55117DFXXV", mappedCaseId);
+        ProgressionStub.stubProgressionProsecutionCase(mappedCaseId, "EJECTED");
 
         final String submissionId = UUID.randomUUID().toString();
         final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit.json")
