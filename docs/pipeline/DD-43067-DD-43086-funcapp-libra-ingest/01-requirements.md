@@ -73,9 +73,37 @@ overriding analysis §3.2's build-time-unpack proposal.
   **`declare` is load-bearing, not cosmetic:** the generated LIBRA `caseDetails` is closed
   (`additionalProperties: false`) where the XHIBIT gate's is open, so a LIBRA field left undeclared
   is rejected *at the gate*.
-  Note also that `initiationCode is not restricted to "O"` is trivially satisfied here — **the gate
-  carries no constraints at all** (no enums, patterns or lengths, see FR6). The enum relaxation is
-  canonical-side work in DD-43081, not this story's.
+  Note also that `initiationCode is not restricted to "O"` is trivially satisfied here — **the
+  `caseDetails` branch of the gate carries no constraints at all** (no enums, patterns or lengths,
+  see FR6; the `defendants` branch is a later, explicitly scoped exception — see below). The enum
+  relaxation is canonical-side work in DD-43081, not this story's.
+  **Extended during implementation, then partly reverted:** the LIBRA workbook schema
+  (`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`) declares 5 properties at the
+  `migratedCase` level — `caseDetails`, `defendants`, `migrationSourceSystem` (required),
+  `hearings`, `officerInCase` (optional) — and closes the object (`additionalProperties: false`).
+  LIBRA's `migrated-case.json` equivalent mirrors this at the object level (closed,
+  `caseDetails`/`defendants` required, `hearings`/`officerInCase` declared-optional), even though
+  XHIBIT's own `migrated-case.json` is untouched — it requires only `caseDetails` and stays open.
+  `migrationSourceSystem` was briefly declared too (`$ref`-ed to the pre-existing shared
+  `migrationSourceSystem.json`, already used by the manifest gate, and required) then removed
+  entirely. Because the object is closed, this means a payload carrying `migrationSourceSystem` at
+  the `migratedCase` level is now rejected as undeclared, not merely optional. The shared
+  `migrationSourceSystem.json` keeps the `required` extension made while it was briefly referenced
+  — it still strengthens the manifest gate independently, verified against every existing fixture.
+  **Extended further still:** `defendants` itself was then fully expanded — a second, larger
+  exception, reversing FR3a's depth limit for this one branch. The workbook's whole `defendant`
+  definition graph (20 definitions: `defendant`, `address`, `individual`, `individualAlias`,
+  `offence`, `phone`, `date`, `email`, `contactDetails`, `personalInformation`,
+  `selfDefinedInformation`, `parentGuardianPerson`, `parentGuardianOrganisation`,
+  `parentGuardianPersonalInformation`, `parentGuardianAddress`, `parentGuardianContactDetails`,
+  `plea`, `verdict`, `allocationDecision`, `alcoholRelatedOffence`) was ported into 20 new
+  `libra-*.json` files, this time carrying the workbook's full constraints
+  (`pattern`/`maxLength`/`minimum`/`maximum`/`minItems`) verbatim rather than bare types — a
+  deliberate reversal of FR3a's "no constraints beyond bare type" principle, scoped to this one
+  branch only (`02-design.md` §"FR3a — depth decision"). `hearings` was then expanded the same
+  way (2 more definitions, `hearing` and `listedDefendant`, reusing `date`), and finally
+  `officerInCase` too (2 more definitions, `officerInCase` and `officerInCaseAddress`, reusing
+  `phone`/`email`) — no `migratedCase` branch remains bare/undescended.
 - **FR3a — Decide how deep the LIBRA gate validates.** Not a detail; it changes the failure profile:
 
   | Gate | Leaves validated | Branches |

@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-officer-in-case.json",
+  "description": "LIBRA Officer In Case",
+  "type": "object",
+  "properties": {
+    "forename": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "forename2": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "forename3": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "surname": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "policeOfficerRank": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "policeWorkerReferenceNumber": {
+      "type": "string",
+      "maxLength": 15
+    },
+    "policeWorkerLocationCode": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "uniquePropertyReferenceNumber": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999999999999
+    },
+    "workTelephoneNumber": {
+      "$ref": "libra-phone.json"
+    },
+    "mobileTelephoneNumber": {
+      "$ref": "libra-phone.json"
+    },
+    "primaryEmail": {
+      "$ref": "libra-email.json"
+    },
+    "secondaryEmail": {
+      "$ref": "libra-email.json"
+    },
+    "faxNumber": {
+      "$ref": "libra-phone.json"
+    },
+    "dxAddress": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "address": {
+      "$ref": "libra-officer-in-case-address.json"
+    }
+  },
+  "required": [
+    "address",
+    "policeOfficerRank",
+    "policeWorkerLocationCode",
+    "policeWorkerReferenceNumber",
+    "surname"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-verdict.json",
+  "description": "LIBRA Verdict",
+  "type": "object",
+  "properties": {
+    "verdictCode": {
+      "type": "string"
+    },
+    "verdictDate": {
+      "$ref": "libra-date.json"
+    }
+  },
+  "additionalProperties": false
+}

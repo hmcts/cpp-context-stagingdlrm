@@ -11,5 +11,9 @@
     "type": "string"
   }
   },
+  "required": [
+    "migrationSourceSystemName",
+    "migrationSourceSystemCaseIdentifier"
+  ],
   "additionalProperties": false
 }

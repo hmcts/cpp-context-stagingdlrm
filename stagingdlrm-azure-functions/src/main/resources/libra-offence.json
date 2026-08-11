@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-offence.json",
+  "description": "LIBRA Offence",
+  "type": "object",
+  "properties": {
+    "offenceCode": {
+      "type": "string",
+      "maxLength": 8
+    },
+    "offenceSequenceNumber": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999
+    },
+    "chargeDate": {
+      "$ref": "libra-date.json"
+    },
+    "offenceDateCode": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9
+    },
+    "offenceCommittedDate": {
+      "$ref": "libra-date.json"
+    },
+    "offenceCommittedEndDate": {
+      "$ref": "libra-date.json"
+    },
+    "arrestDate": {
+      "type": "string"
+    },
+    "offenceLocation": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "offenceWording": {
+      "type": "string",
+      "maxLength": 2500
+    },
+    "offenceWordingWelsh": {
+      "type": "string",
+      "maxLength": 2500
+    },
+    "statementOfFacts": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "statementOfFactsWelsh": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "prosecutorCompensation": {
+      "type": "number",
+      "minimum": 0
+    },
+    "backDuty": {
+      "type": "number",
+      "minimum": 0
+    },
+    "backDutyDateFrom": {
+      "$ref": "libra-date.json"
+    },
+    "backDutyDateTo": {
+      "$ref": "libra-date.json"
+    },
+    "vehicleCode": {
+      "type": "string",
+      "maxLength": 1
+    },
+    "vehicleMake": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "vehicleRegistrationMark": {
+      "type": "string",
+      "maxLength": 11
+    },
+    "prosecutorOfferAOCP": {
+      "type": "boolean"
+    },
+    "convictionDate": {
+      "$ref": "libra-date.json"
+    },
+    "alcoholRelatedOffence": {
+      "$ref": "libra-alcohol-related-offence.json"
+    },
+    "plea": {
+      "$ref": "libra-plea.json"
+    },
+    "verdict": {
+      "$ref": "libra-verdict.json"
+    },
+    "allocationDecision": {
+      "$ref": "libra-allocation-decision.json"
+    }
+  },
+  "required": [
+    "offenceCode",
+    "offenceCommittedDate",
+    "offenceDateCode",
+    "offenceSequenceNumber",
+    "offenceWording"
+  ]
+}

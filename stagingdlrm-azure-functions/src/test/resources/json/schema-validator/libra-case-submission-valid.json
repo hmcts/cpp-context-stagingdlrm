@@ -8,7 +8,7 @@
         "prosecutingAuthority": "GAEAA01"
       },
       "summonsCode": "SUM001",
-      "informant": "PC 1234 LIBRA",
+      "informant": "PC 1234 {{SOURCE_SYSTEM}}",
       "writtenChargePostingDate": "2024-01-15",
       "cpsOrganisation": "CPS North West",
       "caseMarkers": [
@@ -17,9 +17,6 @@
         }
       ]
     },
-    "migrationSourceSystem": {
-      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
-      "migrationSourceSystemCaseIdentifier": "This is from {{SOURCE_SYSTEM}}"
-    }
+    "defendants": []
   }
 }

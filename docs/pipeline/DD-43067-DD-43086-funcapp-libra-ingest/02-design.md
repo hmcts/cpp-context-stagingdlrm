@@ -148,16 +148,21 @@ New test `SubmissionPathTokensTest` (no prior analogous suite exists — see FR9
 A **fully independent** parallel schema chain. The XHIBIT files
 (`stagingdlrm.case-submission.json`, `migrated-case.json`, `case-details.json`,
 `pcf-prosecutor.json`, `stagingdlrm.manifest.json`) are **not modified and not `$ref`-ed** by
-the LIBRA files — the two chains never touch. New files under
+the LIBRA files — the two chains never touch. `migrationSourceSystem.json` (a pre-existing file
+shared by `stagingdlrm.manifest.json`, the manifest-file gate) was briefly `$ref`-ed from
+`libra-migrated-case.json` too, then removed during implementation — see below. New files under
 `stagingdlrm-azure-functions/src/main/resources/`:
 
 | New file | Mirrors | Difference |
 |---|---|---|
 | `libra.case-submission.json` | `stagingdlrm.case-submission.json` | `$ref` → `libra-migrated-case.json` |
-| `libra-migrated-case.json` | `migrated-case.json` | `$ref` → `libra-case-details.json` |
+| `libra-migrated-case.json` | `migrated-case.json` | `$ref` → `libra-case-details.json`, `libra-defendant.json`, `libra-hearing.json`, `libra-officer-in-case.json`; declares 4 of the workbook's 5 `migratedCase` properties, requires 2, closed (revised — see below) |
 | `libra-case-details.json` | `case-details.json` | the real content — see below |
 | `libra-prosecutor.json` | `pcf-prosecutor.json` | adds `required: ["prosecutingAuthority"]` |
-| `libra-case-marker.json` | (new — no XHIBIT equivalent) | minimal `{ markerTypeCode: string }` |
+| `case-marker.json` | (new — no XHIBIT equivalent) | minimal `{ markerTypeCode: string }` |
+| `libra-defendant.json` + 19 more (new — no XHIBIT equivalent) | the workbook's `defendant` definition graph, ported verbatim including constraints | added later during implementation — see "second, larger exception" below |
+| `libra-hearing.json` + `libra-listed-defendant.json` (new — no XHIBIT equivalent) | the workbook's `hearing` definition graph, ported verbatim including constraints (`libra-date.json` reused) | added later still — see "third exception" below |
+| `libra-officer-in-case.json` + `libra-officer-in-case-address.json` (new — no XHIBIT equivalent) | the workbook's `officerInCase` definition graph, ported verbatim including constraints (`libra-phone.json`/`libra-email.json` reused) | added last — see "fourth and final exception" below |
 
 The manifest schema is **not** forked — LIBRA reuses `stagingdlrm.manifest.json` (FR5).
 
@@ -219,7 +224,7 @@ Sketch:
     "informant":               { "type": "string" },
     "writtenChargePostingDate":{ "type": "string" },
     "cpsOrganisation":         { "type": "string" },
-    "caseMarkers":             { "type": "array", "items": { "$ref": "libra-case-marker.json" } }
+    "caseMarkers":             { "type": "array", "items": { "$ref": "case-marker.json" } }
   },
   "required": [
     "prosecutorCaseReference",
@@ -232,7 +237,10 @@ Sketch:
 ```
 
 `libra-prosecutor.json` — mirrors `pcf-prosecutor.json`, adds the one `require` item that lives a
-level down (CSV row 93, `prosecutor.prosecutingAuthority` = `require`):
+level down (CSV row 93, `prosecutor.prosecutingAuthority` = `require`), and matches the LIBRA
+workbook schema's own `prosecutor` definition
+(`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`, which also requires
+`prosecutingAuthority`):
 
 ```json
 {
@@ -248,14 +256,14 @@ level down (CSV row 93, `prosecutor.prosecutingAuthority` = `require`):
 }
 ```
 
-`libra-case-marker.json` — new; the XHIBIT gate does not validate `caseMarkers` at all, but the
+`case-marker.json` — new; the XHIBIT gate does not validate `caseMarkers` at all, but the
 `declare` action needs `caseMarkers[].markerTypeCode` to exist as a valid property so the closed
 parent does not reject it (CSV row 55):
 
 ```json
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "libra-case-marker.json",
+  "id": "case-marker.json",
   "type": "object",
   "description": "LIBRA case marker (structural placeholder — presence only)",
   "properties": {
@@ -274,6 +282,101 @@ the `review-constraint` rows, CSV rows 54/56/60) into the earliest, least-diagno
 the chain, while leaving the two source systems with materially different gate strength. Keep the
 canonical schema as the deep validator; revisit once a real LIBRA sample exists (`01-requirements.md`
 FR3a recommendation).
+
+**One deliberate exception, revised during implementation:** `libra-migrated-case.json` now
+mirrors most of the LIBRA workbook schema's `migratedCase` definition
+(`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`), rather than XHIBIT's
+shallower `migrated-case.json`, but deliberately **excludes `migrationSourceSystem`**:
+- `caseDetails`, `defendants` (`required`), `hearings`, `officerInCase` (declared but optional,
+  matching the workbook);
+- `additionalProperties: false` — closed, so a property the schema doesn't know about at all is
+  rejected, but the two declared-optional ones are not.
+
+`migrationSourceSystem` was briefly declared (`$ref`-ed to the pre-existing shared
+`migrationSourceSystem.json`, already used by `stagingdlrm.manifest.json`) and required, matching
+the workbook — then removed entirely during implementation. Because the object is closed, this is
+not "now optional": a payload that carries `migrationSourceSystem` at the `migratedCase` level is
+now **rejected** as an undeclared property. `migrationSourceSystem.json` itself keeps the
+`required` extension made while it was briefly shared (it still strengthens the manifest gate,
+`stagingdlrm.manifest.json`, which is unaffected by this reversal) — only the `$ref` from
+`libra-migrated-case.json` was removed.
+
+XHIBIT's own `migrated-case.json` is untouched — it still requires only `caseDetails` and stays
+open. This is a LIBRA-only strengthening (of the fields it does declare), not a change to a
+shared/mirrored shape, and it is the safe direction (stricter, not more lenient — see FR6's own
+reasoning for why that direction is harmless).
+
+**A second, larger exception, added later during implementation: `defendants` is fully
+recursively expanded**, reversing FR3a's depth limit entirely for this one branch (`officerInCase`
+remains bare/undescended; `hearings` was expanded the same way shortly after — see below).
+`defendants` changed from `{"type": "array"}` to
+`{"type": "array", "items": {"$ref": "libra-defendant.json"}}`, and the workbook's full
+`defendant` definition graph — every object it reaches, transitively — was ported into 20 new
+`stagingdlrm-azure-functions/src/main/resources/` files (kebab-cased from the workbook definition
+name, `libra-` prefixed): `libra-defendant.json`, `libra-address.json`, `libra-individual.json`,
+`libra-individual-alias.json`, `libra-offence.json`, `libra-phone.json`, `libra-date.json`,
+`libra-email.json`, `libra-contact-details.json`, `libra-personal-information.json`,
+`libra-self-defined-information.json`, `libra-parent-guardian-person.json`,
+`libra-parent-guardian-organisation.json`, `libra-parent-guardian-personal-information.json`,
+`libra-parent-guardian-address.json`, `libra-parent-guardian-contact-details.json`,
+`libra-plea.json`, `libra-verdict.json`, `libra-allocation-decision.json`,
+`libra-alcohol-related-offence.json`.
+
+Unlike every other schema in this chain, **these 20 files carry the workbook's full constraints**
+(`pattern`, `maxLength`/`minLength`, `minimum`/`maximum`, `minItems`) verbatim, not bare types —
+a second, explicitly scoped reversal of FR3a's "no constraints beyond bare type" principle
+(deliberate choice, not an oversight: the func-app gate becomes a real business-rule validator for
+this one branch, e.g. `defendant.address.postcode`'s UK postcode regex, `offence.offenceCode`'s
+`maxLength: 8`). `required` and `additionalProperties` are also carried over byte-for-byte from
+the workbook per definition — some (e.g. `individual`, `offence`, `personalInformation`) are left
+open (no `additionalProperties` key in the workbook) rather than force-closed. Per-property
+`description` text from the workbook is dropped (each file keeps one short top-level
+`description` instead), matching this chain's existing style.
+
+Verified: a fully populated defendant (`prosecutorDefendantId`, `documentationLanguage`,
+`hearingLanguage`, one `address` with `address1`, one `offence` with its five required fields) is
+accepted; each of `defendant`'s 5 required properties is individually proven required; a
+constraint violation at `defendant` depth (`documentationLanguage` over `maxLength: 1`) is
+rejected; a constraint violation two `$ref`s deep (`defendant.address.postcode` failing the UK
+postcode pattern) is also rejected, proving the nested `$ref` chain resolves correctly through
+`libra-migrated-case.json` → `libra-defendant.json` → `libra-address.json`. 111/111 tests pass,
+`mvn -pl stagingdlrm-azure-functions -am clean install -DskipITs` succeeds.
+
+**A third exception, added later still: `hearings` is fully recursively expanded the same way**
+(`officerInCase` was expanded the same way shortly after — see below; no `migratedCase` branch is
+left bare/undescended). `hearings` changed from
+`{"type": "array"}` to `{"type": "array", "items": {"$ref": "libra-hearing.json"}}`. The
+workbook's `hearing` definition graph is much smaller than `defendant`'s — only 2 new files,
+`libra-hearing.json` and `libra-listed-defendant.json` (`libra-date.json`, already added for
+`defendant.offence`, is reused for `hearing.dateOfHearing`) — carrying the same full workbook
+constraints (e.g. `courtHearingLocation`'s exact 7-character length, `timeOfHearing`'s
+`HH:MM:SS` pattern).
+
+Verified the same way: a fully populated hearing (`courtHearingLocation`, `dateOfHearing`,
+`timeOfHearing`, `hearingType`, one `listedDefendant` with its two required fields) is accepted;
+each of `hearing`'s 5 required properties is individually proven required; a constraint violation
+at `hearing` depth (`courtHearingLocation` not exactly 7 characters) is rejected; a constraint
+violation one `$ref` deep (`hearing.listedDefendants[].prosecutorDefendantId` over
+`maxLength: 36`) is also rejected. 119/119 tests pass, full reactor
+`install -DskipITs` succeeds.
+
+**A fourth and final exception: `officerInCase` is fully recursively expanded too** — the last of
+the four `migratedCase` branches, so none remain bare/undescended. `officerInCase` changed from
+`{"type": "object"}` to `{"$ref": "libra-officer-in-case.json"}` (a direct `$ref`, not wrapped in
+an array, unlike `defendants`/`hearings` — the workbook declares it as a single object). Only 2
+new files, `libra-officer-in-case.json` and `libra-officer-in-case-address.json`
+(`libra-phone.json`/`libra-email.json`, already added for `defendant`, are reused).
+
+Verified the same way: a fully populated `officerInCase` (`surname`, `policeOfficerRank`,
+`policeWorkerReferenceNumber`, `policeWorkerLocationCode`, one `address` with `address1`) is
+accepted; each of its 5 required properties is individually proven required; a constraint
+violation one `$ref` deep (`officerInCase.address.postcode` failing the UK postcode pattern) is
+rejected. **Regression fixed in the same change:** the existing "declared but optional" test for
+`officerInCase` previously asserted an *empty* `{}` was accepted — true when it was bare
+`type: object`, false now that it has 5 required fields. Updated to supply a
+requirement-satisfying `officerInCase` instead, since that row is about `migratedCase` not
+requiring the property, not about the property's own shape. 126/126 tests pass, full reactor
+`install -DskipITs` succeeds.
 
 ---
 
@@ -400,7 +503,12 @@ Comparing the two committed flattened files today yields a fixed set of pre-exis
 
 Verified by running the comparison directly against the two committed flattened files (not just reasoned about) —
 6 findings today, not 4; the two `migrationSourceSystem` required-field findings are easy to miss by
-inspection alone. So implement the test as a **ratchet against a pinned baseline** of exactly these known findings:
+inspection alone. **Stale as of the `migrationSourceSystem.json` change above:** the live resource
+file now declares both fields `required`, so these 2 findings would no longer reproduce once
+`staging-dlrm-funcapp-flattened.json` is next regenerated (`tools/schema-gen/flatten-canonical-schema.py`)
+— baseline would drop to 4. Not corrected here since FR6 is unimplemented and the flattened
+snapshot is a manually-regenerated artefact this story does not touch; whoever picks up FR6 should
+regenerate first and re-verify the count. So implement the test as a **ratchet against a pinned baseline** of exactly these known findings:
 fail only on *new* drift beyond the baseline, not on the already-existing condition. (AC8 —
 "when a Function App schema is made more lenient than canonical for a shared field, then the build
 fails" — is met: a *new* leniency is a finding not in the baseline.)

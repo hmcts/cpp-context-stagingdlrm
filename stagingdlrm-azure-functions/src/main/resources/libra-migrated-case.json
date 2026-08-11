@@ -6,10 +6,26 @@
   "properties": {
     "caseDetails": {
       "$ref": "libra-case-details.json"
+    },
+    "defendants": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-defendant.json"
+      }
+    },
+    "hearings": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-hearing.json"
+      }
+    },
+    "officerInCase": {
+      "$ref": "libra-officer-in-case.json"
     }
   },
   "required": [
-    "caseDetails"
+    "caseDetails",
+    "defendants"
   ],
-  "additionalProperties": true
+  "additionalProperties": false
 }

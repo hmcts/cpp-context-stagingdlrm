@@ -1,0 +1,8 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-phone.json",
+  "description": "LIBRA Phone Number",
+  "type": "string",
+  "maxLength": 35,
+  "pattern": "^[\\+]?[0-9()\\-\\.\\s]+$"
+}

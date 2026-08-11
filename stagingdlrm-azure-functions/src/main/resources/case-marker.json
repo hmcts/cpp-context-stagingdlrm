@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "libra-case-marker.json",
+  "id": "case-marker.json",
   "type": "object",
   "description": "LIBRA case marker (structural placeholder — presence only)",
   "properties": {

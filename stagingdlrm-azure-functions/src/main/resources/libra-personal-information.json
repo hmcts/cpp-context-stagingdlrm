@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-personal-information.json",
+  "description": "LIBRA Personal Information",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "maxLength": 35
+    },
+    "forename": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "middleName": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "middleName2": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "surname": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "observedEthnicity": {
+      "type": "string"
+    },
+    "contactDetails": {
+      "$ref": "libra-contact-details.json"
+    }
+  },
+  "required": [
+    "forename",
+    "surname"
+  ]
+}

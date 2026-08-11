@@ -31,7 +31,7 @@
     "caseMarkers": {
       "type": "array",
       "items": {
-        "$ref": "libra-case-marker.json"
+        "$ref": "case-marker.json"
       }
     }
   },

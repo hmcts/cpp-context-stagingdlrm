@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-allocation-decision.json",
+  "description": "LIBRA Allocation Decision",
+  "type": "object",
+  "properties": {
+    "allocationDecisionCode": {
+      "type": "string"
+    },
+    "allocationDecisionDate": {
+      "$ref": "libra-date.json"
+    }
+  },
+  "additionalProperties": false
+}

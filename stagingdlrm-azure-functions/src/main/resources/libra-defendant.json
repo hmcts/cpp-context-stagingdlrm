@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-defendant.json",
+  "description": "LIBRA Defendant Details (Function App gate)",
+  "type": "object",
+  "properties": {
+    "prosecutorDefendantId": {
+      "type": "string",
+      "maxLength": 36
+    },
+    "asn": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "pncIdentifier": {
+      "type": "string",
+      "maxLength": 13
+    },
+    "croNumber": {
+      "type": "string",
+      "maxLength": 12
+    },
+    "organisationName": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "telephoneNumberBusiness": {
+      "$ref": "libra-phone.json"
+    },
+    "organisationTelephoneNumber": {
+      "$ref": "libra-phone.json"
+    },
+    "occupation": {
+      "type": "string",
+      "maxLength": 54
+    },
+    "defendantOccupationCode": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 99999
+    },
+    "driverNumber": {
+      "type": "string",
+      "maxLength": 16
+    },
+    "licenseCode": {
+      "type": "string",
+      "maxLength": 1
+    },
+    "documentationLanguage": {
+      "type": "string",
+      "maxLength": 1
+    },
+    "hearingLanguage": {
+      "type": "string",
+      "maxLength": 1
+    },
+    "languageRequirement": {
+      "type": "string",
+      "maxLength": 150
+    },
+    "specificRequirements": {
+      "type": "string",
+      "maxLength": 150
+    },
+    "numPreviousConvictions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999
+    },
+    "nationalInsuranceNumber": {
+      "type": "string",
+      "maxLength": 9
+    },
+    "prosecutorCosts": {
+      "type": "number",
+      "minimum": 0
+    },
+    "aliasForCorporate": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "address": {
+      "$ref": "libra-address.json"
+    },
+    "individual": {
+      "$ref": "libra-individual.json"
+    },
+    "individualAliases": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-individual-alias.json"
+      }
+    },
+    "offences": {
+      "type": "array",
+      "items": {
+        "$ref": "libra-offence.json"
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "address",
+    "documentationLanguage",
+    "hearingLanguage",
+    "offences",
+    "prosecutorDefendantId"
+  ],
+  "additionalProperties": false
+}

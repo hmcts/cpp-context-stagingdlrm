@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-contact-details.json",
+  "description": "LIBRA Contact Details",
+  "type": "object",
+  "properties": {
+    "work": {
+      "$ref": "libra-phone.json"
+    },
+    "home": {
+      "$ref": "libra-phone.json"
+    },
+    "mobile": {
+      "$ref": "libra-phone.json"
+    },
+    "primaryEmail": {
+      "$ref": "libra-email.json"
+    },
+    "secondaryEmail": {
+      "$ref": "libra-email.json"
+    }
+  },
+  "additionalProperties": false
+}

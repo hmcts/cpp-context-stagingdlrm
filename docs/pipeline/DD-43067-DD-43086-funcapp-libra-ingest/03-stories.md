@@ -148,7 +148,7 @@ rather than being validated against XHIBIT's schema or a naive copy of it**.
 ### Background
 FR3 + FR3a from `01-requirements.md`, designed in `02-design.md` §"FR3 / FR3a" (the fully
 independent parallel schema chain: `libra.case-submission.json` → `libra-migrated-case.json` →
-`libra-case-details.json` → `libra-prosecutor.json` / `libra-case-marker.json`). The XHIBIT files
+`libra-case-details.json` → `libra-prosecutor.json` / `case-marker.json`). The XHIBIT files
 are **not modified and not `$ref`-ed** by the new LIBRA files — the two chains never touch. The
 content of `libra-case-details.json` is derived from
 `docs/analysis/libra-ingestion/libra-schema-impact.csv`'s `funcapp_libra_action` column (`omit`
@@ -186,16 +186,57 @@ into false rejections at the earliest, least-diagnosable point in the chain.
 - [ ] Code reviewed and approved.
 - [ ] Five new schema files added under `stagingdlrm-azure-functions/src/main/resources/`:
       `libra.case-submission.json`, `libra-migrated-case.json`, `libra-case-details.json`,
-      `libra-prosecutor.json`, `libra-case-marker.json` (`02-design.md` §"FR3 / FR3a").
+      `libra-prosecutor.json`, `case-marker.json` (`02-design.md` §"FR3 / FR3a").
 - [ ] `libra-case-details.json` matches the matrix exactly: 7 `omit` fields absent from
       `properties`, 4 `require` fields present in both `properties` and `required`
       (`initiationCode`, `originatingOrganisation`, `prosecutorCaseReference`, `prosecutor`), 5
       `declare` fields present in `properties` but not `required`, `additionalProperties: false`.
 - [ ] `libra-prosecutor.json` requires `prosecutingAuthority` (the one `require` item one level
-      down).
-- [ ] No constraints beyond bare `type` anywhere in the new chain (no `enum`, `pattern`,
-      `minLength`/`maxLength`) — matches the existing gate's zero-constraint style and keeps
-      business rules out of the Function App (FR3a, FR6 scoping).
+      down) — matches the LIBRA workbook schema's own `prosecutor` definition.
+- [ ] `libra-migrated-case.json` mirrors most of the LIBRA workbook schema's own `migratedCase`
+      definition (`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`) at this level:
+      `caseDetails`, `defendants` (required), `hearings`, `officerInCase` (declared but optional),
+      `additionalProperties: false` (closed). Deliberate, LIBRA-only strengthening beyond XHIBIT's
+      `migrated-case.json` (which requires only `caseDetails` and stays open, untouched) — the safe
+      direction, not a new source of drift risk (FR6).
+- [ ] `migrationSourceSystem` is deliberately **not** declared on `libra-migrated-case.json` —
+      briefly `$ref`-ed to the pre-existing shared `migrationSourceSystem.json` (also used by the
+      manifest gate, `stagingdlrm.manifest.json`) and required, then removed. Because the object is
+      closed, a payload carrying it is rejected as undeclared, not treated as optional.
+      `migrationSourceSystem.json` keeps the `required: ["migrationSourceSystemName",
+      "migrationSourceSystemCaseIdentifier"]` extension made while it was briefly shared — it still
+      strengthens the manifest gate, verified safe since every manifest fixture already carries both
+      properties (103/103 tests pass).
+- [ ] No constraints beyond bare `type` in `libra.case-submission.json`, `libra-migrated-case.json`,
+      `libra-case-details.json`, `libra-prosecutor.json`, `case-marker.json`, `migrationSourceSystem.json`
+      (no `enum`, `pattern`, `minLength`/`maxLength`) — matches the existing gate's zero-constraint
+      style and keeps business rules out of the Function App (FR3a, FR6 scoping).
+- [ ] **Exception, added later during implementation:** `defendants` on `libra-migrated-case.json`
+      is fully expanded (`items: {"$ref": "libra-defendant.json"}`), and the workbook's whole
+      `defendant` definition graph is ported into 20 new files (`libra-defendant.json`,
+      `libra-address.json`, `libra-individual.json`, `libra-individual-alias.json`,
+      `libra-offence.json`, `libra-phone.json`, `libra-date.json`, `libra-email.json`,
+      `libra-contact-details.json`, `libra-personal-information.json`,
+      `libra-self-defined-information.json`, `libra-parent-guardian-person.json`,
+      `libra-parent-guardian-organisation.json`, `libra-parent-guardian-personal-information.json`,
+      `libra-parent-guardian-address.json`, `libra-parent-guardian-contact-details.json`,
+      `libra-plea.json`, `libra-verdict.json`, `libra-allocation-decision.json`,
+      `libra-alcohol-related-offence.json`) — this time carrying the workbook's full constraints
+      (`pattern`/`maxLength`/`minimum`/`maximum`/`minItems`) verbatim, not bare types. A deliberate,
+      explicitly scoped reversal of both FR3a's depth limit and its "no constraints" principle for
+      this one branch only (`02-design.md` §"FR3a — depth decision").
+- [ ] **Same exception, added later still:** `hearings` on `libra-migrated-case.json` is fully
+      expanded (`items: {"$ref": "libra-hearing.json"}`), with the workbook's `hearing` definition
+      graph ported into 2 new files (`libra-hearing.json`, `libra-listed-defendant.json`;
+      `libra-date.json` reused), same full-constraint treatment.
+- [ ] **Same exception, added last:** `officerInCase` on `libra-migrated-case.json` is fully
+      expanded (`$ref: "libra-officer-in-case.json"`, a direct `$ref` since the workbook declares
+      it as a single object, not an array), with the workbook's `officerInCase` definition graph
+      ported into 2 new files (`libra-officer-in-case.json`, `libra-officer-in-case-address.json`;
+      `libra-phone.json`/`libra-email.json` reused). No `migratedCase` branch remains
+      bare/undescended. The existing "declared but optional" test for `officerInCase` (which
+      previously accepted an empty `{}`) was updated to supply a requirement-satisfying value,
+      since an empty object no longer passes now that `officerInCase` has 5 required fields.
 - [ ] `JsonSchemaValidatorTest` extended (not forked) with LIBRA accept/reject rows alongside the
       existing XHIBIT rows, per FR9 and the DD-43078 suites this extends: the AC3 payload passes
       LIBRA, the AC4 case proves it fails XHIBIT.

@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-plea.json",
+  "description": "LIBRA Plea",
+  "type": "object",
+  "properties": {
+    "pleaCode": {
+      "type": "string"
+    },
+    "pleaDate": {
+      "$ref": "libra-date.json"
+    }
+  },
+  "additionalProperties": false
+}
