@@ -2,25 +2,28 @@ package uk.gov.moj.cpp.stagingdlrm.schema;
 
 import static java.util.Map.of;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static uk.gov.justice.services.test.utils.core.matchers.JsonSchemaValidationMatcher.failsValidationWithMessage;
-import static uk.gov.justice.services.test.utils.core.matchers.JsonSchemaValidationMatcher.isValidForSchema;
+import static uk.gov.moj.cpp.stagingdlrm.schema.SchemaMatchers.failsValidationWithMessage;
+import static uk.gov.moj.cpp.stagingdlrm.schema.SchemaMatchers.validatesAgainst;
 import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.everit.json.schema.Schema;
 import org.json.JSONObject;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import uk.gov.justice.schema.catalog.test.utils.SchemaCatalogResolver;
+
 class MigratedCaseSubmissionSchemaContractTest {
 
-    private static final String SCHEMA = "json/schema/migrated/migrated-case-submission.json";
+    private static final String SCHEMA_RESOURCE = "json/schema/migrated/migrated-case-submission.json";
 
     private static final String XHIBIT = "XHIBIT";
 
@@ -28,19 +31,18 @@ class MigratedCaseSubmissionSchemaContractTest {
 
     private static final String CASE_DETAILS_MESSAGE = "#/migratedCase/caseDetails: #: only 1 subschema matches out of 2";
 
-    @TempDir
-    private Path tempDir;
+    private static final Schema SCHEMA = loadSchema();
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("acceptScenarios")
-    void shouldAcceptValidPayload(final String name, final Consumer<JSONObject> mutation) throws IOException {
-        assertThat(payload(mutation), isValidForSchema(SCHEMA));
+    void shouldAcceptValidPayload(final String name, final Consumer<JSONObject> mutation) {
+        assertThat(payload(mutation), validatesAgainst(SCHEMA));
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("rejectScenarios")
-    void shouldRejectInvalidPayload(final String name, final Consumer<JSONObject> mutation, final String messageFragment) throws IOException {
-        assertThat(payload(mutation), failsValidationWithMessage(SCHEMA, messageFragment));
+    void shouldRejectInvalidPayload(final String name, final Consumer<JSONObject> mutation, final String expectedMessage) {
+        assertThat(payload(mutation), failsValidationWithMessage(SCHEMA, expectedMessage));
     }
 
     static Stream<Arguments> acceptScenarios() {
@@ -107,12 +109,21 @@ class MigratedCaseSubmissionSchemaContractTest {
                         "#/migratedCase/defendants/0: required key [offences] not found"));
     }
 
-    private String payload(final Consumer<JSONObject> mutation) throws IOException {
+    private static JSONObject payload(final Consumer<JSONObject> mutation) {
         final JSONObject root = new JSONObject(fixture(BASE_FIXTURE, of("SOURCE_SYSTEM", XHIBIT)));
         mutation.accept(root);
-        final Path file = Files.createTempFile(tempDir, "payload", ".json");
-        Files.writeString(file, root.toString());
-        return file.toAbsolutePath().toString();
+        return root;
+    }
+
+    private static Schema loadSchema() {
+        try (InputStream in = MigratedCaseSubmissionSchemaContractTest.class.getClassLoader().getResourceAsStream(SCHEMA_RESOURCE)) {
+            if (in == null) {
+                throw new IllegalStateException("Schema not found on the test classpath: " + SCHEMA_RESOURCE);
+            }
+            return SchemaCatalogResolver.schemaCatalogResolver().loadSchema(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static Consumer<JSONObject> identity() {
