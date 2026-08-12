@@ -1,0 +1,410 @@
+{
+  "azureLocation" : "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555",
+  "materials" : [ {
+    "azureLocation" : "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-one.wav",
+    "documentType" : 3,
+    "fileName" : "recording-one",
+    "fileType" : ".wav",
+    "id" : "550e8400-e29b-41d4-a716-446655440001"
+  }, {
+    "azureLocation" : "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-two.wav",
+    "documentType" : 3,
+    "fileName" : "recording-two",
+    "fileType" : ".wav",
+    "id" : "550e8400-e29b-41d4-a716-446655440002"
+  } ],
+  "migratedCase" : {
+    "caseDetails" : {
+      "caseMarkers" : [ {
+        "markerTypeCode" : "CD"
+      }, {
+        "markerTypeCode" : "YO"
+      } ],
+      "cpsOrganisation" : "GAEAA01",
+      "dateOfCommittal" : "2024-01-15",
+      "dateOfSending" : "2024-08-23",
+      "dateReceived" : "2024-01-15",
+      "initiationCode" : "O",
+      "originatingOrganisation" : "G94DV00",
+      "prosecutor" : {
+        "prosecutingAuthority" : "GAEAA01"
+      },
+      "prosecutorCaseReference" : "TVL55117DFXXV",
+      "receiptType" : "Either way case",
+      "receivingCourt" : "B01LY00",
+      "retrialIndicator" : false,
+      "sendingCourt" : "C50EX00"
+    },
+    "defendants" : [ {
+      "address" : {
+        "address1" : "defendant line1",
+        "address2" : "line2",
+        "address3" : "line3",
+        "address4" : "line4",
+        "address5" : "line5",
+        "postcode" : "M60 1NW"
+      },
+      "aliasForCorporate" : [ "alias-a", "alias-b" ],
+      "asn" : "ASN-def-ref-0001",
+      "croNumber" : "CRO-def-ref-0001",
+      "documentationLanguage" : "W",
+      "emailAddress1" : "a@example.gov.uk",
+      "emailAddress2" : "b@example.gov.uk",
+      "hearingLanguage" : "W",
+      "individual" : {
+        "bailConditions" : "None",
+        "custodyStatus" : "R",
+        "custodyTimeLimit" : "2025-06-01",
+        "parentGuardianInformation" : {
+          "dateOfBirth" : "1970-01-01",
+          "gender" : 1,
+          "personalInformation" : {
+            "address" : {
+              "address1" : "personal line1",
+              "address2" : "line2",
+              "address3" : "line3",
+              "address4" : "line4",
+              "address5" : "line5",
+              "postcode" : "M60 1NW"
+            },
+            "contactDetails" : {
+              "home" : "02",
+              "mobile" : "03",
+              "primaryEmail" : "p@x.gov.uk",
+              "secondaryEmail" : "s@x.gov.uk",
+              "work" : "01"
+            },
+            "forename" : "John",
+            "middleName" : "Q",
+            "observedEthnicity" : 1,
+            "surname" : "Smith",
+            "title" : "Baron"
+          },
+          "selfDefinedEthnicity" : "W1",
+          "address" : {
+            "address1" : "guardian line1",
+            "address2" : "line2",
+            "address3" : "line3",
+            "address4" : "line4",
+            "address5" : "line5",
+            "postcode" : "M60 1NW"
+          },
+          "companyTelephoneNumber" : "09876543210",
+          "organisationName" : "Guardian Org"
+        },
+        "personalInformation" : {
+          "address" : {
+            "address1" : "personal line1",
+            "address2" : "line2",
+            "address3" : "line3",
+            "address4" : "line4",
+            "address5" : "line5",
+            "postcode" : "M60 1NW"
+          },
+          "contactDetails" : {
+            "home" : "02",
+            "mobile" : "03",
+            "primaryEmail" : "p@x.gov.uk",
+            "secondaryEmail" : "s@x.gov.uk",
+            "work" : "01"
+          },
+          "forename" : "John",
+          "middleName" : "Q",
+          "observedEthnicity" : 1,
+          "surname" : "Smith",
+          "title" : "Baron"
+        },
+        "selfDefinedInformation" : {
+          "dateOfBirth" : "1990-01-01",
+          "ethnicity" : "W1",
+          "gender" : 1,
+          "nationality" : "British"
+        }
+      },
+      "individualAliases" : [ {
+        "firstName" : "John",
+        "givenName2" : "A",
+        "givenName3" : "B",
+        "lastName" : "Smith",
+        "title" : "Mr"
+      }, {
+        "firstName" : "Jane",
+        "givenName2" : "C",
+        "givenName3" : "D",
+        "lastName" : "Doe",
+        "title" : "Dr"
+      } ],
+      "languageRequirement" : "Welsh",
+      "offences" : [ {
+        "alcoholRelatedOffence" : {
+          "alcoholOrDrugLevelAmount" : 35,
+          "alcoholOrDrugLevelMethod" : "Breath"
+        },
+        "allocationDecision" : {
+          "allocationDecisionDate" : "2019-03-01",
+          "motReasonId" : "dddddddd-0000-0000-0000-000000000001"
+        },
+        "arrestDate" : "2015-01-01",
+        "chargeDate" : "2015-04-04",
+        "convictingCourtCode" : "B01LY00",
+        "count" : 1,
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceCommittedEndDate" : "2018-09-11",
+        "offenceDateCode" : 1,
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "offenceWordingWelsh" : "Trwydded deledu heb ei thalu",
+        "plea" : {
+          "id" : "bbbbbbbb-0000-0000-0000-000000000001",
+          "pleaDate" : "2019-01-01"
+        },
+        "prosecutorOffenceId" : "off-ref-0001",
+        "verdict" : {
+          "id" : "cccccccc-0000-0000-0000-000000000001",
+          "verdictDate" : "2019-02-01"
+        }
+      }, {
+        "alcoholRelatedOffence" : {
+          "alcoholOrDrugLevelAmount" : 35,
+          "alcoholOrDrugLevelMethod" : "Breath"
+        },
+        "allocationDecision" : {
+          "allocationDecisionDate" : "2019-03-01",
+          "motReasonId" : "dddddddd-0000-0000-0000-000000000001"
+        },
+        "arrestDate" : "2015-01-01",
+        "chargeDate" : "2015-04-04",
+        "convictingCourtCode" : "B01LY00",
+        "count" : 1,
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceCommittedEndDate" : "2018-09-11",
+        "offenceDateCode" : 1,
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "offenceWordingWelsh" : "Trwydded deledu heb ei thalu",
+        "plea" : {
+          "id" : "bbbbbbbb-0000-0000-0000-000000000001",
+          "pleaDate" : "2019-01-01"
+        },
+        "prosecutorOffenceId" : "off-ref-0002",
+        "verdict" : {
+          "id" : "cccccccc-0000-0000-0000-000000000001",
+          "verdictDate" : "2019-02-01"
+        }
+      } ],
+      "organisationName" : "Org def-ref-0001",
+      "pncIdentifier" : "PNC-def-ref-0001",
+      "prosecutorDefendantId" : "def-ref-0001",
+      "specificRequirements" : "Wheelchair",
+      "telephoneNumberBusiness" : "01234567890"
+    }, {
+      "address" : {
+        "address1" : "defendant line1",
+        "address2" : "line2",
+        "address3" : "line3",
+        "address4" : "line4",
+        "address5" : "line5",
+        "postcode" : "M60 1NW"
+      },
+      "aliasForCorporate" : [ "alias-a", "alias-b" ],
+      "asn" : "ASN-def-ref-0002",
+      "croNumber" : "CRO-def-ref-0002",
+      "documentationLanguage" : "W",
+      "emailAddress1" : "a@example.gov.uk",
+      "emailAddress2" : "b@example.gov.uk",
+      "hearingLanguage" : "W",
+      "individual" : {
+        "bailConditions" : "None",
+        "custodyStatus" : "R",
+        "custodyTimeLimit" : "2025-06-01",
+        "parentGuardianInformation" : {
+          "dateOfBirth" : "1970-01-01",
+          "gender" : 1,
+          "personalInformation" : {
+            "address" : {
+              "address1" : "personal line1",
+              "address2" : "line2",
+              "address3" : "line3",
+              "address4" : "line4",
+              "address5" : "line5",
+              "postcode" : "M60 1NW"
+            },
+            "contactDetails" : {
+              "home" : "02",
+              "mobile" : "03",
+              "primaryEmail" : "p@x.gov.uk",
+              "secondaryEmail" : "s@x.gov.uk",
+              "work" : "01"
+            },
+            "forename" : "John",
+            "middleName" : "Q",
+            "observedEthnicity" : 1,
+            "surname" : "Smith",
+            "title" : "Baron"
+          },
+          "selfDefinedEthnicity" : "W1",
+          "address" : {
+            "address1" : "guardian line1",
+            "address2" : "line2",
+            "address3" : "line3",
+            "address4" : "line4",
+            "address5" : "line5",
+            "postcode" : "M60 1NW"
+          },
+          "companyTelephoneNumber" : "09876543210",
+          "organisationName" : "Guardian Org"
+        },
+        "personalInformation" : {
+          "address" : {
+            "address1" : "personal line1",
+            "address2" : "line2",
+            "address3" : "line3",
+            "address4" : "line4",
+            "address5" : "line5",
+            "postcode" : "M60 1NW"
+          },
+          "contactDetails" : {
+            "home" : "02",
+            "mobile" : "03",
+            "primaryEmail" : "p@x.gov.uk",
+            "secondaryEmail" : "s@x.gov.uk",
+            "work" : "01"
+          },
+          "forename" : "John",
+          "middleName" : "Q",
+          "observedEthnicity" : 1,
+          "surname" : "Smith",
+          "title" : "Baron"
+        },
+        "selfDefinedInformation" : {
+          "dateOfBirth" : "1990-01-01",
+          "ethnicity" : "W1",
+          "gender" : 9,
+          "nationality" : "British"
+        }
+      },
+      "individualAliases" : [ {
+        "firstName" : "John",
+        "givenName2" : "A",
+        "givenName3" : "B",
+        "lastName" : "Smith",
+        "title" : "Mr"
+      }, {
+        "firstName" : "Jane",
+        "givenName2" : "C",
+        "givenName3" : "D",
+        "lastName" : "Doe",
+        "title" : "Dr"
+      } ],
+      "languageRequirement" : "Welsh",
+      "offences" : [ {
+        "alcoholRelatedOffence" : {
+          "alcoholOrDrugLevelAmount" : 35,
+          "alcoholOrDrugLevelMethod" : "Breath"
+        },
+        "allocationDecision" : {
+          "allocationDecisionDate" : "2019-03-01",
+          "motReasonId" : "dddddddd-0000-0000-0000-000000000001"
+        },
+        "arrestDate" : "2015-01-01",
+        "chargeDate" : "2015-04-04",
+        "convictingCourtCode" : "B01LY00",
+        "count" : 1,
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceCommittedEndDate" : "2018-09-11",
+        "offenceDateCode" : 1,
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "offenceWordingWelsh" : "Trwydded deledu heb ei thalu",
+        "plea" : {
+          "id" : "bbbbbbbb-0000-0000-0000-000000000001",
+          "pleaDate" : "2019-01-01"
+        },
+        "prosecutorOffenceId" : "off-ref-0001",
+        "verdict" : {
+          "id" : "cccccccc-0000-0000-0000-000000000001",
+          "verdictDate" : "2019-02-01"
+        }
+      }, {
+        "alcoholRelatedOffence" : {
+          "alcoholOrDrugLevelAmount" : 35,
+          "alcoholOrDrugLevelMethod" : "Breath"
+        },
+        "allocationDecision" : {
+          "allocationDecisionDate" : "2019-03-01",
+          "motReasonId" : "dddddddd-0000-0000-0000-000000000001"
+        },
+        "arrestDate" : "2015-01-01",
+        "chargeDate" : "2015-04-04",
+        "convictingCourtCode" : "B01LY00",
+        "count" : 1,
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceCommittedEndDate" : "2018-09-11",
+        "offenceDateCode" : 1,
+        "offenceLocation" : "Croydon",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "offenceWordingWelsh" : "Trwydded deledu heb ei thalu",
+        "plea" : {
+          "id" : "bbbbbbbb-0000-0000-0000-000000000001",
+          "pleaDate" : "2019-01-01"
+        },
+        "prosecutorOffenceId" : "off-ref-0002",
+        "verdict" : {
+          "id" : "cccccccc-0000-0000-0000-000000000001",
+          "verdictDate" : "2019-02-01"
+        }
+      } ],
+      "organisationName" : "Org def-ref-0002",
+      "pncIdentifier" : "PNC-def-ref-0002",
+      "prosecutorDefendantId" : "def-ref-0002",
+      "specificRequirements" : "Wheelchair",
+      "telephoneNumberBusiness" : "01234567890"
+    } ],
+    "hearings" : [ {
+      "courtHearingLocation" : "B01LY01",
+      "courtRoomId" : 60,
+      "dateOfHearing" : "2024-11-10",
+      "durationMinutes" : 60,
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "off-ref-0001", "off-ref-0002" ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      }, {
+        "listedOffences" : [ "off-ref-0003" ],
+        "prosecutorDefendantId" : "def-ref-0002"
+      } ],
+      "timeOfHearing" : "10:05:01",
+      "weekCommencingDate" : {
+        "duration" : 4,
+        "startDate" : "2025-03-02"
+      }
+    }, {
+      "courtHearingLocation" : "B01LY01",
+      "courtRoomId" : 60,
+      "dateOfHearing" : "2024-12-10",
+      "durationMinutes" : 60,
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "off-ref-0001", "off-ref-0002" ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      }, {
+        "listedOffences" : [ "off-ref-0003" ],
+        "prosecutorDefendantId" : "def-ref-0002"
+      } ],
+      "timeOfHearing" : "10:05:01"
+    } ],
+    "migrationSourceSystem" : {
+      "migrationSourceSystemCaseIdentifier" : "case-identifier-0001",
+      "migrationSourceSystemName" : "XHIBIT"
+    }
+  },
+  "submissionId" : "11111111-2222-3333-4444-555555555555"
+}

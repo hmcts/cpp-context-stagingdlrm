@@ -21,18 +21,19 @@
         "dateOfHearing": "2024-11-10",
         "timeOfHearing": "10:05:01",
         "durationMinutes": 60,
+        "courtRoomId": 60,
         "hearingType": "",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "XHIBIT-offence-id-1"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-2",
             "listedOffences": [
-              "LIBRA-offence-id-2"
+              "XHIBIT-offence-id-2"
             ]
           }
         ]
@@ -40,7 +41,6 @@
       {
         "courtHearingLocation": "B01LY02",
         "durationMinutes": 90,
-        "courtRoomId": 60,
         "weekCommencingDate": {
           "startDate": "2025-05-10",
           "duration": 5
@@ -48,15 +48,15 @@
         "hearingType": "",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "XHIBIT-offence-id-1"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "XHIBIT-defendant-id-2",
             "listedOffences": [
-              "LIBRA-offence-id-2"
+              "XHIBIT-offence-id-2"
             ]
           }
         ]
@@ -64,7 +64,7 @@
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "prosecutorDefendantId": "XHIBIT-defendant-id-1",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -85,7 +85,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "prosecutorOffenceId": "XHIBIT-offence-id-1",
             "offenceCode": "CA03013",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -97,7 +97,7 @@
         ]
       },
       {
-        "prosecutorDefendantId":"LIBRA-defendant-id-2",
+        "prosecutorDefendantId":"XHIBIT-defendant-id-2",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -118,7 +118,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-2",
+            "prosecutorOffenceId": "XHIBIT-offence-id-2",
             "offenceCode": "DA03014",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -131,13 +131,29 @@
       }
     ],
     "migrationSourceSystem": {
-      "migrationSourceSystemName": "LIBRA",
-      "migrationSourceSystemCaseIdentifier": "This is from Libra"
+      "migrationSourceSystemName": "XHIBIT",
+      "migrationSourceSystemCaseIdentifier": "xhibit-case-identifier-0001"
     }
   },
+  "materials": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "azureLocation": "http://inazure/secrets/1",
+      "fileName": "Audio Recording one",
+      "fileType": ".pdf",
+      "documentType": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "azureLocation": "http://inazure/secrets/2",
+      "fileName": "Audio Recording two",
+      "fileType": ".pdf",
+      "documentType": 3
+    }
+  ],
   "metadata": {
     "id": "550e8400-e29b-41d4-a716-446655440003",
-    "numberOfMaterials": 0
+    "numberOfMaterials": 2
   },
   "submissionId": "SUBMISSION_ID",
   "azureLocation": "TVL55117DFXXV"

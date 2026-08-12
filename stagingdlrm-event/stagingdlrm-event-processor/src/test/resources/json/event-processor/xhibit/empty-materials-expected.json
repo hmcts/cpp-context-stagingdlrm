@@ -1,0 +1,41 @@
+{
+  "channel" : "DLRM_MIGRATION",
+  "materials" : [ ],
+  "migratedCaseDetails" : {
+    "caseDetails" : {
+      "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+      "dateReceived" : "2024-01-15",
+      "initiationCode" : "O",
+      "prosecutorCaseReference" : "TVL55117DFXXV",
+      "receiptType" : "Either way case",
+      "receivingCourt" : "B01LY00",
+      "retrialIndicator" : false
+    },
+    "defendants" : [ {
+      "id" : "c81b299f-bd7a-4dca-bc48-1aee4a802747",
+      "offences" : [ {
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceDateCode" : 1,
+        "offenceId" : "f120d3de-2119-4750-b935-47f85fd783a9",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "prosecutorOffenceId" : "off-ref-0001"
+      } ],
+      "prosecutorDefendantId" : "def-ref-0001"
+    } ],
+    "hearings" : [ {
+      "courtHearingLocation" : "B01LY01",
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "off-ref-0001" ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      } ]
+    } ],
+    "migrationSourceSystem" : {
+      "migrationSourceSystemCaseIdentifier" : "case-identifier-emptymat",
+      "migrationSourceSystemName" : "XHIBIT"
+    }
+  },
+  "submissionId" : "11111111-2222-3333-4444-555555555555"
+}

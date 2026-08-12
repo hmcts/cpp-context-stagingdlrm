@@ -1,0 +1,122 @@
+{
+  "migratedCaseSubmission" : {
+    "azureLocation" : "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555",
+    "materials" : [ {
+      "azureLocation" : "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-one.wav",
+      "documentType" : 3,
+      "fileName" : "Audio Recording one",
+      "fileType" : ".wav",
+      "id" : "550e8400-e29b-41d4-a716-446655440001"
+    }, {
+      "azureLocation" : "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-two.wav",
+      "documentType" : 3,
+      "fileName" : "Audio Recording two",
+      "fileType" : ".wav",
+      "id" : "550e8400-e29b-41d4-a716-446655440000"
+    } ],
+    "metadata" : {
+      "id" : "550e8400-e29b-41d4-a716-446655440003",
+      "numberOfMaterials" : 2
+    },
+    "migratedCase" : {
+      "caseDetails" : {
+        "dateOfCommittal" : "2024-01-15",
+        "dateOfSending" : "2024-08-23",
+        "dateReceived" : "2024-01-15",
+        "initiationCode" : "O",
+        "originatingOrganisation" : "G94DV00",
+        "prosecutor" : {
+          "prosecutingAuthority" : "GAEAA01"
+        },
+        "prosecutorCaseReference" : "TVL55117DFXXV",
+        "receiptType" : "Either way case",
+        "receivingCourt" : "B01LY00",
+        "retrialIndicator" : false,
+        "sendingCourt" : "C50EX00"
+      },
+      "defendants" : [ {
+        "documentationLanguage" : "W",
+        "hearingLanguage" : "W",
+        "id" : "aaaaaaaa-0000-0000-0000-000000000001",
+        "individual" : {
+          "personalInformation" : {
+            "address" : {
+              "address1" : "armagaddon house",
+              "postcode" : "M60 1NW"
+            },
+            "contactDetails" : { },
+            "forename" : "John",
+            "surname" : "Smith",
+            "title" : "Baron"
+          },
+          "selfDefinedInformation" : {
+            "ethnicity" : "W1",
+            "gender" : 1
+          }
+        },
+        "offences" : [ {
+          "chargeDate" : "2015-04-04",
+          "offenceCode" : "CA03013",
+          "offenceCommittedDate" : "2018-09-10",
+          "offenceDateCode" : 1,
+          "offenceLocation" : "Croydon",
+          "offenceSequenceNumber" : 1,
+          "offenceWording" : "TV Licence not paid",
+          "prosecutorOffenceId" : "off-ref-0001"
+        } ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      }, {
+        "documentationLanguage" : "W",
+        "hearingLanguage" : "W",
+        "id" : "aaaaaaaa-0000-0000-0000-000000000002",
+        "individual" : {
+          "personalInformation" : {
+            "address" : {
+              "address1" : "armagaddon house",
+              "postcode" : "M60 1NW"
+            },
+            "contactDetails" : { },
+            "forename" : "John",
+            "surname" : "Smith",
+            "title" : "Baron"
+          },
+          "selfDefinedInformation" : {
+            "ethnicity" : "W1",
+            "gender" : 2
+          }
+        },
+        "offences" : [ {
+          "chargeDate" : "2015-04-04",
+          "offenceCode" : "DA03014",
+          "offenceCommittedDate" : "2018-09-10",
+          "offenceDateCode" : 1,
+          "offenceLocation" : "Croydon",
+          "offenceSequenceNumber" : 1,
+          "offenceWording" : "TV Licence not paid",
+          "prosecutorOffenceId" : "off-ref-0002"
+        } ],
+        "prosecutorDefendantId" : "def-ref-0002"
+      } ],
+      "hearings" : [ {
+        "courtHearingLocation" : "B01LY01",
+        "courtRoomId" : 60,
+        "dateOfHearing" : "2024-11-10",
+        "durationMinutes" : 60,
+        "hearingType" : "Trial",
+        "listedDefendants" : [ {
+          "listedOffences" : [ "off-ref-0001" ],
+          "prosecutorDefendantId" : "def-ref-0001"
+        }, {
+          "listedOffences" : [ "off-ref-0002" ],
+          "prosecutorDefendantId" : "def-ref-0002"
+        } ],
+        "timeOfHearing" : "10:05:01"
+      } ],
+      "migrationSourceSystem" : {
+        "migrationSourceSystemCaseIdentifier" : "case-identifier-0001",
+        "migrationSourceSystemName" : "{{SOURCE_SYSTEM}}"
+      }
+    },
+    "submissionId" : "11111111-2222-3333-4444-555555555555"
+  }
+}
