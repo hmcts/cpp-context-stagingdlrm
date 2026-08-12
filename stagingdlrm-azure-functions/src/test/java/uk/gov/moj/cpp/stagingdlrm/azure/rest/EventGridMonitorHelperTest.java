@@ -134,6 +134,40 @@ class EventGridMonitorHelperTest {
         assertEquals("URN:12345", json.getString("caseUrn"));
     }
 
+    /**
+     * DD-43086 FR8/AC7 — a Function App-level validation failure rejects the payload before it is
+     * ever parsed, so {@code caseUrn} is empty by construction (not absent from the map — see
+     * {@code TimerTriggerJava.processClientError(QueueMessage, List, String, String, String)},
+     * which passes {@code caseUrn = ""}). The outcome file must still be usable: valid JSON,
+     * {@code success=false}, the validation error in {@code description}, and an explicit empty
+     * (not null, not missing) {@code caseUrn} — asserted whole, not just "some content exists".
+     */
+    @Test
+    void shouldUploadUsableOutcomeContentWhenCaseUrnIsAbsentByConstruction() throws Exception {
+        final Map<String, Object> event = Map.of(
+                "caseUrn", "",
+                "success", "false",
+                "description", "$.migratedCase.caseDetails.initiationCode: is missing but it is required"
+        );
+        when(context.getLogger()).thenReturn(logger);
+
+        eventGridMonitorHelper.processEvent(event, "LIBRA/Batch0001/case-1/submission-1", FILE_NAME);
+
+        final ArgumentCaptor<InputStream> inputStreamCaptor = ArgumentCaptor.forClass(InputStream.class);
+        verify(blobCloudStorage).uploadToStorage(inputStreamCaptor.capture(), anyLong(), any());
+
+        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
+        final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
+        assertEquals(Map.of(
+                "caseUrn", "",
+                "success", false,
+                "description", "$.migratedCase.caseDetails.initiationCode: is missing but it is required"
+        ).keySet(), json.keySet(), () -> "outcome file must contain exactly these three fields, no more, no fewer: " + uploadedContent);
+        assertEquals("", json.getString("caseUrn"));
+        assertFalse(json.getBoolean("success"));
+        assertEquals("$.migratedCase.caseDetails.initiationCode: is missing but it is required", json.getString("description"));
+    }
+
     @Test
     void shouldNotReinitializeBlobCloudStorageIfAlreadyPresent() {
         final Map<String, Object> event = Map.of(

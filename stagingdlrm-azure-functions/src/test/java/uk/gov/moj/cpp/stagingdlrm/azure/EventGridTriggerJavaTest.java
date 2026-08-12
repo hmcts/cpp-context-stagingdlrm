@@ -41,11 +41,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * or folder/batch configuration is one {@code arguments(...)} and never a new test method
  * (DD-43078 AC2, T2 AC8).
  *
- * <p>Verified against {@code EventGridTriggerJava.run}: {@code dlrm_batch_name} is a comma-separated
- * list, trimmed, matched case-insensitively, with a leading {@code *} meaning "match anything".
- * {@code dlrm_folder_name} is none of those — a single {@code trim().equalsIgnoreCase()} — so a
- * comma-separated folder list does not work today. The row saying so is what flips when DD-43086
- * adds support.
+ * <p>Verified against {@code EventGridTriggerJava.run}: both {@code dlrm_folder_name} and
+ * {@code dlrm_batch_name} are comma-separated lists, trimmed and matched case-insensitively via the
+ * shared {@code validateConfiguredNames} helper (DD-43086 FR1). The one behavioural difference is
+ * deliberate: a leading {@code *} in {@code dlrm_batch_name} means "match anything", but
+ * {@code dlrm_folder_name} never honours the wildcard — folder name is the source-system gate
+ * itself, so wildcarding it would accept any legacy system's blobs (DD-43086 AC2).
  */
 @ExtendWith(MockitoExtension.class)
 class EventGridTriggerJavaTest {
@@ -117,11 +118,22 @@ class EventGridTriggerJavaTest {
                         "  xhibit  ", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
                 arguments("FR9 a folder other than the configured one is dropped",
                         FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT1", "Batch0001"), false),
-                // Flips when DD-43086 adds source-system-keyed folders.
-                arguments("FR9 a comma-separated folder list is NOT supported yet — pins today's gap",
-                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false),
                 arguments("FR9 a path with fewer than four tokens is dropped",
-                        FOLDER_ENV, BATCH_ENV, "test1.json", false));
+                        FOLDER_ENV, BATCH_ENV, "test1.json", false),
+                // DD-43086 FR1/AC1 — dlrm_folder_name now accepts a comma-separated list.
+                arguments("FR1/AC1 a comma-separated folder list matches its first member (XHIBIT)",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
+                arguments("FR1/AC1 a comma-separated folder list matches its second member (LIBRA)",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("LIBRA", "Batch0001"), true),
+                arguments("FR1/AC1 a folder outside a comma-separated configured list is dropped",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("OTHER", "Batch0001"), false),
+                arguments("FR1 comma-separated folder matching is case-insensitive and trimmed",
+                        " XHIBIT , LIBRA ", BATCH_ENV, submissionPath("libra", "Batch0001"), true),
+                // DD-43086 AC2 — unlike batch name, a wildcard must never widen the folder gate.
+                arguments("FR1/AC2 a wildcard folder name does not widen the source-system gate",
+                        "*", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false),
+                arguments("FR1/AC2 a wildcard as one entry of a folder list still does not match",
+                        "*,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -154,6 +166,53 @@ class EventGridTriggerJavaTest {
         } else {
             verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
         }
+    }
+
+    /**
+     * DD-43086 NFR1 — the FR1 folder-name generalisation must not change XHIBIT's existing
+     * behaviour. Not a row in {@code pathValidationScenarios}: unlike that table's assertion (which
+     * derives its expected string from the same tokens/format used by production code, so it would
+     * still pass even if the format changed as long as both sides changed together), this test
+     * hardcodes the expected queue message and case/submission IDs independently of production —
+     * a genuine regression pin on path parsing, submission-id extraction and queue message format,
+     * not just on the new comma-separated-list behaviour.
+     */
+    @Test
+    @DisplayName("NFR1 queue message format, path parsing and submission-id extraction are unchanged for XHIBIT")
+    void shouldPreserveQueueMessageAndSubmissionIdExtractionForXhibit() {
+        setField(eventGridTriggerJava, "folderName", "XHIBIT");
+        setField(eventGridTriggerJava, "batchName", "Batch0001");
+
+        final String expectedQueueMessage = "XHIBIT/Batch0001/" + CASE_ID + "/" + SUBMISSION_ID;
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.getDlrmContainer()).thenReturn(CONTAINER);
+        when(storageCloudClient.sendMessageToTheQueue(eq(SUBMISSION_ID), eq(expectedQueueMessage)))
+                .thenReturn(response);
+        when(response.getValue()).thenReturn(sendMessageResult);
+
+        eventGridTriggerJava.run(event(blobUrl(submissionPath("XHIBIT", "Batch0001"))), context, "test".getBytes());
+
+        verify(storageCloudClient).sendMessageToTheQueue(eq(SUBMISSION_ID), eq(expectedQueueMessage));
+    }
+
+    /**
+     * DD-43086 NFR1 — an unconfigured folder is still rejected once {@code dlrm_folder_name} is a
+     * multi-value list, exactly as it was for the old single-value config
+     * ("FR9 a folder other than the configured one is dropped" pins the single-value case).
+     */
+    @Test
+    @DisplayName("NFR1 a blob under an unconfigured folder is still rejected with a multi-value dlrm_folder_name")
+    void shouldRejectUnconfiguredFolderWithMultiValueConfig() {
+        setField(eventGridTriggerJava, "folderName", "XHIBIT,LIBRA");
+        setField(eventGridTriggerJava, "batchName", BATCH_ENV);
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.getDlrmContainer()).thenReturn(CONTAINER);
+
+        eventGridTriggerJava.run(event(blobUrl(submissionPath("XHIBIT1", "Batch0001"))), context, "test".getBytes());
+
+        verify(storageCloudClient, never()).sendMessageToTheQueue(anyString(), anyString());
     }
 
     /** Not a row: {@code run} returns before the storage client is touched, so the stubbing differs. */

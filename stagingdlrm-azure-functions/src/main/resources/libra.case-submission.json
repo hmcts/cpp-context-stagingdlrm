@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra.case-submission.json",
+  "type": "object",
+  "description": "Migrated Case File Submission (LIBRA)",
+  "properties": {
+    "migratedCase": {
+      "$ref": "libra-migrated-case.json"
+    }
+  },
+  "required": [
+    "migratedCase"
+  ],
+  "additionalProperties": false
+}
