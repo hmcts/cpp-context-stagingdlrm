@@ -14,13 +14,15 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/hearing"
-          }
+          },
+          "minItems": 1
         },
         "defendants": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/defendant"
-          }
+          },
+          "minItems": 1
         },
         "officerInCase": {
           "$ref": "#/definitions/officerInCase"
@@ -62,7 +64,8 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/caseMarkers"
-          }
+          },
+          "minItems": 1
         },
         "summonsCode": {
           "type": "string",
@@ -187,7 +190,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1
         },
         "address": {
           "$ref": "#/definitions/address"
@@ -199,13 +203,15 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/individualAlias"
-          }
+          },
+          "minItems": 1
         },
         "offences": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/offence"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
@@ -605,7 +611,7 @@
           "maxLength": 35
         },
         "postcode": {
-          "$ref": "#/definitions/postcode"
+          "$ref": "#/definitions/ukGovPostCode"
         }
       },
       "required": [
@@ -613,7 +619,7 @@
       ],
       "additionalProperties": false
     },
-    "postcode": {
+    "ukGovPostCode": {
       "type": "string",
       "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
       "maxLength": 8

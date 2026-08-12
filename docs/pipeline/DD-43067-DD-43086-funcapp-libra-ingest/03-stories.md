@@ -270,7 +270,8 @@ into false rejections at the earliest, least-diagnosable point in the chain.
       property — `definitions` now has 20 entries. `offence`'s own four nested objects
       (`alcoholRelatedOffence`, `plea`, `verdict`, `allocationDecision`) were factored out next,
       each its own `definitions` entry matching the workbook's names exactly — `offence` is now
-      fully flat and `definitions` has 24 entries. The only inline object literals left in the
+      fully flat and `definitions` has 25 entries (the running tally undercounted by one from the
+      `contactDetails` merge onward — the actual file always had `postcode` too). The only inline object literals left in the
       whole schema are `parentGuardianInformation`'s own two `oneOf` branches, kept inline by
       design (it's deliberately one combined definition, not split further).
       **Final audit:** every object-type schema in the file was checked against the workbook for
@@ -280,6 +281,28 @@ into false rejections at the earliest, least-diagnosable point in the chain.
       definitions without it (`offence`, `individual`, `personalInformation`,
       `parentGuardianPersonalInformation`, `hearing`, `listedDefendant`) are faithful to the
       workbook, which leaves them open too — not oversights.
+      **Code review pass** approved with comments, two fixed: `defendant.offences` was missing
+      `minItems: 1` (an oversight — sibling arrays already had it) — fixed with a new proving
+      test; and this doc's `definitions` count had undercounted by one throughout (`postcode`
+      wasn't folded back in) — corrected to 25. `postcode` was then renamed to `ukGovPostCode`
+      (the JSON property name `postcode` in payloads is unchanged). **Extended once more, beyond
+      the review's findings:** `minItems: 1` added to `migratedCase.defendants` and
+      `migratedCase.hearings` — no workbook counterpart (the workbook leaves both bare, only
+      constraining nested arrays), a deliberate LIBRA-gate strengthening on request. The shared
+      fixture's `"defendants": []` was replaced with one fully-populated defendant; the "declared
+      but optional" test's `hearings` row now supplies one valid hearing instead of an empty
+      array. Two new proving tests
+      (`shouldRejectLibraCaseSubmissionWithNoDefendants`,
+      `shouldRejectLibraCaseSubmissionWithAnEmptyHearingsArray`).
+      **A second code review** confirmed everything above and made one suggestion (assertions
+      checked only message count, not that the message names `minItems`) — addressed below.
+      **Extended again:** `minItems: 1` added to `caseDetails.caseMarkers`,
+      `defendant.aliasForCorporate`, `defendant.individualAliases` too — same no-workbook-basis
+      strengthening, all three optional so omitting the key stays valid. New parameterized tests
+      (`shouldRejectLibraCaseSubmissionWithAnEmptyCaseDetailsArray`,
+      `shouldRejectLibraCaseSubmissionWithAnEmptyDefendantArray`). All five `minItems` tests now
+      share an `assertRejectedByMinItems(...)` helper asserting both the message count and that
+      the message contains networknt's `"minimum of"` wording — addressing the review suggestion.
 - [ ] `libra.case-submission.json`'s `migratedCase` level declares `caseDetails`, `defendants`
       (required), `hearings`, `officerInCase` (declared but optional), `additionalProperties: false`
       (closed) — matching the LIBRA workbook schema's own `migratedCase` definition

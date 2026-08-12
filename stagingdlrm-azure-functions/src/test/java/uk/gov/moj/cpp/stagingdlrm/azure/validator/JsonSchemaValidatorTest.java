@@ -300,9 +300,11 @@ class JsonSchemaValidatorTest {
      * DD-43086 LIBRA02 — {@code hearings} and {@code officerInCase} are declared (so the closed
      * {@code migratedCase} doesn't reject them) but not required, matching the LIBRA workbook
      * schema's own {@code migratedCase} definition. Each row supplies a value satisfying that
-     * property's own required fields (an empty {@code {}} would no longer pass once
-     * {@code officerInCase} was expanded to the workbook's full definition) — the row is about
-     * {@code migratedCase} not requiring the property, not about the property's own shape.
+     * property's own required fields — an empty {@code {}} would no longer pass once
+     * {@code officerInCase} was expanded to the workbook's full definition, and an empty
+     * {@code []} would no longer pass once {@code hearings} gained {@code minItems: 1} — the row
+     * is about {@code migratedCase} not requiring the property, not about the property's own
+     * shape.
      */
     @ParameterizedTest(name = "LIBRA02 migratedCase.{0} is declared but optional in the LIBRA gate (LIBRA)")
     @ValueSource(strings = {"hearings", "officerInCase"})
@@ -314,7 +316,7 @@ class JsonSchemaValidatorTest {
         assertFalse(migratedCase.has(property),
                 "fixture already carries " + property + " — the row proves nothing");
         if (property.equals("hearings")) {
-            migratedCase.putArray(property);
+            migratedCase.putArray(property).add(validHearing());
         } else {
             migratedCase.set(property, validOfficerInCase());
         }
@@ -399,6 +401,94 @@ class JsonSchemaValidatorTest {
         final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
 
         assertEquals(1, messages.size(), () -> messages.toString());
+    }
+
+    /**
+     * All {@code minItems} rejections share this shape: exactly one message, and it names
+     * {@code minItems} specifically (networknt's wording: "there must be a minimum of N items in
+     * the array") — not just any single message, in case a future fixture change silently swaps
+     * in a different violation.
+     */
+    private static void assertRejectedByMinItems(final Set<ValidationMessage> messages) {
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("minimum of"),
+                () -> "expected a minItems rejection: " + messages);
+    }
+
+    /**
+     * DD-43086 LIBRA02 — {@code defendant.offences} carries {@code minItems: 1}, matching the
+     * workbook (found missing during code review — the sibling arrays
+     * {@code hearing.listedDefendants} and {@code listedDefendant.listedOffences} already had it).
+     * An empty array satisfies {@code required} (the key is present) but must still be rejected.
+     */
+    @Test
+    @DisplayName("LIBRA02 the gate enforces minItems:1 on defendant.offences (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithADefendantHavingNoOffences() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.putArray("offences");
+        migratedCase.putArray("defendants").add(defendant);
+
+        assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
+    }
+
+    /**
+     * DD-43086 LIBRA02 — {@code migratedCase.defendants} and {@code migratedCase.hearings} both
+     * carry {@code minItems: 1} — a deliberate LIBRA-gate strengthening with no workbook
+     * counterpart (the workbook leaves both bare {@code type: array}, only constraining the
+     * nested arrays). {@code defendants} is already {@code required}, so this closes the
+     * remaining gap of an empty-but-present array; {@code hearings} is optional, so this only
+     * bites once the key is sent at all.
+     */
+    @Test
+    @DisplayName("LIBRA02 the gate enforces minItems:1 on migratedCase.defendants (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithNoDefendants() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        migratedCase.putArray("defendants");
+
+        assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
+    }
+
+    @Test
+    @DisplayName("LIBRA02 the gate enforces minItems:1 on migratedCase.hearings (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnEmptyHearingsArray() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        migratedCase.putArray("hearings");
+
+        assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
+    }
+
+    /**
+     * DD-43086 LIBRA02 — {@code caseDetails.caseMarkers}, {@code defendant.aliasForCorporate} and
+     * {@code defendant.individualAliases} all carry {@code minItems: 1} too — same deliberate,
+     * no-workbook-counterpart strengthening as {@code migratedCase.defendants}/{@code hearings}.
+     * All three are optional (not in their parent's {@code required}), so this only bites once
+     * the key is sent at all — omitting it entirely remains valid (the shared valid fixture
+     * already omits {@code aliasForCorporate}/{@code individualAliases} and passes).
+     */
+    @ParameterizedTest(name = "LIBRA02 the gate enforces minItems:1 on caseDetails.{0} (LIBRA)")
+    @ValueSource(strings = {"caseMarkers"})
+    void shouldRejectLibraCaseSubmissionWithAnEmptyCaseDetailsArray(final String property) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode caseDetails = (ObjectNode) payload.get("migratedCase").get("caseDetails");
+        caseDetails.putArray(property);
+
+        assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
+    }
+
+    @ParameterizedTest(name = "LIBRA02 the gate enforces minItems:1 on defendant.{0} (LIBRA)")
+    @ValueSource(strings = {"aliasForCorporate", "individualAliases"})
+    void shouldRejectLibraCaseSubmissionWithAnEmptyDefendantArray(final String property) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.putArray(property);
+        migratedCase.putArray("defendants").add(defendant);
+
+        assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
     }
 
     @Test

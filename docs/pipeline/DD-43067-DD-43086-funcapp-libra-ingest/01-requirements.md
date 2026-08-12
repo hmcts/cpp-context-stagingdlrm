@@ -155,13 +155,25 @@ overriding analysis §3.2's build-time-unpack proposal.
   inline top-level `defendant` property — `definitions` now has 20 entries. Finally, `offence`'s
   own four nested objects (`alcoholRelatedOffence`, `plea`, `verdict`, `allocationDecision`) were
   each factored out too, matching the workbook's names exactly — `offence` is now fully flat and
-  `definitions` has 24 entries. The only inline object literals left anywhere in the schema are
+  `definitions` has 25 entries (the running tally undercounted by one from the `contactDetails`
+  merge onward — the actual file always had `postcode` too). The only inline object literals left anywhere in the schema are
   `parentGuardianInformation`'s own two `oneOf` branches, kept inline by design. Finally, an audit
   of `additionalProperties` across every object-type schema against the workbook found one
   genuine gap — `caseMarkers` was open where the workbook closes it — fixed to
   `additionalProperties: false`. The other 6 open definitions (`offence`, `individual`,
   `personalInformation`, `parentGuardianPersonalInformation`, `hearing`, `listedDefendant`) are
-  faithful to the workbook, which leaves them open too.
+  faithful to the workbook, which leaves them open too. A subsequent code review approved with
+  comments, two fixed: `defendant.offences` was missing `minItems: 1` (fixed, with a new proving
+  test), and `postcode` was renamed to `ukGovPostCode` (the JSON property name `postcode` in
+  payloads is unchanged — only the internal definition key). `minItems: 1` was then also added to
+  `migratedCase.defendants`/`migratedCase.hearings` — no workbook counterpart, a deliberate
+  LIBRA-gate strengthening on request; the shared fixture and the "declared but optional" test
+  were updated accordingly. A second code review confirmed all of the above and suggested
+  tightening the `minItems` tests' assertions. `minItems: 1` was then extended to
+  `caseDetails.caseMarkers`/`defendant.aliasForCorporate`/`defendant.individualAliases` too (same
+  no-workbook-basis strengthening), and all five `minItems` tests were switched to a shared
+  helper that also asserts the rejection message names `minItems`, addressing the review
+  suggestion.
 - **FR3a — Decide how deep the LIBRA gate validates.** Not a detail; it changes the failure profile:
 
   | Gate | Leaves validated | Branches |

@@ -529,14 +529,16 @@ inline. `offence`'s own nested objects (`alcoholRelatedOffence`, `plea`, `verdic
 `definitions.offence.properties.{alcoholRelatedOffence,plea,verdict,allocationDecision}`.
 `offence` is now fully flat — every property either a bare type or a `$ref`, no nested object
 literals left, matching `individual`/`parentGuardianPersonalInformation`. `definitions` now has
-24 entries. The only inline object literals left anywhere in the schema are
+25 entries (the running tally in this log undercounted by one from the `contactDetails` merge
+onward — `postcode` was never folded back into the count after that point; the actual file has
+always had the extra `postcode` entry). The only inline object literals left anywhere in the schema are
 `parentGuardianInformation`'s own two `oneOf` branches — kept inline by design, since that whole
 `oneOf` is deliberately one combined definition rather than split into named
 `parentGuardianPerson`/`parentGuardianOrganisation` sub-definitions (see above). 128/128 tests
 pass, full reactor install succeeds.
 
 → **finally, an audit of `additionalProperties` across every object-type schema in the file**
-(root, `migratedCase`, all 24 `definitions` entries) against the workbook found one genuine gap:
+(root, `migratedCase`, all 25 `definitions` entries) against the workbook found one genuine gap:
 `caseMarkers` was open (`additionalProperties` absent) where the workbook itself closes it
 (`false`). Fixed — `definitions.caseMarkers` now has `additionalProperties: false`, with a new
 proving test (`shouldRejectLibraCaseSubmissionWithAnUndeclaredCaseMarkerProperty`). The other 6
@@ -544,6 +546,56 @@ definitions without `additionalProperties: false` (`offence`, `individual`,
 `personalInformation`, `parentGuardianPersonalInformation`, `hearing`, `listedDefendant`) were
 checked and left as-is — the workbook itself leaves every one of them open too, so this is
 faithful, not an oversight. 129/129 tests pass, full reactor install succeeds.
+
+**Code review pass** (`code-reviewer` agent, against `team/libra1`) — approved with comments, two
+of which were fixed:
+- `defendant.offences` was missing `minItems: 1` (the workbook has it; the sibling arrays
+  `hearing.listedDefendants` and `listedDefendant.listedOffences` already carried it correctly —
+  an oversight, not a deliberate choice). Fixed, with a new proving test
+  (`shouldRejectLibraCaseSubmissionWithADefendantHavingNoOffences`).
+- This log's running `definitions` entry count had undercounted by one from the `contactDetails`
+  merge onward (`postcode` was never folded back into the tally) — corrected above; the file
+  itself was always correct.
+130/130 tests pass, full reactor install succeeds.
+
+→ **`postcode` renamed to `ukGovPostCode`** — `#/definitions/postcode` is now
+`#/definitions/ukGovPostCode`, `$ref`-ed from `definitions.address.properties.postcode` (the
+JSON property name in payloads, `postcode`, is unchanged — only the internal definition key
+changed, to name the concept rather than the field). 130/130 tests pass, full reactor install
+succeeds.
+
+→ **`minItems: 1` added to `migratedCase.defendants` and `migratedCase.hearings`** —
+unlike the `defendant.offences` fix above, this has **no workbook counterpart**: the workbook
+leaves both of these top-level arrays as bare `type: array`, constraining only the nested arrays
+(`offences`, `listedDefendants`, `listedOffences`). A deliberate LIBRA-gate strengthening beyond
+the workbook, added on request. `defendants` was already `required`, so this closes the
+remaining "present but empty" gap; `hearings` is still optional, so the constraint only applies
+once the key is sent at all. The shared `libra-case-submission-valid.json` fixture's
+`"defendants": []` was replaced with one fully-populated defendant (mirroring the test's
+`validDefendant()` builder exactly), and the "declared but optional" test's `hearings` row was
+changed from an empty array to one valid hearing (`validHearing()`), since an empty array no
+longer passes. Two new proving tests added
+(`shouldRejectLibraCaseSubmissionWithNoDefendants`, `shouldRejectLibraCaseSubmissionWithAnEmptyHearingsArray`).
+132/132 tests pass, full reactor install succeeds.
+
+**Code review pass 2** (against the `postcode` rename and the `defendants`/`hearings` `minItems`
+change above) — approved with comments: all previously-flagged items confirmed fixed, the rename
+verified fully clean (no dangling/orphaned `$ref`s), the new `minItems` additions correctly
+implemented and workbook-cross-checked. One non-blocking suggestion: the three `minItems`
+rejection tests asserted only `messages.size() == 1`, not that the message actually names
+`minItems` — addressed below.
+
+→ **finally, `minItems: 1` extended to three more optional arrays**:
+`caseDetails.caseMarkers`, `defendant.aliasForCorporate`, `defendant.individualAliases` — same
+no-workbook-counterpart, deliberate LIBRA-gate strengthening as `defendants`/`hearings`, on
+request. All three are optional at their parent level, so omitting the key entirely remains
+valid; only an empty-but-present array is now rejected. New parameterized proving tests
+(`shouldRejectLibraCaseSubmissionWithAnEmptyCaseDetailsArray`,
+`shouldRejectLibraCaseSubmissionWithAnEmptyDefendantArray`). Also addressed the review's
+assertion-tightness suggestion for all five `minItems` tests at once: a shared
+`assertRejectedByMinItems(...)` helper now asserts both `messages.size() == 1` and that the
+message contains networknt's `"minimum of"` wording, replacing the previous size-only checks.
+135/135 tests pass, full reactor install succeeds.
 
 ---
 
