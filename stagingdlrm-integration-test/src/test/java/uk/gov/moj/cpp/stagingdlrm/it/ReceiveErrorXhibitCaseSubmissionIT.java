@@ -19,7 +19,7 @@ import javax.json.JsonObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-class ReceiveErrorCaseSubmissionIT extends AbstractTestHelper {
+class ReceiveErrorXhibitCaseSubmissionIT extends AbstractTestHelper {
 
     private static final JmsMessageConsumerClient consumerClient = newPrivateJmsMessageConsumerClientProvider(CONTEXT)
             .withEventNames("stagingdlrm.events.error-migrated-case-submission-received")
@@ -32,7 +32,7 @@ class ReceiveErrorCaseSubmissionIT extends AbstractTestHelper {
 
     @Test
     void shouldAcceptReceiveErrorCaseSubmission() {
-        final String payload = getStringFromResource("stagingdlrm.receive-error-migrated-case-submission.json");
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-error-migrated-case-submission.json");
 
         final String url = getWriteUrl("/receive-error-migrated-case-submission");
         makePostCall(url,
@@ -43,6 +43,6 @@ class ReceiveErrorCaseSubmissionIT extends AbstractTestHelper {
 
         assertTrue(envelope.isPresent());
         assertThat(envelope.get().toString(),
-                matchesWholePayload(getStringFromResource("expected/error-migrated-case-submission-received.json"), of()));
+                matchesWholePayload(getStringFromResource("xhibit/expected/error-migrated-case-submission-received.json"), of()));
     }
 }

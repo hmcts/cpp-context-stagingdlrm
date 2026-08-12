@@ -39,7 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 
-class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
+class ReceiveXhibitCaseFileSubmissionIT extends AbstractTestHelper {
 
     private static final JmsMessageConsumerClient consumerClient = newPrivateJmsMessageConsumerClientProvider(CONTEXT)
             .withEventNames("stagingdlrm.events.migrated-case-submission-received")
@@ -65,7 +65,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     public static final String POSTCODE_STRING_INVALID_POSTCODE_DOES_NOT_MATCH_PATTERN = "postcode: string [KJ3 4RF] does not match pattern";
     public static final String DEFENDANTS_EXPECTED_MINIMUM_ITEM_COUNT = "defendants: expected minimum item count: 1, found: 0";
     public static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
-    private static final String XHIBIT_UNMAPPED_SYSTEM_ID_MAPPER_FIXTURE = "stagingdlrm.receive-migrated-case-submission-from-xhibit-unmapped-system-id-mapper.json";
+    private static final String XHIBIT_UNMAPPED_SYSTEM_ID_MAPPER_FIXTURE = "xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-unmapped-system-id-mapper.json";
 
     private static final List<String> FORWARDED_BODY_EXCLUSIONS = List.of(
             "submissionId",
@@ -87,7 +87,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     void shouldAcceptCaseFileSubmissionRequest() {
         final String submissionId = UUID.randomUUID().toString();
 
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission.json").replace("SUBMISSION_ID", submissionId);
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission.json").replace("SUBMISSION_ID", submissionId);
 
         makePostCall(
                 getWriteUrl("/receive-migrated-case-submission"),
@@ -98,7 +98,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
         verifyReceiveCaseFileBody(submissionId,
-                getStringFromResource("expected/receive-migrated-case-file.json"),
+                getStringFromResource("xhibit/expected/receive-migrated-case-file.json"),
                 FORWARDED_BODY_EXCLUSIONS);
     }
 
@@ -106,7 +106,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     void shouldNotAcceptCaseFileSubmissionRequest() {
         String submissionId = UUID.randomUUID().toString();
         final String uniqueCaseUrn = "DUP" + submissionId.replace("-", "").substring(0, 10).toUpperCase();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission.json")
                 .replace("SUBMISSION_ID", submissionId)
                 .replace("TVL55117DFXXV", uniqueCaseUrn);
         final String realCaseUrn = readJson(payload).getJsonObject("migratedCase")
@@ -142,7 +142,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldRaiseBadRequestWhenNoDefendants() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-no-defendants.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-no-defendants.json")
                 .replace("SUBMISSION_ID", submissionId);
         Assertions.assertDoesNotThrow(() ->
                 makePostCall(getWriteUrl("/receive-migrated-case-submission"),
@@ -154,7 +154,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldRaiseBadRequest() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-bad-request.json").replace("SUBMISSION_ID", submissionId);
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-bad-request.json").replace("SUBMISSION_ID", submissionId);
         Assertions.assertDoesNotThrow(() ->
 
         makePostCall(getWriteUrl("/receive-migrated-case-submission"), "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
@@ -169,7 +169,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldAcceptCaseFileSubmissionRequestFromXhibit() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit.json")
                 .replace("SUBMISSION_ID", submissionId);
 
 
@@ -210,7 +210,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldAcceptCaseFileSubmissionRequestFromXhibitWhenGenderHearingLanguageNotMatchCP() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-gender.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-gender.json")
                 .replace("SUBMISSION_ID", submissionId);
 
 
@@ -251,7 +251,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     void shouldAcceptCaseFileSubmissionRequestWithMultipleHearing() {
         final String submissionId = UUID.randomUUID().toString();
 
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-with-multiple-hearing.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-with-multiple-hearing.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         final JsonObject jsonPayload = readJson(payload);
@@ -292,7 +292,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     void shouldAcceptCaseFileSubmissionRequestWithoutMaterials() {
         final String submissionId = UUID.randomUUID().toString();
 
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-without-materials.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-without-materials.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         final JsonObject jsonPayload = readJson(payload);
@@ -333,7 +333,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldAcceptCaseFileSubmissionRequestXHIBITWithCaseMarker() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-with-casemarker.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-with-casemarker.json")
                 .replace("SUBMISSION_ID", submissionId);
 
 
@@ -371,7 +371,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     void shouldAcceptCaseFileSubmissionRequestXHIBITWithPlea() {
         String submissionId = UUID.randomUUID().toString();
         String pleaId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-with-plea.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-with-plea.json")
                 .replace("SUBMISSION_ID", submissionId)
                 .replace("PLEA_ID", pleaId);
 
@@ -411,7 +411,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         String submissionId = UUID.randomUUID().toString();
         String pleaId = UUID.randomUUID().toString();
         String verdictId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-with-verdict.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-with-verdict.json")
                 .replace("SUBMISSION_ID", submissionId)
                 .replace("PLEA_ID", pleaId)
                 .replace("VERDICT_ID", verdictId);
@@ -450,7 +450,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldAcceptCaseFileSubmissionRequestWhenDateOfCommittalIsMissing() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-missing-doc.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-missing-doc.json")
                 .replace("SUBMISSION_ID", submissionId);
 
 
@@ -486,7 +486,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     @Test
     void shouldAcceptCaseFileSubmissionRequestWhenSendingCourtIsMissing() {
         String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-missing-sending-court.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-missing-sending-court.json")
                 .replace("SUBMISSION_ID", submissionId);
 
 
@@ -526,7 +526,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         ProgressionStub.stubProgressionProsecutionCase(mappedCaseId, "EJECTED");
 
         final String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         makePostCall(
@@ -560,7 +560,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         ProgressionStub.stubProgressionProsecutionCase(existingCaseId, "ACTIVE");
 
         final String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-in-progression.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-in-progression.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         makePostCall(
@@ -579,7 +579,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         ProgressionStub.stubProgressionProsecutionCase(existingCaseId, "EJECTED");
 
         final String submissionId = UUID.randomUUID().toString();
-        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-ejected.json")
+        final String payload = getStringFromResource("xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-ejected.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         makePostCall(
