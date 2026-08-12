@@ -1,0 +1,25 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "LIB55117DFXXV",
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "C",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "summonsCode": "SUM001",
+      "informant": "PC 1234 LIBRA",
+      "writtenChargePostingDate": "2024-01-15",
+      "cpsOrganisation": "CPS North West",
+      "caseMarkers": [
+        {
+          "markerTypeCode": "YOUTH"
+        }
+      ]
+    },
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "This is from {{SOURCE_SYSTEM}}"
+    }
+  }
+}

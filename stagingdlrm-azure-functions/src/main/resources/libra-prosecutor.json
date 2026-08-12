@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "libra-prosecutor.json",
+  "type": "object",
+  "description": "LIBRA Prosecutor Details",
+  "properties": {
+    "prosecutingAuthority": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "prosecutingAuthority"
+  ],
+  "additionalProperties": true
+}
