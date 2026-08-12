@@ -3,17 +3,17 @@
     "caseDetails": {
       "originatingOrganisation": "G94DV00",
       "initiationCode": "O",
+      "prosecutorCaseReference": "TVL55117DFXXV",
       "dateReceived": "2024-01-15",
-      "sendingCourt": "C01BL00",
-      "receivingCourt": "C01BL00",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "sendingCourt": "C50EX00",
+      "receivingCourt": "B01LY00",
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
       "receiptType": "Either way case",
-      "retrialIndicator": false,
-      "prosecutorCaseReference": "TVL55117DFXXV",
-      "prosecutor": {
-        "prosecutingAuthority": "GAEAA01"
-      }
+      "retrialIndicator": false
     },
     "hearings": [
       {
@@ -22,41 +22,18 @@
         "timeOfHearing": "10:05:01",
         "durationMinutes": 60,
         "courtRoomId": 60,
-        "hearingType": "",
+        "hearingType": "Trial",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "def-ref-0001",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "off-ref-0001"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "def-ref-0002",
             "listedOffences": [
-              "LIBRA-offence-id-2"
-            ]
-          }
-        ]
-      },
-      {
-        "courtHearingLocation": "B01LY02",
-        "durationMinutes": 90,
-        "weekCommencingDate": {
-          "startDate": "2025-05-10",
-          "duration": 5
-        },
-        "hearingType": "",
-        "listedDefendants": [
-          {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
-            "listedOffences": [
-              "LIBRA-offence-id-1"
-            ]
-          },
-          {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
-            "listedOffences": [
-              "LIBRA-offence-id-2"
+              "off-ref-0002"
             ]
           }
         ]
@@ -64,7 +41,7 @@
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "prosecutorDefendantId": "def-ref-0001",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -85,7 +62,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "prosecutorOffenceId": "off-ref-0001",
             "offenceCode": "CA03013",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -97,7 +74,7 @@
         ]
       },
       {
-        "prosecutorDefendantId":"LIBRA-defendant-id-2",
+        "prosecutorDefendantId": "def-ref-0002",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -113,12 +90,12 @@
           },
           "selfDefinedInformation": {
             "ethnicity": "W1",
-            "gender": 1
+            "gender": 2
           }
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-2",
+            "prosecutorOffenceId": "off-ref-0002",
             "offenceCode": "DA03014",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -131,21 +108,21 @@
       }
     ],
     "migrationSourceSystem": {
-      "migrationSourceSystemName": "LIBRA",
-      "migrationSourceSystemCaseIdentifier": "This is from Libra"
+      "migrationSourceSystemName": "XHIBIT",
+      "migrationSourceSystemCaseIdentifier": "case-identifier-0001"
     }
   },
   "materials": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
-      "azureLocation": "http://inazure/secrets/1",
+      "azureLocation": "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-one.wav",
       "fileName": "Audio Recording one",
       "fileType": ".wav",
       "documentType": 3
     },
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "azureLocation": "http://inazure/secrets/2",
+      "azureLocation": "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-two.wav",
       "fileName": "Audio Recording two",
       "fileType": ".wav",
       "documentType": 3
@@ -155,6 +132,6 @@
     "id": "550e8400-e29b-41d4-a716-446655440003",
     "numberOfMaterials": 2
   },
-  "submissionId": "SUBMISSION_ID",
-  "azureLocation": "TVL55117DFXXV"
+  "submissionId": "11111111-2222-3333-4444-555555555555",
+  "azureLocation": "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555"
 }

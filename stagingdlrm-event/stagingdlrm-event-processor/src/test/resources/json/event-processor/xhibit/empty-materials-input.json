@@ -1,0 +1,48 @@
+{
+  "azureLocation": "XHIBIT/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555",
+  "migratedCase": {
+    "caseDetails": {
+      "dateReceived": "2024-01-15",
+      "initiationCode": "O",
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "receiptType": "Either way case",
+      "receivingCourt": "B01LY00",
+      "retrialIndicator": false
+    },
+    "defendants": [
+      {
+        "offences": [
+          {
+            "offenceCode": "CA03013",
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceSequenceNumber": 1,
+            "offenceWording": "TV Licence not paid",
+            "prosecutorOffenceId": "off-ref-0001"
+          }
+        ],
+        "prosecutorDefendantId": "def-ref-0001"
+      }
+    ],
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "hearingType": "Trial",
+        "listedDefendants": [
+          {
+            "listedOffences": [
+              "off-ref-0001"
+            ],
+            "prosecutorDefendantId": "def-ref-0001"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemCaseIdentifier": "case-identifier-emptymat",
+      "migrationSourceSystemName": "XHIBIT"
+    }
+  },
+  "submissionId": "11111111-2222-3333-4444-555555555555",
+  "materials": []
+}

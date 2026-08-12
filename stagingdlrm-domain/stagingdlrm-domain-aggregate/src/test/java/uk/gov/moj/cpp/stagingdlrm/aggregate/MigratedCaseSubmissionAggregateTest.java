@@ -1,237 +1,261 @@
 package uk.gov.moj.cpp.stagingdlrm.aggregate;
 
-import static java.util.UUID.fromString;
-import static org.hamcrest.CoreMatchers.is;
+import static java.util.Map.of;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Answers.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.is;
+import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
+import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
-import uk.gov.moj.stagingdlrm.domain.event.CaseAlreadyProcessedAndExistsInProgression;
-import uk.gov.moj.stagingdlrm.domain.event.DuplicatedMigratedCaseSubmissionReceived;
-import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
+import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
+import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
 
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.CaseAlreadyProcessedAndExistsInProgressionCommand;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ErrorMigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmissionProcessedOutput;
-import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
-import uk.gov.moj.stagingdlrm.domain.event.ErrorMigratedCaseSubmissionReceived;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@ExtendWith(MockitoExtension.class)
 class MigratedCaseSubmissionAggregateTest {
 
+    private static final String XHIBIT = "XHIBIT";
 
-    @Test
-    void shouldRaiseMigratedCaseSubmissionReceived() {
 
-        final String migrationSourceSystemName = "XHIBIT";
+    private static final UUID WITH_MATERIALS_SUBMISSION_ID = UUID.fromString("11111111-2222-3333-4444-555555555555");
 
-        final String batchIdentifier = "20082025";
+    private static final UUID STANDALONE_CASE_ID = UUID.fromString("a4391788-f829-4514-a344-61f1d5d9690c");
 
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
+    private static final UUID PROGRESSION_CASE_ID = UUID.fromString("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
 
-        final String submissionId = UUID.randomUUID().toString();
+    private static final UUID ERROR_SUBMISSION_ID = UUID.fromString("99999999-8888-7777-6666-555555555555");
 
-        final String path = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProducer().objectMapper();
 
-        final String testFile = path + "/test.pdf";
+    private static final JsonObjectToObjectConverter CONVERTER =
+            new JsonObjectToObjectConverter(new ObjectMapperProducer().objectMapper());
 
-        final String test1File = path + "/test1.pdf";
+    @ParameterizedTest(name = "{index} => {0}")
+    @MethodSource("submissionScenarios")
+    void shouldAppendExpectedEventsWholePayload(final String name, final SubmissionScenario scenario) {
+        scenario.runAndAssert(new MigratedCaseSubmissionAggregate());
+    }
 
-        MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
-
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(fromString(submissionId));
-
-        when(migratedCaseSubmission.getMaterials()).thenReturn(List.of(
-                MigratedMaterial.migratedMaterial()
-                        .withId(UUID.randomUUID())
-                        .withAzureLocation(testFile)
-                        .build(),
-                MigratedMaterial.migratedMaterial()
-                        .withId(UUID.randomUUID())
-                        .withAzureLocation(test1File)
-                        .build()));
-
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
-
-        migratedCaseSubmissionAggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
-
-        assertEquals(submissionId, migratedCaseSubmissionAggregate.getSubmissionId().toString(), "Caseid should match");
-
+    static Stream<Arguments> submissionScenarios() {
+        return Stream.of(
+                Arguments.of(
+                        "FR2 migrated-case-submission-received carries the whole submission with materials (XHIBIT)",
+                        scenario(XHIBIT)
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))),
+                Arguments.of(
+                        "FR2 migrated-case-submission-received carries the whole submission without materials (XHIBIT)",
+                        scenario(XHIBIT)
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))),
+                Arguments.of(
+                        "FR2 recording a processing output appends migrated-case-submission-processed (XHIBIT)",
+                        scenario(XHIBIT)
+                                .recordProcessingOutput(standaloneOutput(),
+                                        expect("json/aggregate/xhibit/expected-processed.json"))),
+                Arguments.of(
+                        "FR2 a repeat submission is flagged duplicate then processed unsuccessfully (XHIBIT)",
+                        scenario(XHIBIT)
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))
+                                .recordProcessingOutput(duplicateOutput(),
+                                        expect("json/aggregate/xhibit/expected-processed-intermediate.json"))
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-duplicated.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-duplicate.json"))),
+                Arguments.of(
+                        "FR2 a case already in progression is recorded then processed unsuccessfully (XHIBIT)",
+                        scenario(XHIBIT)
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))
+                                .caseAlreadyProcessed("json/aggregate/xhibit/submission-without-materials.json", PROGRESSION_CASE_ID,
+                                        expect("json/aggregate/xhibit/expected-already-processed.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-already.json"))),
+                Arguments.of(
+                        "FR2 an error submission appends error-migrated-case-submission-received (XHIBIT)",
+                        scenario(XHIBIT)
+                                .receiveError(errorSubmission(),
+                                        expect("json/aggregate/xhibit/expected-error.json"))));
     }
 
     @Test
-    void shouldRaiseMigratedCaseSubmissionReceivedWhenMaterialIsEmpty() {
+    void aggregateInputFixtureRoundTripsUnchanged() {
+        final String json = fixture("json/aggregate/xhibit/submission-with-materials.json", of("SOURCE_SYSTEM", XHIBIT));
 
-        final String submissionId = UUID.randomUUID().toString();
+        final MigratedCaseSubmission submission = CONVERTER.convert(readJson(json), MigratedCaseSubmission.class);
 
-        MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
-
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(fromString(submissionId));
-
-        when(migratedCaseSubmission.getMaterials()).thenReturn(List.of());
-
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
-
-        migratedCaseSubmissionAggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
-
-        assertEquals(submissionId, migratedCaseSubmissionAggregate.getSubmissionId().toString(), "Caseid should match");
-
+        assertThat(serialise(submission), matchesWholePayload(json, List.of()));
     }
 
-    @Test
-    void shouldRaiseMigratedCaseSubmissionReceivedWhenMaterialIsNull() {
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
-
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(fromString(submissionId));
-
-        when(migratedCaseSubmission.getMaterials()).thenReturn(null);
-
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
-
-        migratedCaseSubmissionAggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
-
-        assertEquals(submissionId, migratedCaseSubmissionAggregate.getSubmissionId().toString(), "Caseid should match");
-
-    }
-
-    @Test
-    void shouldRaiseDuplicateMigratedCaseSubmissionReceived() {
-        final String uuid = UUID.randomUUID().toString();
-
-        final String migrationSourceSystemName = "XHIBIT";
-
-        final String batchIdentifier = "20082025";
-
-        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
-
-        final String submissionId = UUID.randomUUID().toString();
-
-        final String path = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
-
-        final String testFile = path + "/test.pdf";
-
-        final String test1File = path + "/test1.pdf";
-
-        MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
-
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(fromString(uuid));
-        when(migratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn("T20000001");
-
-        when(migratedCaseSubmission.getMaterials()).thenReturn(List.of(
-                MigratedMaterial.migratedMaterial()
-                        .withId(UUID.randomUUID())
-                        .withAzureLocation(testFile)
-                        .build(),
-                MigratedMaterial.migratedMaterial()
-                        .withId(UUID.randomUUID())
-                        .withAzureLocation(test1File)
-                        .build()));
-
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
-
-        migratedCaseSubmissionAggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
-
-        final MigratedCaseSubmissionProcessedOutput processedOutput = MigratedCaseSubmissionProcessedOutput.migratedCaseSubmissionProcessedOutput()
-                .withCaseId(UUID.fromString(uuid))
-                .withSubmissionId(UUID.fromString(uuid))
-                .withCaseUrn("T20000001")
+    private static MigratedCaseSubmissionProcessedOutput standaloneOutput() {
+        return MigratedCaseSubmissionProcessedOutput
+                .migratedCaseSubmissionProcessedOutput()
+                .withCaseId(STANDALONE_CASE_ID)
+                .withSubmissionId(STANDALONE_CASE_ID)
+                .withCaseUrn("TVL55117DFXXV")
                 .withProcessingIsSuccessful(true)
                 .withDescription("Processed")
                 .build();
-        migratedCaseSubmissionAggregate.recordMigratedCaseSubmissionOutput(processedOutput);
-
-        List<Object> eventStream =  migratedCaseSubmissionAggregate.receiveMigratedCaseSubmission(migratedCaseSubmission).toList();
-
-        assertEquals(uuid, migratedCaseSubmissionAggregate.getSubmissionId().toString(), "Caseid should match");
-        assertThat(eventStream.size(), is(2));
-        assertTrue(eventStream.get(0) instanceof DuplicatedMigratedCaseSubmissionReceived, "First event should be DuplicatedMigratedCaseSubmissionReceived");
-        assertTrue(eventStream.get(1) instanceof MigratedCaseSubmissionProcessed, "Second event should be MigratedCaseSubmissionProcessed");
-        assertTrue(migratedCaseSubmissionAggregate.isCaseSubmissionDuplicated());
     }
 
-
-    @Test
-    void shouldRaiseMigratedCaseSubmissionProcessed() {
-        final UUID uuid = UUID.fromString("a4391788-f829-4514-a344-61f1d5d9690c");
-        final MigratedCaseSubmissionProcessedOutput output = MigratedCaseSubmissionProcessedOutput.migratedCaseSubmissionProcessedOutput().withCaseId(uuid).withCaseUrn("caseURN").withSubmissionId(uuid).withProcessingIsSuccessful(true).build();
-
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
-
-        migratedCaseSubmissionAggregate.recordMigratedCaseSubmissionOutput(output);
-
-        assertEquals(uuid, migratedCaseSubmissionAggregate.getMigratedCaseSubmissionProcessedOutput().getCaseId(), "Caseid should match");
-
-    }
-
-    @Test
-    void shouldRaiseCaseAlreadyProcessedAndExistsInProgressionEvents() {
-        final UUID submissionId = UUID.randomUUID();
-        final UUID caseId = UUID.randomUUID();
-        final String caseUrn = "T20000001";
-
-        final MigratedCaseSubmission migratedCaseSubmission = mock(MigratedCaseSubmission.class, RETURNS_DEEP_STUBS);
-        when(migratedCaseSubmission.getSubmissionId()).thenReturn(submissionId);
-        when(migratedCaseSubmission.getMigratedCase().getCaseDetails().getProsecutorCaseReference()).thenReturn(caseUrn);
-        when(migratedCaseSubmission.getMaterials()).thenReturn(List.of());
-
-        final MigratedCaseSubmissionAggregate aggregate = new MigratedCaseSubmissionAggregate();
-        aggregate.receiveMigratedCaseSubmission(migratedCaseSubmission);
-
-        final CaseAlreadyProcessedAndExistsInProgressionCommand command = CaseAlreadyProcessedAndExistsInProgressionCommand
-                .caseAlreadyProcessedAndExistsInProgressionCommand()
-                .withCaseId(caseId)
-                .withMigratedCaseSubmission(migratedCaseSubmission)
+    private static MigratedCaseSubmissionProcessedOutput duplicateOutput() {
+        return MigratedCaseSubmissionProcessedOutput
+                .migratedCaseSubmissionProcessedOutput()
+                .withCaseId(WITH_MATERIALS_SUBMISSION_ID)
+                .withSubmissionId(WITH_MATERIALS_SUBMISSION_ID)
+                .withCaseUrn("TVL55117DFXXV")
+                .withProcessingIsSuccessful(true)
+                .withDescription("Processed")
                 .build();
-
-        final List<Object> events = aggregate.receiveCaseAlreadyProcessed(command).toList();
-
-        assertThat(events.size(), is(2));
-        assertTrue(events.get(0) instanceof CaseAlreadyProcessedAndExistsInProgression, "First event should be CaseAlreadyProcessedAndExistsInProgression");
-        assertTrue(events.get(1) instanceof MigratedCaseSubmissionProcessed, "Second event should be MigratedCaseSubmissionProcessed");
-        assertTrue(aggregate.isCaseAlreadyProcessedAndExistsInProgression());
-
-        final MigratedCaseSubmissionProcessed processed = (MigratedCaseSubmissionProcessed) events.get(1);
-        assertThat(processed.getMigratedCaseSubmissionProcessed().getCaseId(), is(caseId));
-        assertThat(processed.getMigratedCaseSubmissionProcessed().getCaseUrn(), is(caseUrn));
-        assertThat(processed.getMigratedCaseSubmissionProcessed().getSubmissionId(), is(submissionId));
-        assertThat(processed.getMigratedCaseSubmissionProcessed().getProcessingIsSuccessful(), is(false));
-        assertThat(processed.getMigratedCaseSubmissionProcessed().getDescription(), is(MigratedCaseSubmissionAggregate.CASE_ALREADY_EXISTS_IN_PROGRESSION));
     }
 
-    @Test
-    void receiveErrorMigratedCaseSubmission() {
-        UUID submissionId = UUID.randomUUID();
-
-        ErrorMigratedCaseSubmission errorMigratedCaseSubmission = ErrorMigratedCaseSubmission
-                .errorMigratedCaseSubmission().withSubmissionId(submissionId)
+    private static ErrorMigratedCaseSubmission errorSubmission() {
+        return ErrorMigratedCaseSubmission
+                .errorMigratedCaseSubmission()
+                .withSubmissionId(ERROR_SUBMISSION_ID)
                 .withPayload("sample text")
                 .build();
+    }
 
-        MigratedCaseSubmissionAggregate migratedCaseSubmissionAggregate = new MigratedCaseSubmissionAggregate();
+    private static SubmissionScenario scenario(final String sourceSystem) {
+        return new SubmissionScenario(sourceSystem);
+    }
 
-        final List<Object> response = migratedCaseSubmissionAggregate.receiveErrorMigratedCaseSubmission(errorMigratedCaseSubmission).toList();
+    private static Expectation expect(final String fixtureName, final String... excludedPaths) {
+        return new Expectation(fixtureName, List.of(excludedPaths));
+    }
 
-        assertThat(response.size(), is(1));
-        assertThat(response.get(0).getClass().toString(), is(ErrorMigratedCaseSubmissionReceived.class.toString()));
+    private static JsonObject readJson(final String json) {
+        return Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))).readObject();
+    }
 
-        final ErrorMigratedCaseSubmission actual = ((ErrorMigratedCaseSubmissionReceived) response.get(0)).getErrorMigratedCaseSubmission();
+    private static String serialise(final Object event) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(event);
+        } catch (final JsonProcessingException e) {
+            throw new AssertionError("Failed to serialise " + event, e);
+        }
+    }
 
-        assertThat(actual.getSubmissionId(), is(submissionId));
-        assertThat(actual.getPayload(), is("sample text"));
+    private record Expectation(String fixtureName, List<String> excludedPaths) {
+    }
+
+    private record Step(Function<MigratedCaseSubmissionAggregate, Stream<Object>> invocation,
+                        List<Expectation> expectations) {
+    }
+
+    private static final class SubmissionScenario {
+
+        private final String sourceSystem;
+        private final List<Step> steps = new ArrayList<>();
+
+        private SubmissionScenario(final String sourceSystem) {
+            this.sourceSystem = sourceSystem;
+        }
+
+        private SubmissionScenario receiveSubmission(final String submissionFixture, final Expectation... expectations) {
+            steps.add(new Step(
+                    aggregate -> aggregate.receiveMigratedCaseSubmission(loadSubmission(submissionFixture)),
+                    List.of(expectations)));
+            return this;
+        }
+
+        private SubmissionScenario recordProcessingOutput(final MigratedCaseSubmissionProcessedOutput output,
+                                                          final Expectation... expectations) {
+            steps.add(new Step(
+                    aggregate -> aggregate.recordMigratedCaseSubmissionOutput(output),
+                    List.of(expectations)));
+            return this;
+        }
+
+        private SubmissionScenario caseAlreadyProcessed(final String submissionFixture, final UUID caseId,
+                                                        final Expectation... expectations) {
+            steps.add(new Step(
+                    aggregate -> aggregate.receiveCaseAlreadyProcessed(
+                            CaseAlreadyProcessedAndExistsInProgressionCommand
+                                    .caseAlreadyProcessedAndExistsInProgressionCommand()
+                                    .withCaseId(caseId)
+                                    .withMigratedCaseSubmission(loadSubmission(submissionFixture))
+                                    .build()),
+                    List.of(expectations)));
+            return this;
+        }
+
+        private SubmissionScenario receiveError(final ErrorMigratedCaseSubmission error,
+                                                final Expectation... expectations) {
+            steps.add(new Step(
+                    aggregate -> aggregate.receiveErrorMigratedCaseSubmission(error),
+                    List.of(expectations)));
+            return this;
+        }
+
+        private void runAndAssert(final MigratedCaseSubmissionAggregate aggregate) {
+            for (final Step step : steps) {
+                final List<Object> events = step.invocation().apply(aggregate).toList();
+
+                assertThat("number of appended events", events.size(), is(step.expectations().size()));
+
+                for (int i = 0; i < events.size(); i++) {
+                    final Expectation expectation = step.expectations().get(i);
+                    assertThat(serialise(events.get(i)),
+                            matchesWholePayload(loadExpected(expectation.fixtureName()), expectation.excludedPaths()));
+                }
+            }
+        }
+
+        private MigratedCaseSubmission loadSubmission(final String submissionFixture) {
+            return CONVERTER.convert(readJson(bind(submissionFixture)), MigratedCaseSubmission.class);
+        }
+
+        private String loadExpected(final String expectedFixture) {
+            return bind(expectedFixture);
+        }
+
+        private String bind(final String fixtureName) {
+            if (carriesSourceSystem(fixtureName)) {
+                return fixture(fixtureName, of("SOURCE_SYSTEM", requireSourceSystem()));
+            }
+            return fixture(fixtureName);
+        }
+
+        private String requireSourceSystem() {
+            if (sourceSystem == null) {
+                throw new AssertionError("Scenario did not bind a source system (DD-43078 FR1)");
+            }
+            return sourceSystem;
+        }
+
+        private static boolean carriesSourceSystem(final String fixtureName) {
+            try (InputStream in = SubmissionScenario.class.getClassLoader().getResourceAsStream(fixtureName)) {
+                if (in == null) {
+                    throw new AssertionError("Fixture not found on the test classpath: " + fixtureName);
+                }
+                return new String(in.readAllBytes(), StandardCharsets.UTF_8).contains("{{SOURCE_SYSTEM}}");
+            } catch (final IOException e) {
+                throw new AssertionError("Failed to read fixture " + fixtureName, e);
+            }
+        }
     }
 }

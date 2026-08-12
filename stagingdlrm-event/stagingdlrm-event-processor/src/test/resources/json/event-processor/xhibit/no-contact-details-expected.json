@@ -1,0 +1,55 @@
+{
+  "channel" : "DLRM_MIGRATION",
+  "migratedCaseDetails" : {
+    "caseDetails" : {
+      "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+      "dateReceived" : "2024-01-15",
+      "initiationCode" : "O",
+      "prosecutorCaseReference" : "TVL55117DFXXV",
+      "receiptType" : "Either way case",
+      "receivingCourt" : "B01LY00",
+      "retrialIndicator" : false
+    },
+    "defendants" : [ {
+      "id" : "2a1f80a7-13c2-4e13-9916-9eb464d05175",
+      "individual" : {
+        "personalInformation" : {
+          "address" : {
+            "address1" : "armagaddon house",
+            "postcode" : "M60 1NW"
+          },
+          "firstName" : "John",
+          "lastName" : "Smith",
+          "title" : "Baron"
+        },
+        "selfDefinedInformation" : {
+          "ethnicity" : "W1",
+          "gender" : "MALE"
+        }
+      },
+      "offences" : [ {
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceDateCode" : 1,
+        "offenceId" : "9361adf6-950f-4f10-8055-eff2b6a4304a",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "prosecutorOffenceId" : "off-ref-0001"
+      } ],
+      "prosecutorDefendantId" : "def-ref-0001"
+    } ],
+    "hearings" : [ {
+      "courtHearingLocation" : "B01LY01",
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "off-ref-0001" ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      } ]
+    } ],
+    "migrationSourceSystem" : {
+      "migrationSourceSystemCaseIdentifier" : "case-identifier-nocontact",
+      "migrationSourceSystemName" : "XHIBIT"
+    }
+  },
+  "submissionId" : "11111111-2222-3333-4444-555555555555"
+}

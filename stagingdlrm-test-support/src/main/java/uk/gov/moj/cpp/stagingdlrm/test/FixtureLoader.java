@@ -7,22 +7,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-/**
- * Loads a JSON fixture from the test classpath, substituting {@code {{PARAM}}} placeholders.
- *
- * <p>Three deliberate behaviours make this safe to assert on (ADR-001 appendix): fixtures are read
- * as UTF-8, never the platform default; a supplied parameter absent from the fixture fails, so a
- * renamed placeholder cannot silently stop substituting; an unresolved <code>{{...}}</code> fails —
- * the DD-43078 FR1 guard, so an unbound source system cannot reach a comparison and pass.
- */
 public final class FixtureLoader {
+
+    private static final String EMPTY_JSON = "{}";
 
     private FixtureLoader() {
     }
 
-    /** The empty JSON object — use instead of committing another one-line {@code {}} fixture. */
     public static String emptyJson() {
-        return "{}";
+        return EMPTY_JSON;
     }
 
     public static String fixture(final String path) {
