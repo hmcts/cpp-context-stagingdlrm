@@ -54,16 +54,22 @@ run python3 "$HERE/flatten-canonical-schema.py" \
     --root stagingdlrm.case-submission.json \
     --out "$DEST/schema/canonical/staging-dlrm-funcapp-flattened.json"
 
-# 2. The LIBRA schema, generated from the workbook against the canonical schema as its reference.
+# 2. The LIBRA schema, generated from the workbook but named and typed by the live contracts, plus
+#    its provenance sidecar. The schema is the artefact that can be shared outside the team: it
+#    carries no workbook references, no row numbers and no internal notes. Everything the workbook
+#    says — the sheet's own field names, Format cells, per-case-type mandatoriness, business rules —
+#    goes to dlrm-libra-0.13.provenance.json, which step 3 reads.
 run python3 "$HERE/generate-dlrm-schema.py" --out-dir "$DEST/schema/libra" \
     --reference "$DEST/schema/canonical/staging-dlrm-canonical-flattened.json"
 
-# 3. The field-level impact matrix — depends on all three schemas above, and verifies its curated
-#    PCFDLRM/core claims against those checkouts. Exits non-zero if a claim no longer holds.
+# 3. The field-level impact matrix — depends on all three schemas above and on the provenance
+#    sidecar, and verifies its curated PCFDLRM/core claims against those checkouts. Exits non-zero
+#    if a claim no longer holds.
 run python3 "$HERE/build-schema-impact.py" --out-dir "$DEST" \
-    --libra     "$DEST/schema/libra/dlrm-libra-0.13.json" \
-    --canonical "$DEST/schema/canonical/staging-dlrm-canonical-flattened.json" \
-    --funcapp   "$DEST/schema/canonical/staging-dlrm-funcapp-flattened.json" \
+    --libra      "$DEST/schema/libra/dlrm-libra-0.13.json" \
+    --provenance "$DEST/schema/libra/dlrm-libra-0.13.provenance.json" \
+    --canonical  "$DEST/schema/canonical/staging-dlrm-canonical-flattened.json" \
+    --funcapp    "$DEST/schema/canonical/staging-dlrm-funcapp-flattened.json" \
     --out
 
 echo
