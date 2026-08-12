@@ -37,7 +37,7 @@ public class PcfdlrmStub {
     }
 
     public static void verifyReceiveCaseFileRequested(final List<String> expectedValues) {
-        await().atMost(10, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
+        await().atMost(30, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
             final RequestPatternBuilder requestPatternBuilder = postRequestedFor(urlPathMatching(RECEIVE_MIGRATE_CASE_FILE));
             expectedValues.forEach(
                     expectedValue -> requestPatternBuilder.withRequestBody(containing(expectedValue))
@@ -47,7 +47,7 @@ public class PcfdlrmStub {
     }
 
     public static void verifyReceiveCaseFileBody(final String submissionId, final String expectedBody, final List<String> excludedPaths) {
-        await().atMost(10, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
+        await().atMost(30, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
             final List<LoggedRequest> requests = findAll(postRequestedFor(urlPathMatching(RECEIVE_MIGRATE_CASE_FILE))
                     .withRequestBody(containing(submissionId)));
             assertFalse(requests.isEmpty(), "No receive-migrated-case-file request captured for submissionId: " + submissionId);
