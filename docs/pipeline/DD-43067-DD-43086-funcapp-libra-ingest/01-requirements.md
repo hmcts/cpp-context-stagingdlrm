@@ -73,9 +73,107 @@ overriding analysis §3.2's build-time-unpack proposal.
   **`declare` is load-bearing, not cosmetic:** the generated LIBRA `caseDetails` is closed
   (`additionalProperties: false`) where the XHIBIT gate's is open, so a LIBRA field left undeclared
   is rejected *at the gate*.
-  Note also that `initiationCode is not restricted to "O"` is trivially satisfied here — **the gate
-  carries no constraints at all** (no enums, patterns or lengths, see FR6). The enum relaxation is
-  canonical-side work in DD-43081, not this story's.
+  Note also that `initiationCode is not restricted to "O"` is trivially satisfied here — **the
+  `caseDetails` branch originally carried no constraints at all** (no enums, patterns or lengths,
+  see FR6), later revised to add `maxLength`/`minLength` (still no `enum`/`pattern`) — see below.
+  The enum relaxation itself is canonical-side work in DD-43081, not this story's.
+  **Substantially extended during implementation** (full step-by-step evolution in
+  `02-design.md` §"FR3a — depth decision", condensed here to the final state): the LIBRA workbook
+  schema (`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`) declares 5 properties
+  at the `migratedCase` level — `caseDetails`, `defendants`, `migrationSourceSystem` (required),
+  `hearings`, `officerInCase` (optional) — and closes the object (`additionalProperties: false`).
+  LIBRA's `migratedCase` (under `libra.case-submission.json`) mirrors 4 of the 5:
+  `caseDetails`/`defendants` required, `hearings`/`officerInCase` declared-optional, closed — but
+  **excludes `migrationSourceSystem` entirely** (a closed object then rejects it as undeclared, not
+  merely optional; the shared `migrationSourceSystem.json` file used by the manifest gate
+  independently keeps a `required` extension made while briefly referenced here). `defendants`,
+  `hearings` and `officerInCase` are each **fully expanded** to the workbook's own definition
+  graph, transitively, all the way down — reversing FR3a's depth limit for these three branches
+  only, and (unlike the rest of this gate) carrying the workbook's full constraints
+  (`pattern`/`maxLength`/`minimum`/`maximum`/`minItems`) verbatim rather than bare types.
+  Everything — `caseDetails`, `prosecutor`, `defendants`'s and `hearings`'s and `officerInCase`'s
+  entire graphs — lives in the single `libra.case-submission.json` file, and each of
+  `caseDetails`/`prosecutor`/`defendant`/`hearing`/`officerInCase` is factored out as its own
+  root-level `#/definitions/...` entry (`prosecutor` nested one level inside `caseDetails`'s own
+  `properties.prosecutor`, all the rest `$ref`-ed from `properties.migratedCase` directly) —
+  `caseDetails`, `prosecutor` and `officerInCase` used once each, factored out for readability
+  rather than reuse; `defendant` and `hearing` are each `$ref`-ed once too, from
+  `defendants.items`/`hearings.items`. `date`/`phone`/`email` (reused many times within the graph)
+  are three further `definitions` entries alongside those five. No `libra-*.json` file of any kind
+  exists any more — this one file is the entire LIBRA case-submission schema, root to leaf.
+  XHIBIT's own `migrated-case.json` is untouched throughout. `caseDetails` was then extended the
+  same length-constraint way as `defendant`/`hearing`/`officerInCase`: every property gained the
+  workbook's own `maxLength`/`minLength` (`enum`/`pattern` still absent) — the shared valid-case
+  fixture's
+  `summonsCode`/`cpsOrganisation`/`caseMarkers[0].markerTypeCode` were shortened to match.
+  `caseMarkers` was then factored out the same way as `prosecutor`, as its own
+  `#/definitions/caseMarkers` entry (matching the workbook's own definition name) — `definitions`
+  now has 8 entries in total. `prosecutor.additionalProperties` then flipped from `true` to
+  `false`, matching the workbook's own `prosecutor` definition exactly — completing the divergence
+  from `pcf-prosecutor.json`, which stays open. `hearing.timeOfHearing` was then factored out
+  the same way, as its own `#/definitions/timeOfHearing` entry — `definitions` now has 9 entries.
+  `hearing.listedDefendants.items` was then factored out as `#/definitions/listedDefendant`
+  (singular, matching the workbook's own definition name) — `definitions` now has 10 entries.
+  `defendant.address` was then factored out as `#/definitions/address` — `definitions` now has
+  11 entries. `officerInCase.address` stays inline, deliberately: it happens to be identical in
+  content, but the workbook names it as a separate definition (`officerInCaseAddress`), and this
+  schema has consistently respected the workbook's own definition boundaries over merging
+  coincidentally-identical shapes. Finally, `postcode` — declared identically in three places
+  (`address`, `officerInCase.address`, and the nested `parentGuardianPerson`'s address) — was
+  factored out as `#/definitions/postcode` — `definitions` now has 12 entries. Unlike every prior
+  factoring, this one has no workbook counterpart: the workbook duplicates the postcode regex
+  inline in each address type rather than sharing it, so this is a func-app-local deduplication
+  choice, not a mirror of the workbook's own structure. `defendant.individual` and
+  `individual.personalInformation` were then each factored out too, as
+  `#/definitions/individual`/`#/definitions/personalInformation` — `definitions` now has 14
+  entries in total. `personalInformation.contactDetails` and `defendant.individualAliases.items`
+  were factored out next, as `#/definitions/contactDetails`/`#/definitions/individualAlias`
+  (singular, matching the workbook's array-item definition name) — `definitions` now has 16
+  entries. Finally, `individual.selfDefinedInformation` and `individual.parentGuardianInformation`
+  were factored out too, as `#/definitions/selfDefinedInformation`/
+  `#/definitions/parentGuardianInformation` — `definitions` now has 18 entries and `individual` is
+  fully flat. `parentGuardianInformation` is kept as one combined `oneOf` definition rather than
+  split into 0.13's own `parentGuardianPerson`/`parentGuardianOrganisation` pair — see
+  `02-design.md` for the naming note. The `personalInformation`/`contactDetails`-shaped objects
+  nested inside that person branch were then factored out as their own
+  `#/definitions/parentGuardianPersonalInformation`/`#/definitions/parentGuardianContactDetails` —
+  distinct workbook definitions from (and a different shape to) `individual`'s
+  `personalInformation`/`contactDetails` — `definitions` now has 20 entries. `contactDetails` and
+  `parentGuardianContactDetails` were then found to be byte-for-byte identical (true in the
+  workbook too), and — unlike `address`/`prosecutor`'s precedent of keeping identical-looking
+  workbook-separate shapes apart — explicitly merged on request:
+  `parentGuardianContactDetails` deleted, `parentGuardianPersonalInformation.contactDetails` now
+  `$ref`s `#/definitions/contactDetails` directly. `definitions` back down to 19 entries.
+  `parentGuardianPersonalInformation.address` was merged the same way into `#/definitions/address`
+  (also byte-for-byte identical) — `parentGuardianPersonalInformation` is now fully flat. A final
+  full-document scan for other duplicate shapes found one more genuine candidate,
+  `officerInCase.address` (flagged earlier as identical but left inline at the time) — merged into
+  `#/definitions/address` too. Other scan hits (single-property leaf schemas like `{"type":
+  "string", "maxLength": 1}` shared by unrelated fields) were left alone as coincidental value
+  matches, not genuine shared concepts. `defendant.offences.items` was then factored out as
+  `#/definitions/offence` (singular, matching the workbook's own definition name) — the last
+  inline top-level `defendant` property — `definitions` now has 20 entries. Finally, `offence`'s
+  own four nested objects (`alcoholRelatedOffence`, `plea`, `verdict`, `allocationDecision`) were
+  each factored out too, matching the workbook's names exactly — `offence` is now fully flat and
+  `definitions` has 25 entries (the running tally undercounted by one from the `contactDetails`
+  merge onward — the actual file always had `postcode` too). The only inline object literals left anywhere in the schema are
+  `parentGuardianInformation`'s own two `oneOf` branches, kept inline by design. Finally, an audit
+  of `additionalProperties` across every object-type schema against the workbook found one
+  genuine gap — `caseMarkers` was open where the workbook closes it — fixed to
+  `additionalProperties: false`. The other 6 open definitions (`offence`, `individual`,
+  `personalInformation`, `parentGuardianPersonalInformation`, `hearing`, `listedDefendant`) are
+  faithful to the workbook, which leaves them open too. A subsequent code review approved with
+  comments, two fixed: `defendant.offences` was missing `minItems: 1` (fixed, with a new proving
+  test), and `postcode` was renamed to `ukGovPostCode` (the JSON property name `postcode` in
+  payloads is unchanged — only the internal definition key). `minItems: 1` was then also added to
+  `migratedCase.defendants`/`migratedCase.hearings` — no workbook counterpart, a deliberate
+  LIBRA-gate strengthening on request; the shared fixture and the "declared but optional" test
+  were updated accordingly. A second code review confirmed all of the above and suggested
+  tightening the `minItems` tests' assertions. `minItems: 1` was then extended to
+  `caseDetails.caseMarkers`/`defendant.aliasForCorporate`/`defendant.individualAliases` too (same
+  no-workbook-basis strengthening), and all five `minItems` tests were switched to a shared
+  helper that also asserts the rejection message names `minItems`, addressing the review
+  suggestion.
 - **FR3a — Decide how deep the LIBRA gate validates.** Not a detail; it changes the failure profile:
 
   | Gate | Leaves validated | Branches |

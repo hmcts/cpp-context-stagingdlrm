@@ -6,11 +6,13 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 
 import uk.gov.justice.services.messaging.JsonObjects;
 import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
+import uk.gov.moj.cpp.stagingdlrm.azure.event.SubmissionPathTokens;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
+import uk.gov.moj.cpp.stagingdlrm.azure.validator.SourceSystemValidators;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -62,9 +64,7 @@ public class TimerTriggerJava {
 
     private String stagingDlrmBaseUri;
 
-    private JsonSchemaValidator caseJsonSchemaValidator;
-
-    private JsonSchemaValidator manifestJsonSchemaValidator;
+    private Map<String, SourceSystemValidators> validatorsBySourceSystem;
 
     private EventGridMonitorHelper eventGridMonitorHelper;
 
@@ -130,13 +130,24 @@ public class TimerTriggerJava {
         final List<String> materialFiles = getMaterialFiles(message.listOfBlobNames());
         loggerHelper.logInfo(context, submissionId, "Number of material files found: {0}", materialFiles.size());
 
+        final String sourceSystem = SubmissionPathTokens.sourceSystem(queueMessage);
+        final SourceSystemValidators validators = validatorsBySourceSystem.get(sourceSystem);
+
+        if (isNull(validators)) {
+            loggerHelper.logSevere(context, submissionId,
+                    String.format("No schema configured for source system '%s' — rejecting submission %s", sourceSystem, queueMessage));
+            storageCloudClient.deleteQueueMessage(queueMessage);
+            storageCloudClient.sendMessageToTheLogQueue(queueMessage);
+            return;
+        }
+
         final String caseJsonContent = getJsonContent(submissionId, queueMessage +"/"+"case.json");
 
         final String manifestJsonContent = getJsonContent(submissionId, queueMessage +"/"+"manifest.json");
 
-        final Set<ValidationMessage> caseValidationMessages = caseJsonSchemaValidator.validate(submissionId, caseJsonContent);
+        final Set<ValidationMessage> caseValidationMessages = validators.caseValidator().validate(submissionId, caseJsonContent);
 
-        final Set<ValidationMessage> manifestValidationMessages = manifestJsonSchemaValidator.validate(submissionId, manifestJsonContent);
+        final Set<ValidationMessage> manifestValidationMessages = validators.manifestValidator().validate(submissionId, manifestJsonContent);
 
         final List<String> baseUriArray = Arrays.stream(stagingDlrmBaseUri.split(",")).toList();
 
@@ -371,14 +382,16 @@ public class TimerTriggerJava {
     }
 
     private void setJsonSchemaValidator() {
-        if(isNull(this.caseJsonSchemaValidator)) {
-            final String jsonSchema = "stagingdlrm.case-submission.json";
-            this.caseJsonSchemaValidator = new JsonSchemaValidator(context, jsonSchema);
-        }
+        if (isNull(this.validatorsBySourceSystem)) {
+            // FR5: ONE shared manifest validator instance, referenced by every source-system entry.
+            final JsonSchemaValidator manifestValidator =
+                    new JsonSchemaValidator(context, "stagingdlrm.manifest.json");
 
-        if(isNull(this.manifestJsonSchemaValidator)) {
-            final String jsonSchema = "stagingdlrm.manifest.json";
-            this.manifestJsonSchemaValidator = new JsonSchemaValidator(context, jsonSchema);
+            this.validatorsBySourceSystem = Map.of(
+                    "xhibit", new SourceSystemValidators(
+                            new JsonSchemaValidator(context, "stagingdlrm.case-submission.json"), manifestValidator),
+                    "libra", new SourceSystemValidators(
+                            new JsonSchemaValidator(context, "libra.case-submission.json"), manifestValidator));
         }
     }
 

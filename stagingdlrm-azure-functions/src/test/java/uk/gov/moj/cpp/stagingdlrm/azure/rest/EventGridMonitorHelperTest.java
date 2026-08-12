@@ -134,6 +134,38 @@ class EventGridMonitorHelperTest {
         assertEquals("URN:12345", json.getString("caseUrn"));
     }
 
+    /**
+     * DD-43086 LIBRA03/AC7 (FR8 confirm) — for a Function-App-level rejection the case is never
+     * parsed, so {@code caseUrn} arrives as an explicit empty string. The written outcome file is
+     * asserted <b>whole</b>: {@code caseUrn: ""} (an empty string, not null and not a missing key),
+     * {@code success: false}, the populated {@code description}, and nothing else — and it is written
+     * under the submission-derived LIBRA path, not a configured constant.
+     */
+    @Test
+    void shouldWriteWholeOutcomeWithEmptyCaseUrnForFunctionAppLevelRejection() throws Exception {
+        final String libraLocation = "LIBRA/batch1/CASEREF-0001/submission1";
+        final Map<String, Object> event = Map.of(
+                "caseUrn", "",
+                "success", "false",
+                "description", "LIBRA case failed schema validation at the Function App gate"
+        );
+        when(context.getLogger()).thenReturn(logger);
+
+        eventGridMonitorHelper.processEvent(event, libraLocation, FILE_NAME);
+
+        final ArgumentCaptor<InputStream> inputStreamCaptor = ArgumentCaptor.forClass(InputStream.class);
+        verify(blobCloudStorage).uploadToStorage(inputStreamCaptor.capture(), anyLong(),
+                eq(libraLocation + File.separator + FILE_NAME));
+
+        final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
+        final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
+        assertEquals(3, json.size(), () -> "outcome should carry exactly caseUrn, success, description: " + json);
+        assertEquals("", json.getString("caseUrn"),
+                () -> "caseUrn must be an explicit empty string, not null or missing: " + json);
+        assertFalse(json.getBoolean("success"));
+        assertEquals("LIBRA case failed schema validation at the Function App gate", json.getString("description"));
+    }
+
     @Test
     void shouldNotReinitializeBlobCloudStorageIfAlreadyPresent() {
         final Map<String, Object> event = Map.of(
