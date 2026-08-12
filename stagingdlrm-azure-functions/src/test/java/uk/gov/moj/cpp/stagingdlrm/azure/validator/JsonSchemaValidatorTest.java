@@ -73,10 +73,18 @@ class JsonSchemaValidatorTest {
     private JsonSchemaValidator manifestValidator;
 
     /**
-     * DD-43086 LIBRA02 — the new, fully independent LIBRA case-submission schema chain
-     * ({@code libra.case-submission.json} → {@code libra-migrated-case.json} →
-     * {@code libra-case-details.json} → {@code libra-prosecutor.json} / {@code case-marker.json}).
-     * The XHIBIT chain above is untouched.
+     * DD-43086 LIBRA02 — the new, fully independent LIBRA case-submission schema: a single file,
+     * {@code libra.case-submission.json}. {@code migratedCase} (case details, prosecutor, case
+     * markers, defendants, hearings, officer in case, and everything each of those reaches) is
+     * fully inlined — there is no {@code libra-migrated-case.json}, nor any other
+     * {@code libra-*.json} file, any more. Each of {@code migratedCase}'s four properties is
+     * factored out as its own root-level {@code definitions} entry ({@code caseDetails},
+     * {@code defendant} — the {@code defendants[]} item schema, {@code hearing} — the
+     * {@code hearings[]} item schema, {@code officerInCase}), {@code $ref}-ed from
+     * {@code properties.migratedCase}, alongside {@code date}/{@code phone}/{@code email} (reused
+     * many times within the graph). JSON Pointer refs resolve against the document root, so
+     * {@code definitions} lives one level above {@code properties.migratedCase}, not nested
+     * inside it. The XHIBIT chain above is untouched.
      */
     private JsonSchemaValidator libraCaseValidator;
 
@@ -161,6 +169,69 @@ class JsonSchemaValidatorTest {
     }
 
     /**
+     * DD-43086 LIBRA02 — {@code caseDetails} was extended, during implementation, to carry the
+     * LIBRA workbook's {@code maxLength}/{@code minLength} constraints on every property
+     * (`prosecutorCaseReference: 36`, `originatingOrganisation`/`cpsOrganisation`/
+     * `prosecutor.prosecutingAuthority: 7`, `initiationCode`/`summonsCode: 1`, `informant: 92`,
+     * `caseMarkers[].markerTypeCode: 3`) — a reversal, for this one branch, of FR3a's original
+     * "no constraints beyond bare type" decision for {@code caseDetails} specifically (already
+     * reversed for {@code defendant}/{@code hearing}/{@code officerInCase}).
+     */
+    @Test
+    @DisplayName("LIBRA02 the gate enforces the LIBRA workbook's constraints at caseDetails depth — "
+            + "summonsCode maxLength:1 (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithACaseDetailsPropertyViolatingADeclaredConstraint() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode caseDetails = (ObjectNode) payload.get("migratedCase").get("caseDetails");
+        caseDetails.put("summonsCode", "AB");
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+    }
+
+    /**
+     * DD-43086 LIBRA02 — {@code caseDetails.prosecutor} was extended, during implementation, to
+     * {@code additionalProperties: false} (matching the workbook's own {@code prosecutor}
+     * definition exactly), reversing the earlier deliberate choice to mirror
+     * {@code pcf-prosecutor.json}'s {@code additionalProperties: true}. The workbook's
+     * {@code prosecutor} declares only {@code prosecutingAuthority}, so this is now the only
+     * property accepted.
+     */
+    @Test
+    @DisplayName("LIBRA02 caseDetails.prosecutor rejects an undeclared sibling property — the object "
+            + "is closed (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnUndeclaredProsecutorProperty() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode prosecutor = (ObjectNode) payload.get("migratedCase").get("caseDetails").get("prosecutor");
+        prosecutor.put("somePropertyTheSchemaDoesNotDeclare", "value");
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+    }
+
+    /**
+     * DD-43086 LIBRA02 — {@code caseDetails.caseMarkers[]} was missing
+     * {@code additionalProperties: false} entirely (an oversight, not a deliberate choice — the
+     * workbook's own {@code caseMarkers} definition is closed), found and fixed by an audit of
+     * every object-type schema in this file against the workbook.
+     */
+    @Test
+    @DisplayName("LIBRA02 caseDetails.caseMarkers[] rejects an undeclared sibling property — the object "
+            + "is closed (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnUndeclaredCaseMarkerProperty() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode caseMarker = (ObjectNode) payload.get("migratedCase").get("caseDetails")
+                .get("caseMarkers").get(0);
+        caseMarker.put("somePropertyTheSchemaDoesNotDeclare", "value");
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+    }
+
+    /**
      * DD-43086 LIBRA02 — {@code migratedCase} requires {@code defendants} in addition to
      * {@code caseDetails}. {@code migrationSourceSystem} is deliberately not declared at all
      * (removed during implementation — see {@link #shouldRejectLibraCaseSubmissionCarryingMigrationSourceSystem()}),
@@ -203,11 +274,11 @@ class JsonSchemaValidatorTest {
     }
 
     /**
-     * DD-43086 LIBRA02 — {@code migrationSourceSystem} is deliberately not declared on
-     * {@code libra-migrated-case.json} (removed during implementation — it was briefly declared
-     * and required, {@code $ref}-ed to the shared {@code migrationSourceSystem.json}, then dropped).
-     * Because {@code migratedCase} is closed ({@code additionalProperties: false}), a payload that
-     * carries it is rejected as an undeclared property, not merely treated as optional.
+     * DD-43086 LIBRA02 — {@code migrationSourceSystem} is deliberately not declared under
+     * {@code migratedCase} (removed during implementation — it was briefly declared and required,
+     * {@code $ref}-ed to the shared {@code migrationSourceSystem.json}, then dropped). Because
+     * {@code migratedCase} is closed ({@code additionalProperties: false}), a payload that carries
+     * it is rejected as an undeclared property, not merely treated as optional.
      */
     @Test
     @DisplayName("LIBRA02 migratedCase rejects migrationSourceSystem — deliberately undeclared, not just optional (LIBRA)")
@@ -255,12 +326,17 @@ class JsonSchemaValidatorTest {
 
     /**
      * DD-43086 LIBRA02 — {@code defendants} was extended, during implementation, from a bare
-     * {@code type: array} to {@code items: {$ref: libra-defendant.json}}, a full recursive
-     * expansion of the LIBRA workbook's {@code defendant} definition and everything it reaches
-     * ({@code address}, {@code individual}, {@code offence}, {@code plea}, {@code verdict}, …).
-     * Unlike the rest of this gate, these definitions carry the workbook's full constraints
-     * (patterns, {@code maxLength}, {@code minimum}/{@code maximum}), not bare types only — a
-     * deliberate, scoped exception to FR3a's otherwise structural/presence-only style.
+     * {@code type: array} to a full recursive expansion of the LIBRA workbook's {@code defendant}
+     * definition and everything it reaches ({@code address}, {@code individual}, {@code offence},
+     * {@code plea}, {@code verdict}, …). No separate {@code libra-defendant.json}/
+     * {@code libra-address.json}/… files remain — {@code defendant} is one root-level
+     * {@code #/definitions/defendant} entry within {@code libra.case-submission.json}, and
+     * {@code migratedCase.defendants.items} is just {@code {"$ref": "#/definitions/defendant"}}
+     * (the reused {@code date}/{@code phone}/{@code email} primitives are their own sibling
+     * {@code definitions} entries). Unlike the rest of this gate, these definitions carry the
+     * workbook's full constraints (patterns, {@code maxLength}, {@code minimum}/
+     * {@code maximum}), not bare types only — a deliberate, scoped exception to FR3a's otherwise
+     * structural/presence-only style.
      */
     private static ObjectNode validDefendant() {
         final ObjectNode defendant = MAPPER.createObjectNode();
@@ -342,9 +418,15 @@ class JsonSchemaValidatorTest {
 
     /**
      * DD-43086 LIBRA02 — {@code hearings} was extended, during implementation, from a bare
-     * {@code type: array} to {@code items: {$ref: libra-hearing.json}}, the same full-recursive,
-     * full-constraint treatment given to {@code defendants} above ({@code libra-hearing.json},
-     * {@code libra-listed-defendant.json}; {@code libra-date.json} is reused).
+     * {@code type: array} to a full-constraint inline item schema (the same treatment given to
+     * {@code defendants} above), then fully flattened: {@code hearing} and {@code listedDefendant}
+     * are both inlined into one root-level {@code #/definitions/hearing} entry within
+     * {@code libra.case-submission.json}, with {@code migratedCase.hearings.items} now just
+     * {@code {"$ref": "#/definitions/hearing"}} (no separate {@code libra-hearing.json}/
+     * {@code libra-listed-defendant.json} files remain).
+     * {@code dateOfHearing} references the local {@code #/definitions/date} entry, same as every
+     * other date field in the graph — there is no longer a standalone {@code libra-date.json}
+     * file at all.
      */
     private static ObjectNode validHearing() {
         final ObjectNode hearing = MAPPER.createObjectNode();
@@ -424,11 +506,19 @@ class JsonSchemaValidatorTest {
 
     /**
      * DD-43086 LIBRA02 — {@code officerInCase} was extended, during implementation, from a bare
-     * {@code type: object} to {@code $ref: libra-officer-in-case.json}, the same full-recursive,
-     * full-constraint treatment given to {@code defendants} and {@code hearings} above
-     * ({@code libra-officer-in-case.json}, {@code libra-officer-in-case-address.json};
-     * {@code libra-phone.json}/{@code libra-email.json} are reused). This is the last of the four
-     * `migratedCase` branches — none remain bare/undescended.
+     * {@code type: object} to the same full-recursive, full-constraint treatment given to
+     * {@code defendants} and {@code hearings} above, then factored into its own root-level
+     * {@code #/definitions/officerInCase} entry within {@code libra.case-submission.json}, with
+     * {@code migratedCase.officerInCase} now just {@code {"$ref": "#/definitions/officerInCase"}}
+     * (no separate {@code libra-officer-in-case.json}/{@code libra-officer-in-case-address.json}
+     * files remain; {@code workTelephoneNumber} / {@code mobileTelephoneNumber} /
+     * {@code faxNumber} / {@code primaryEmail} / {@code secondaryEmail} reference the sibling
+     * {@code #/definitions/phone} / {@code #/definitions/email} entries). This is the last of the
+     * four {@code migratedCase} branches — none remain bare/undescended.
+     * {@code libra.case-submission.json} — root and everything below it, all inlined into one
+     * file with {@code caseDetails}/{@code defendant}/{@code hearing}/{@code officerInCase}/
+     * {@code date}/{@code phone}/{@code email} each factored out as a root-level {@code #/definitions/...}
+     * entry — is now the only LIBRA-specific schema file in this chain.
      */
     private static ObjectNode validOfficerInCase() {
         final ObjectNode officerInCase = MAPPER.createObjectNode();

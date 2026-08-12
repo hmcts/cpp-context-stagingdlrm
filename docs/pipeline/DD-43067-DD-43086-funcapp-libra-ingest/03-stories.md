@@ -147,10 +147,11 @@ rather than being validated against XHIBIT's schema or a naive copy of it**.
 
 ### Background
 FR3 + FR3a from `01-requirements.md`, designed in `02-design.md` §"FR3 / FR3a" (the fully
-independent parallel schema chain: `libra.case-submission.json` → `libra-migrated-case.json` →
-`libra-case-details.json` → `libra-prosecutor.json` / `case-marker.json`). The XHIBIT files
-are **not modified and not `$ref`-ed** by the new LIBRA files — the two chains never touch. The
-content of `libra-case-details.json` is derived from
+independent, fully self-contained LIBRA schema: one file, `libra.case-submission.json` — no other
+`libra-*.json` file exists, after several rounds of inlining during implementation). The XHIBIT
+files are **not modified and not `$ref`-ed** by it — the two chains never touch. The content of
+what was originally `libra-case-details.json` (now `definitions.caseDetails`, `$ref`-ed from
+`properties.migratedCase.properties.caseDetails`) is derived from
 `docs/analysis/libra-ingestion/libra-schema-impact.csv`'s `funcapp_libra_action` column (`omit`
 7 fields / `require` 4 fields / `declare` 5 fields / `not-validated-at-gate` 149 fields below
 `caseDetails` depth) — explicitly **not** by editing a copy of `case-details.json`, per
@@ -184,59 +185,132 @@ into false rejections at the earliest, least-diagnosable point in the chain.
 
 ### Definition of done
 - [ ] Code reviewed and approved.
-- [ ] Five new schema files added under `stagingdlrm-azure-functions/src/main/resources/`:
-      `libra.case-submission.json`, `libra-migrated-case.json`, `libra-case-details.json`,
-      `libra-prosecutor.json`, `case-marker.json` (`02-design.md` §"FR3 / FR3a").
-- [ ] `libra-case-details.json` matches the matrix exactly: 7 `omit` fields absent from
-      `properties`, 4 `require` fields present in both `properties` and `required`
-      (`initiationCode`, `originatingOrganisation`, `prosecutorCaseReference`, `prosecutor`), 5
-      `declare` fields present in `properties` but not `required`, `additionalProperties: false`.
-- [ ] `libra-prosecutor.json` requires `prosecutingAuthority` (the one `require` item one level
-      down) — matches the LIBRA workbook schema's own `prosecutor` definition.
-- [ ] `libra-migrated-case.json` mirrors most of the LIBRA workbook schema's own `migratedCase`
-      definition (`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`) at this level:
-      `caseDetails`, `defendants` (required), `hearings`, `officerInCase` (declared but optional),
-      `additionalProperties: false` (closed). Deliberate, LIBRA-only strengthening beyond XHIBIT's
-      `migrated-case.json` (which requires only `caseDetails` and stays open, untouched) — the safe
-      direction, not a new source of drift risk (FR6).
-- [ ] `migrationSourceSystem` is deliberately **not** declared on `libra-migrated-case.json` —
-      briefly `$ref`-ed to the pre-existing shared `migrationSourceSystem.json` (also used by the
-      manifest gate, `stagingdlrm.manifest.json`) and required, then removed. Because the object is
-      closed, a payload carrying it is rejected as undeclared, not treated as optional.
-      `migrationSourceSystem.json` keeps the `required: ["migrationSourceSystemName",
-      "migrationSourceSystemCaseIdentifier"]` extension made while it was briefly shared — it still
-      strengthens the manifest gate, verified safe since every manifest fixture already carries both
-      properties (103/103 tests pass).
-- [ ] No constraints beyond bare `type` in `libra.case-submission.json`, `libra-migrated-case.json`,
-      `libra-case-details.json`, `libra-prosecutor.json`, `case-marker.json`, `migrationSourceSystem.json`
-      (no `enum`, `pattern`, `minLength`/`maxLength`) — matches the existing gate's zero-constraint
-      style and keeps business rules out of the Function App (FR3a, FR6 scoping).
-- [ ] **Exception, added later during implementation:** `defendants` on `libra-migrated-case.json`
-      is fully expanded (`items: {"$ref": "libra-defendant.json"}`), and the workbook's whole
-      `defendant` definition graph is ported into 20 new files (`libra-defendant.json`,
-      `libra-address.json`, `libra-individual.json`, `libra-individual-alias.json`,
-      `libra-offence.json`, `libra-phone.json`, `libra-date.json`, `libra-email.json`,
-      `libra-contact-details.json`, `libra-personal-information.json`,
-      `libra-self-defined-information.json`, `libra-parent-guardian-person.json`,
-      `libra-parent-guardian-organisation.json`, `libra-parent-guardian-personal-information.json`,
-      `libra-parent-guardian-address.json`, `libra-parent-guardian-contact-details.json`,
-      `libra-plea.json`, `libra-verdict.json`, `libra-allocation-decision.json`,
-      `libra-alcohol-related-offence.json`) — this time carrying the workbook's full constraints
-      (`pattern`/`maxLength`/`minimum`/`maximum`/`minItems`) verbatim, not bare types. A deliberate,
-      explicitly scoped reversal of both FR3a's depth limit and its "no constraints" principle for
-      this one branch only (`02-design.md` §"FR3a — depth decision").
-- [ ] **Same exception, added later still:** `hearings` on `libra-migrated-case.json` is fully
-      expanded (`items: {"$ref": "libra-hearing.json"}`), with the workbook's `hearing` definition
-      graph ported into 2 new files (`libra-hearing.json`, `libra-listed-defendant.json`;
-      `libra-date.json` reused), same full-constraint treatment.
-- [ ] **Same exception, added last:** `officerInCase` on `libra-migrated-case.json` is fully
-      expanded (`$ref: "libra-officer-in-case.json"`, a direct `$ref` since the workbook declares
-      it as a single object, not an array), with the workbook's `officerInCase` definition graph
-      ported into 2 new files (`libra-officer-in-case.json`, `libra-officer-in-case-address.json`;
-      `libra-phone.json`/`libra-email.json` reused). No `migratedCase` branch remains
-      bare/undescended. The existing "declared but optional" test for `officerInCase` (which
-      previously accepted an empty `{}`) was updated to supply a requirement-satisfying value,
-      since an empty object no longer passes now that `officerInCase` has 5 required fields.
+- [ ] One new schema file added under `stagingdlrm-azure-functions/src/main/resources/`:
+      `libra.case-submission.json`, fully self-contained root to leaf — `02-design.md`
+      §"FR3 / FR3a". Every intermediate `libra-*.json` file created during implementation
+      (`libra-migrated-case.json`, `libra-case-details.json`, `libra-prosecutor.json`,
+      `case-marker.json`, `libra-defendant.json` and 19 more, `libra-hearing.json`,
+      `libra-listed-defendant.json`, `libra-officer-in-case.json`,
+      `libra-officer-in-case-address.json`, `libra-phone.json`, `libra-email.json`,
+      `libra-date.json`) was inlined and deleted — see "Evolution" in `02-design.md`.
+- [ ] `caseDetails` (`definitions.caseDetails`, `$ref`-ed once — factored out for readability, not
+      reuse) matches the matrix exactly: 7 `omit` fields absent from `properties`, 4 `require`
+      fields present in both `properties` and `required` (`initiationCode`,
+      `originatingOrganisation`, `prosecutorCaseReference`, `prosecutor`), 5 `declare` fields
+      present in `properties` but not `required`, `additionalProperties: false`.
+      `caseDetails.prosecutor` (now its own `definitions.prosecutor` entry, `$ref`-ed from
+      `definitions.caseDetails.properties.prosecutor` — factored out the same way as
+      `caseDetails` itself) requires `prosecutingAuthority` (the one `require` item
+      one level down) — matches the LIBRA workbook schema's own `prosecutor` definition, and is
+      kept independently declared from `pcf-prosecutor.json` (a deliberate decision, confirmed
+      during implementation after checking the workbook — `02-design.md` §"FR3 / FR3a").
+      **Extended later still:** every `caseDetails` property carries the workbook's
+      `maxLength`/`minLength` (`prosecutorCaseReference: 36`, `originatingOrganisation`/
+      `cpsOrganisation`/`prosecutor.prosecutingAuthority: 7`, `initiationCode`/`summonsCode: 1`,
+      `informant: 92`, `caseMarkers[].markerTypeCode: 3`) — the same length-constraint reversal
+      already made for `defendant`/`hearing`/`officerInCase`, extended to `caseDetails` too
+      (`enum`/`pattern` still absent). The shared `libra-case-submission-valid.json` fixture was
+      updated to satisfy the new lengths (`summonsCode`, `cpsOrganisation`,
+      `caseMarkers[0].markerTypeCode`). `prosecutor` and `caseMarkers` were then each factored out
+      as their own `definitions.prosecutor`/`definitions.caseMarkers` entries (the latter named to
+      match the workbook's own definition name), `$ref`-ed from
+      `definitions.caseDetails.properties.prosecutor`/`.caseMarkers.items` — same "used once,
+      factored out for readability" treatment as `caseDetails` itself.
+      **Extended once more:** `prosecutor.additionalProperties` flipped from `true` to `false`,
+      matching the workbook's own `prosecutor` definition exactly — the divergence from
+      `pcf-prosecutor.json` (which stays open) is now complete. New proving test:
+      `shouldRejectLibraCaseSubmissionWithAnUndeclaredProsecutorProperty`.
+      `hearing.timeOfHearing` was also factored out as its own `definitions.timeOfHearing` entry,
+      `$ref`-ed from `definitions.hearing.properties.timeOfHearing` — same "used once, factored
+      out for readability" treatment. `hearing.listedDefendants.items` was factored out the same
+      way as `definitions.listedDefendant` (singular, matching the workbook's own definition
+      name). `defendant.address` was factored out as `definitions.address` — `officerInCase.address`
+      stays inline deliberately, since the workbook names it as a separate definition
+      (`officerInCaseAddress`) despite identical content. **`postcode` was then also factored out**
+      as `definitions.postcode`, `$ref`-ed from all three places it's declared identically
+      (`address`, `officerInCase.address`, and the deeply-nested
+      `defendant.individual.parentGuardianInformation…personalInformation.address`) — unlike the
+      other factorings, this one has no workbook counterpart (the workbook duplicates the postcode
+      regex inline in each address type); it's a func-app-local deduplication of one long regex,
+      not a mirror of workbook structure. `defendant.individual` and, within it,
+      `individual.personalInformation` were each factored out the same way as
+      `definitions.individual`/`definitions.personalInformation` — both workbook definition names,
+      both used once, both factored for readability. `personalInformation.contactDetails` and
+      `defendant.individualAliases.items` were factored out the same way, as
+      `definitions.contactDetails`/`definitions.individualAlias` (singular, matching the
+      workbook's own array-item definition name) — `definitions` now has 16 entries.
+      `individual.selfDefinedInformation` and `individual.parentGuardianInformation` were factored
+      out the same way, as `definitions.selfDefinedInformation`/`definitions.parentGuardianInformation`
+      — `definitions` now has 18 entries and `individual` is fully flat. Naming note:
+      `parentGuardianInformation` is kept as one combined `oneOf` definition here, where 0.13
+      splits it into `parentGuardianPerson`/`parentGuardianOrganisation` — matching how
+      `dlrm-0.9.1.json` names this concept instead (`02-design.md` §"FR3 / FR3a" "Evolution").
+      The `personalInformation`/`contactDetails`-shaped objects nested inside its person branch
+      were then factored out as `definitions.parentGuardianPersonalInformation`/
+      `definitions.parentGuardianContactDetails` — distinct workbook definitions from (and a
+      different shape to) `individual`'s `personalInformation`/`contactDetails`, not the same ones
+      reused — `definitions` now has 20 entries.
+      **Then reversed for `contactDetails` specifically:** spotted as byte-for-byte identical to
+      `contactDetails` (true in the workbook too, description text aside), and — unlike
+      `address`/`officerInCase.address` and `prosecutor`/`pcf-prosecutor.json` — explicitly merged
+      on request rather than kept separate. `parentGuardianContactDetails` deleted;
+      `parentGuardianPersonalInformation.properties.contactDetails` now `$ref`s
+      `definitions.contactDetails` directly. `definitions` back down to 19 entries.
+      `parentGuardianPersonalInformation.properties.address` was merged the same way, into
+      `definitions.address` (also byte-for-byte identical, in this schema and the workbook) —
+      `parentGuardianPersonalInformation` is now fully flat. **A full-document scan for other
+      duplicate shapes** then found `officerInCase.properties.address` — flagged earlier as
+      identical to `definitions.address` but left inline at the time — as the one remaining
+      genuine candidate; merged the same way, on request. Other scan hits (single-property leaf
+      schemas like `{"type": "string", "maxLength": 1}` shared by unrelated fields such as
+      `initiationCode`/`summonsCode`/`licenseCode`/`custodyStatus`) were left alone — coincidental
+      value matches between distinct business fields, not genuine shared concepts.
+      `defendant.offences.items` was then factored out as `definitions.offence` (singular,
+      matching the workbook's own definition name) — the last inline top-level `defendant`
+      property — `definitions` now has 20 entries. `offence`'s own four nested objects
+      (`alcoholRelatedOffence`, `plea`, `verdict`, `allocationDecision`) were factored out next,
+      each its own `definitions` entry matching the workbook's names exactly — `offence` is now
+      fully flat and `definitions` has 24 entries. The only inline object literals left in the
+      whole schema are `parentGuardianInformation`'s own two `oneOf` branches, kept inline by
+      design (it's deliberately one combined definition, not split further).
+      **Final audit:** every object-type schema in the file was checked against the workbook for
+      `additionalProperties`. One genuine gap found: `caseMarkers` was open where the workbook
+      closes it — fixed to `additionalProperties: false`, with a new proving test
+      (`shouldRejectLibraCaseSubmissionWithAnUndeclaredCaseMarkerProperty`). The other 6
+      definitions without it (`offence`, `individual`, `personalInformation`,
+      `parentGuardianPersonalInformation`, `hearing`, `listedDefendant`) are faithful to the
+      workbook, which leaves them open too — not oversights.
+- [ ] `libra.case-submission.json`'s `migratedCase` level declares `caseDetails`, `defendants`
+      (required), `hearings`, `officerInCase` (declared but optional), `additionalProperties: false`
+      (closed) — matching the LIBRA workbook schema's own `migratedCase` definition
+      (`docs/analysis/libra-ingestion/schema/libra/dlrm-libra-0.13.json`) at this level. Deliberate,
+      LIBRA-only strengthening beyond XHIBIT's `migrated-case.json` (which requires only
+      `caseDetails` and stays open, untouched) — the safe direction, not a new source of drift risk
+      (FR6). `migrationSourceSystem` is deliberately **not** declared at all (was briefly `$ref`-ed
+      to the shared `migrationSourceSystem.json`, also used by the manifest gate, and required,
+      then removed) — because the object is closed, a payload carrying it is rejected as
+      undeclared, not treated as optional. `migrationSourceSystem.json` itself keeps the
+      `required: ["migrationSourceSystemName", "migrationSourceSystemCaseIdentifier"]` extension
+      made while it was briefly referenced — it still independently strengthens the manifest gate.
+- [ ] `defendants`, `hearings` and `officerInCase` are each fully expanded to the LIBRA workbook's
+      corresponding definition graph, transitively — `defendant` → `address`/`individual`/
+      `individualAlias`/`offence` and everything those reach (`plea`, `verdict`,
+      `allocationDecision`, `alcoholRelatedOffence`, parent/guardian types, etc.); `hearing` →
+      `listedDefendant`; `officerInCase` → `officerInCaseAddress`. Each is its own root-level
+      `#/definitions/...` entry within `libra.case-submission.json` (`#/definitions/defendant`,
+      `#/definitions/hearing`, `#/definitions/officerInCase`), with
+      `migratedCase.defendants.items`/`migratedCase.hearings.items`/`migratedCase.officerInCase`
+      each reduced to a single `$ref`. Unlike the rest of this gate, these three branches carry
+      the workbook's full constraints (`pattern`/`maxLength`/`minimum`/`maximum`/`minItems`)
+      verbatim, not bare types — a deliberate, explicitly scoped reversal of both FR3a's depth
+      limit and its "no constraints" principle for these branches only (`02-design.md`
+      §"FR3a — depth decision"). `date`, `phone` and `email` — reused 11/12/6 times respectively
+      across the graph — are three further root-level `#/definitions/...` entries alongside the
+      other four, rather than duplicated literally at every occurrence or kept as separate files.
+- [ ] **Regression caught and fixed along the way:** the "declared but optional" test for
+      `officerInCase` had previously asserted an empty `{}` was accepted — true only while
+      `officerInCase` was bare `type: object`; false once it gained 5 required fields. Updated to
+      supply a requirement-satisfying value instead.
 - [ ] `JsonSchemaValidatorTest` extended (not forked) with LIBRA accept/reject rows alongside the
       existing XHIBIT rows, per FR9 and the DD-43078 suites this extends: the AC3 payload passes
       LIBRA, the AC4 case proves it fails XHIBIT.
