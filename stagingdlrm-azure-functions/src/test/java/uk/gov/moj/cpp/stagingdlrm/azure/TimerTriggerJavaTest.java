@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +26,7 @@ import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
+import uk.gov.moj.cpp.stagingdlrm.azure.validator.SourceSystemValidators;
 
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
@@ -40,7 +42,9 @@ import javax.json.JsonObjectBuilder;
 import javax.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
+import com.networknt.schema.ValidationMessage;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,6 +56,21 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * DD-43078 T2 — the timer trigger's orchestration.
+ *
+ * <p>DD-43086 LIBRA03 (FR4/FR5/FR8) extends this suite: {@code TimerTriggerJava}'s two hard-wired
+ * XHIBIT-only validator fields ({@code caseJsonSchemaValidator}, {@code manifestJsonSchemaValidator})
+ * are replaced by one {@code Map<String, SourceSystemValidators> validatorsBySourceSystem}, keyed on
+ * the lower-cased source-system token from {@code SubmissionPathTokens.sourceSystem(...)} (LIBRA01).
+ * Mockito cannot autowire {@code @Mock}s into a {@code Map} field, so the map is built explicitly in
+ * {@link #setup()} and injected via {@code setField} — the {@code xhibit} entry keeps the existing
+ * two mocks so every DD-43078 XHIBIT scenario still exercises the same instances, the {@code libra}
+ * entry adds {@code libraCaseJsonSchemaValidator}, and both entries share one manifest validator
+ * (FR5). {@code shouldTestTimerTriggerSuccessfully}'s synthetic single-token queue message is also
+ * corrected to a realistic four-token path here, so source-system resolution resolves to a
+ * configured system instead of falling into the AC6 "unconfigured" branch.
+ */
 @ExtendWith(MockitoExtension.class)
 class TimerTriggerJavaTest {
 
@@ -66,6 +85,10 @@ class TimerTriggerJavaTest {
 
     @Mock
     private JsonSchemaValidator caseJsonSchemaValidator;
+
+    /** DD-43086 LIBRA03 — the LIBRA case validator, the {@code libra} map entry's case schema. */
+    @Mock
+    private JsonSchemaValidator libraCaseJsonSchemaValidator;
 
     @Mock
     private JsonSchemaValidator manifestJsonSchemaValidator;
@@ -104,12 +127,23 @@ class TimerTriggerJavaTest {
         setField(timerTrigger, "stagingDlrmUserId", stagingDlrmUserId);
         setField(timerTrigger, "stagingDlrmBaseUri", "http://localhost:8080");
         setField(timerTrigger, "eventGridMonitorHelper", eventGridMonitorHelper);
+
+        // DD-43086 LIBRA03/FR4/FR5 — the source-system-keyed validator map, built explicitly because
+        // Mockito cannot autowire mocks into a Map field. The 'xhibit' entry reuses the two existing
+        // DD-43078 mocks (so every XHIBIT scenario is unchanged), the 'libra' entry adds the LIBRA case
+        // validator, and both entries reference the ONE shared manifest validator (FR5).
+        setField(timerTrigger, "validatorsBySourceSystem", Map.of(
+                "xhibit", new SourceSystemValidators(caseJsonSchemaValidator, manifestJsonSchemaValidator),
+                "libra", new SourceSystemValidators(libraCaseJsonSchemaValidator, manifestJsonSchemaValidator)));
     }
 
     @Test
     void shouldTestTimerTriggerSuccessfully() {
         final String timerInfo = "timerInfo";
-        final String queueMessage = "CASEREF-0001";
+        // DD-43086 LIBRA03 — corrected from the synthetic single-token "CASEREF-0001" to a realistic
+        // four-token folder/batch/case/submission path, so source-system resolution finds the
+        // configured 'xhibit' entry instead of hitting the new AC6 "unconfigured source system" branch.
+        final String queueMessage = "XHIBIT/batch1/CASEREF-0001/submission1";
         final String caseJsonPayload = casePayload(CASE_REFERENCE);
 
         final String manifestJsonPayload = emptyJson();
@@ -118,19 +152,19 @@ class TimerTriggerJavaTest {
                 .add("metadata", createObjectBuilder().add("numberOfMaterials", 2))
                 .build();
 
-        final List<String> listBlobNames = List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf", "CASEREF-0001/case.json", "CASEREF-0001/manifest.json");
+        final List<String> listBlobNames = List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf", queueMessage + "/case.json", queueMessage + "/manifest.json");
         final Map<String, QueueMessage> messageMap = new HashMap<>();
         messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
 
         when(context.getLogger()).thenReturn(logger);
         when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
-        when(storageCloudClient.downloadBlobContents(anyString(), eq("CASEREF-0001/case.json"))).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(anyString(), eq(queueMessage + "/case.json"))).thenReturn(caseJsonPayload);
         when(caseJsonSchemaValidator.validate(anyString(), eq(caseJsonPayload))).thenReturn(Set.of());
-        when(storageCloudClient.downloadBlobContents(anyString(), eq("CASEREF-0001/manifest.json"))).thenReturn(manifestJsonPayload);
+        when(storageCloudClient.downloadBlobContents(anyString(), eq(queueMessage + "/manifest.json"))).thenReturn(manifestJsonPayload);
         when(manifestJsonSchemaValidator.validate(anyString(), eq(manifestJsonPayload))).thenReturn(Set.of());
         when(stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
                 caseJsonObjectCaptor.capture(),
-                eq(List.of("CASEREF-0001/test.pdf", "CASEREF-0001/test1.pdf")),
+                eq(List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf")),
                 manifestJsonObjectCaptor.capture(),
                 stringArgumentCaptor.capture(),
                 eq(queueMessage)))
@@ -475,6 +509,160 @@ class TimerTriggerJavaTest {
         assertHandedToAssemblerWhole("CASEREF-0002", getMetaJsonObject().toString());
         assertEquals(submissionId, stringArgumentCaptor.getValue());
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
+    }
+
+    /**
+     * DD-43086 LIBRA03/AC5 — a LIBRA submission routes through the LIBRA case validator (never the
+     * XHIBIT one) yet POSTs to the <b>same</b> stagingDLRM endpoint and content type as an XHIBIT
+     * submission. The submission URL ({@code MIGRATED_CASE_SUBMISSION_PATH}) and content type do not
+     * vary by source system (FR5) — only the case schema does.
+     */
+    @Test
+    @DisplayName("LIBRA03/AC5 a LIBRA submission is validated by the LIBRA schema and POSTed to the "
+            + "same endpoint + content type as XHIBIT")
+    void shouldRouteLibraSubmissionToTheSameEndpointAndContentTypeAsXhibit() {
+        final String timerInfo = "timerInfo";
+        final String submissionId = "submission1";
+        final String queueMessage = "LIBRA/batch1/CASEREF-0001/" + submissionId;
+
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
+        final String manifestJsonPayload = emptyJson();
+
+        final JsonObject migratedCaseSubmissionJsonObject = createObjectBuilder()
+                .add("submissionId", submissionId)
+                .add("metadata", createObjectBuilder().add("numberOfMaterials", 2))
+                .build();
+
+        final List<String> listBlobNames = List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf", queueMessage + "/case.json", queueMessage + "/manifest.json");
+        final Map<String, QueueMessage> messageMap = Map.of(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/case.json")).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/manifest.json")).thenReturn(manifestJsonPayload);
+        // Routed to the LIBRA case validator, NOT the XHIBIT one.
+        when(libraCaseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of());
+        when(manifestJsonSchemaValidator.validate(submissionId, manifestJsonPayload)).thenReturn(Set.of());
+        when(stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
+                any(JsonObject.class),
+                eq(List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf")),
+                any(JsonObject.class),
+                eq(submissionId),
+                eq(queueMessage)))
+                .thenReturn(migratedCaseSubmissionJsonObject);
+        when(stagingDlrmCommandHelper.sendPostCommandApi(
+                "http://localhost:8080" + MIGRATED_CASE_SUBMISSION_PATH,
+                migratedCaseSubmissionJsonObject,
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                stagingDlrmUserId,
+                submissionId))
+                .thenReturn(Response.accepted().entity("").build());
+
+        timerTrigger.run(timerInfo, context);
+
+        verify(stagingDlrmCommandHelper).sendPostCommandApi(
+                eq("http://localhost:8080" + MIGRATED_CASE_SUBMISSION_PATH),
+                eq(migratedCaseSubmissionJsonObject),
+                eq("application/vnd.stagingdlrm.receive-migrated-case-submission+json"),
+                eq(stagingDlrmUserId),
+                eq(submissionId));
+        verify(libraCaseJsonSchemaValidator).validate(submissionId, caseJsonPayload);
+        verify(caseJsonSchemaValidator, never()).validate(anyString(), anyString());
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
+    }
+
+    /**
+     * DD-43086 LIBRA03/AC6 — a submission whose path names a source system with no configured schema
+     * fails clearly: a SEVERE diagnostic (via the existing {@code LoggerHelper.logSevere} overload),
+     * the message deleted and routed to the log queue, and <b>no</b> validator invoked and no POST.
+     * Explicitly not a {@code NullPointerException} and not a silent fallback to XHIBIT's schema.
+     */
+    @Test
+    @DisplayName("LIBRA03/AC6 an unconfigured source system is rejected to the log queue — no NPE, "
+            + "no silent XHIBIT fallback")
+    void shouldFailClearlyWhenSourceSystemHasNoConfiguredSchema() {
+        final String timerInfo = "timerInfo";
+        final String submissionId = "submission1";
+        final String queueMessage = "COMPASS/batch1/CASEREF-0001/" + submissionId;
+
+        final List<String> listBlobNames = List.of(queueMessage + "/case.json", queueMessage + "/manifest.json");
+        final Map<String, QueueMessage> messageMap = Map.of(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+
+        timerTrigger.run(timerInfo, context);
+
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
+        verify(storageCloudClient).sendMessageToTheLogQueue(queueMessage);
+        verify(caseJsonSchemaValidator, never()).validate(anyString(), anyString());
+        verify(libraCaseJsonSchemaValidator, never()).validate(anyString(), anyString());
+        verify(manifestJsonSchemaValidator, never()).validate(anyString(), anyString());
+        verify(stagingDlrmCommandHelper, never()).sendPostCommandApi(
+                anyString(), any(JsonObject.class), anyString(), anyString(), anyString());
+    }
+
+    /**
+     * DD-43086 LIBRA03/AC7 (FR8 confirm) — a Function-App-level rejection of a LIBRA submission still
+     * produces a usable outcome file, written under the LIBRA-derived path. The case is never parsed
+     * at this point, so {@code caseUrn} is an <b>explicit empty string</b> (not null, not a missing
+     * key) by construction ({@code TimerTriggerJava.processClientError} sets {@code caseUrn = ""}).
+     * The whole outcome event is asserted — {@code success: "false"}, a populated {@code description}
+     * (the downstream error body), {@code caseUrn: ""}, and the LIBRA {@code migrationSourceSystemName}
+     * — for both the {@code outcome/outcome-<submissionId>.json} and the {@code outcome.json} writes.
+     */
+    @Test
+    @DisplayName("LIBRA03/AC7 a Function-App-level LIBRA rejection writes a whole outcome file under "
+            + "the LIBRA path with an empty caseUrn")
+    void shouldWriteOutcomeUnderLibraPathWithEmptyCaseUrnForFunctionAppLevelRejection() {
+        final String timerInfo = "timerInfo";
+        final String submissionId = "submission1";
+        final String queueMessage = "LIBRA/batch1/CASEREF-0001/" + submissionId;
+
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
+        final String manifestJsonPayload = emptyJson();
+        final String validationError = "$.migratedCase.caseDetails.initiationCode: is missing but it is required";
+        final String errorEntity = fixture(FIXTURES + "error-response.json");
+        final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
+
+        final ValidationMessage caseValidationMessage = mock(ValidationMessage.class);
+        when(caseValidationMessage.getMessage()).thenReturn(validationError);
+
+        final List<String> listBlobNames = List.of(queueMessage + "/case.json", queueMessage + "/manifest.json");
+        final Map<String, QueueMessage> messageMap = Map.of(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/case.json")).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/manifest.json")).thenReturn(manifestJsonPayload);
+        // LIBRA case validation fails — the Function-App-level rejection, before the case is parsed.
+        when(libraCaseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of(caseValidationMessage));
+        when(manifestJsonSchemaValidator.validate(submissionId, manifestJsonPayload)).thenReturn(Set.of());
+        when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
+                eq(caseJsonPayload), eq(submissionId), eq(""), eq(queueMessage), eq(validationError)))
+                .thenReturn(errorMigratedCaseSubmissionJsonObject);
+        when(stagingDlrmCommandHelper.sendPostCommandApi(
+                "http://localhost:8080" + ERROR_MIGRATED_CASE_SUBMISSION_PATH,
+                errorMigratedCaseSubmissionJsonObject,
+                "application/vnd.stagingdlrm.receive-error-migrated-case-submission+json",
+                stagingDlrmUserId,
+                submissionId))
+                .thenReturn(Response.status(400).entity(errorEntity).build());
+
+        timerTrigger.run(timerInfo, context);
+
+        final Map<String, Object> expectedOutcome = Map.of(
+                "submissionId", submissionId,
+                "migrationSourceSystemName", "LIBRA",
+                "azureLocation", queueMessage,
+                "description", errorEntity,
+                "caseUrn", "",
+                "success", "false");
+
+        verify(eventGridMonitorHelper).processEvent(expectedOutcome, "LIBRA", "outcome/outcome-" + submissionId + ".json");
+        verify(eventGridMonitorHelper).processEvent(expectedOutcome, queueMessage, "outcome.json");
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
+        verify(storageCloudClient).sendMessageToTheLogQueue(queueMessage);
     }
 
     /**
