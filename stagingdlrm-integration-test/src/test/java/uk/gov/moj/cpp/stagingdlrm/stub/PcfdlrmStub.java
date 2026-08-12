@@ -6,7 +6,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.findAll;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -25,12 +24,12 @@ import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 
 public class PcfdlrmStub {
-    public static String RECEIVE_MIGRATE_CASE_FILE = "/pcfdlrm-service/command/api/rest/pcfdlrm/receive-migrated-case-file";
+    public static String RECEIVE_MIGRATE_CASE_FILE = ".*/command/api/rest/pcfdlrm/receive-migrated-case-file";
 
     public static void stubForReceiveMigratedCaseFile() {
         stubPingFor("pcfdlrm-service");
 
-        stubFor(post(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
+        stubFor(post(urlPathMatching(RECEIVE_MIGRATE_CASE_FILE))
                 .willReturn(aResponse().withStatus(SC_ACCEPTED))
         );
         setupUsersGroupQueryStub();
@@ -58,7 +57,7 @@ public class PcfdlrmStub {
     public static void verifyReceiveCaseFileNotRequestedFor(final String submissionId) {
         await().atMost(5, SECONDS).pollInterval(2, SECONDS).until(() -> true);
         assertTrue(
-                findAll(postRequestedFor(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
+                findAll(postRequestedFor(urlPathMatching(RECEIVE_MIGRATE_CASE_FILE))
                         .withRequestBody(containing(submissionId))).isEmpty(),
                 "PCFDLRM receive-migrated-case-file should NOT have been called for submissionId: " + submissionId);
     }
