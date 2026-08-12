@@ -68,6 +68,37 @@ class EventGridMonitorTest {
         verify(helper).processEvent(eventData, azureLocation, "outcome.json");
     }
 
+    /**
+     * DD-43086 LIBRA03/AC7 (FR8 confirm) — the outcome path is submission-derived, not a configured
+     * constant, so a LIBRA event whose {@code azureLocation} starts {@code LIBRA/...} writes its
+     * outcome under the LIBRA path automatically, with no source-system-specific code. This is the
+     * same trace {@code EventGridMonitor} already runs for XHIBIT; the row proves it holds for LIBRA
+     * and for the empty {@code caseUrn} of a Function-App-level rejection.
+     */
+    @Test
+    void shouldWriteOutcomeUnderLibraPathForFunctionAppLevelRejection() {
+        final String migrationSourceSystemName = "LIBRA";
+        final String batchIdentifier = "batch1";
+        final String migrationSourceSystemCaseIdentifier = UUID.randomUUID().toString();
+        final String submissionId = UUID.randomUUID().toString();
+        final String azureLocation = "%s/%s/%s/%s".formatted(migrationSourceSystemName, batchIdentifier, migrationSourceSystemCaseIdentifier, submissionId);
+
+        final Map<String, Object> eventData = Map.of(
+                "caseUrn", "",
+                "success", "false",
+                "description", "LIBRA case failed schema validation at the Function App gate",
+                "azureLocation", azureLocation
+        );
+        final EventGridEvent eventGridEvent = new EventGridEvent(new Date(), eventData);
+
+        when(context.getLogger()).thenReturn(logger);
+
+        eventGridMonitor.run(eventGridEvent, context);
+
+        verify(helper).processEvent(eventData, migrationSourceSystemName, "outcome/outcome-" + submissionId + ".json");
+        verify(helper).processEvent(eventData, azureLocation, "outcome.json");
+    }
+
     @Test
     void shouldUseAzureLocationAsMigrationSourceSystemNameWhenItDoesNotHaveFourParts() {
         final String azureLocation = "XHIBIT/20082025";
