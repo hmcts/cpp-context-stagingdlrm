@@ -33,7 +33,6 @@ import javax.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
@@ -330,18 +329,16 @@ class StagingDlrmCommandHelperTest {
     }
 
     /**
-     * Reproducer for the unguarded copies in
+     * Regression test for the unguarded copies that used to be in
      * {@code StagingDlrmCommandHelper.buildMigratedCaseJsonBuilder}: {@code hearings} and
-     * {@code defendants} are optional in the func app's own {@code migrated-case.json}, but both are
-     * handed to {@code JsonObjectBuilder.add} without the {@code nonNull} guard
+     * {@code defendants} are optional in the func app's own {@code migrated-case.json} (and in the
+     * LIBRA gate too — only {@code caseDetails} is unconditionally required by both), but both used
+     * to be handed to {@code JsonObjectBuilder.add} without the {@code nonNull} guard
      * {@code migrationSourceSystem} gets three lines below. A gate-valid case file omitting either
-     * throws {@code NullPointerException}.
-     *
-     * <p>{@code expected-no-hearings.json} encodes the proposed fix — absent arrays omitted. Enable
-     * when the defect is fixed; update the fixture if the fix emits empty arrays instead.
+     * threw {@code NullPointerException} in production (Azure Functions worker stack trace); now
+     * fixed to omit the absent arrays instead, matching {@code expected-no-hearings.json}.
      */
     @Test
-    @Disabled("DD-XXXXX: gate-valid case file without hearings/defendants NPEs the assembler")
     void shouldAssemblePayloadWhenHearingsAndDefendantsAreAbsent() {
 
         final JsonObject payload = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
