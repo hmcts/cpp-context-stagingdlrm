@@ -108,6 +108,22 @@ class DeriveHearingFlagsTests(unittest.TestCase):
         self.assertEqual(summary_report.derive_hearing_flags(hearings), ["unscheduled_hearing=3"])
 
 
+class DeriveStatusTests(unittest.TestCase):
+    """Unit tests for derive_status — DD-43081 T1 VALIDATION_REJECTED."""
+
+    def test_validation_rejected_is_stuck_at_stagingdlrm(self):
+        self.assertEqual(
+            summary_report.derive_status("VALIDATION_REJECTED", None, False, "0"),
+            "STUCK_AT_STAGINGDLRM",
+        )
+
+    def test_none_staging_status_is_never_ingested(self):
+        self.assertEqual(summary_report.derive_status(None, None, False, "0"), "NEVER_INGESTED")
+
+    def test_fully_processed_case_in_listing_is_processed(self):
+        self.assertEqual(summary_report.derive_status("PROCESSED", "PROCESSED", True, "1"), "PROCESSED")
+
+
 class ParseReportTypeTests(unittest.TestCase):
     """Unit tests for parse_report_type (AC010) and project_row (AC012)."""
 

@@ -8,6 +8,14 @@
 > half is [DD-43086](https://tools.hmcts.net/jira/browse/DD-43086); all PCFDLRM work is a separate
 > pipeline in `cpp-context-prosecution-casefile-dlrm`.
 >
+> **Revised against `schema-diff_3.html`** (LIBRA 0.13 vs XHIBIT 0.12), reconciled with the **live**
+> canonical schema. LIBRA 0.13 now aligns far more closely to XHIBIT than earlier drafts: `initiationCode`
+> is `["O"]` on both sides, `durationMinutes` / `prosecutorOffenceId` are required on both, and
+> plea/verdict/allocationDecision use the UUID identifier on both. Two cells in the diff's XHIBIT column
+> contradict the live schema — `migrationSourceSystem` (live requires both fields; the diff says neither)
+> and the `caseDetails` `anyOf` `dateOfCommittal|dateOfSending` (live has it; the diff dropped it). These
+> are `tools/schema-gen` regeneration bugs in `dlrm-xhibit-0.12.json`; this document follows the live
+> schema and they are noted for a tooling fix.
 
 ## Story
 
@@ -26,7 +34,7 @@ accept LIBRA without weakening XHIBIT**
 
 ### Summary (JIRA summary line)
 
-`[LIBRA enabler] stagingDLRM schema enablement: relax 10 constraints for LIBRA, add 38 LIBRA fields, re-impose XHIBIT rules in code, wire the rejection path`
+`[LIBRA enabler] stagingDLRM schema enablement: relax 5 constraints for LIBRA, add 35 LIBRA fields, re-impose XHIBIT rules in code, wire the rejection path`
 
 ### User story
 
@@ -54,53 +62,58 @@ XHIBIT rule**, so that **XHIBIT's behaviour is provably unchanged**.
 
 ### A. Relax what LIBRA cannot satisfy
 
-- **FR1 — Relax the 10 constraints a valid LIBRA payload fails.** In the shared canonical schema,
-  not a LIBRA fork:
-  - **7 unconditional `required`** — `caseDetails`: `dateReceived`, `receiptType`,
-    `receivingCourt`, `retrialIndicator`; `hearings[*].durationMinutes`;
-    `defendants[*].offences[*].prosecutorOffenceId`;
-    `defendants[*].individual.selfDefinedInformation.gender`.
-    Each sits in an object that is **always present** in a LIBRA payload, so the constraint really
-    does fire and really does block.
+- **FR1 — Relax the 5 constraints a valid LIBRA payload fails.** In the shared canonical schema,
+  not a LIBRA fork. All five sit on `caseDetails`, which is unconditionally present in every LIBRA
+  payload (required on `migratedCase`), so each really does fire and really does block:
+  - **4 unconditional `required`** — `caseDetails`: `dateReceived`, `receiptType`,
+    `receivingCourt`, `retrialIndicator`. LIBRA supplies none of the four.
   - **The `anyOf` combinator** on `caseDetails` requiring one of `dateOfCommittal` / `dateOfSending`
-    — LIBRA supplies neither, so relaxing to "at least one of `sendingCourt` / `receivingCourt`"
-    does not help and the branch has to go.
-  - **`caseDetails.initiationCode`'s `enum: ["O"]`** — widened to
-    `["Q","R","S","C","J","Z","O"]`, matching the CPP platform's own
-    `uk.gov.justice.core.courts.InitiationCode`. All four codes LIBRA supplies (C, J, Q, S) are
-    already in the platform enum, so `enum: ["O"]` was always narrower than the domain it models —
-    this corrects an over-tight constraint rather than conceding one. The field stays a typed enum,
-    so genuinely invalid codes are still rejected at the schema.
+    — LIBRA supplies neither, so the branch has to go. (The diff artefact drops this `anyOf`; the
+    **live** schema still has it, so the relaxation stands — see the header note.)
+  - **What is *not* relaxed, against earlier drafts.** `hearings[*].durationMinutes` and
+    `defendants[*].offences[*].prosecutorOffenceId` are now required on **both** sides in LIBRA 0.13,
+    so LIBRA satisfies them and no relaxation is needed. `caseDetails.initiationCode` is `enum: ["O"]`
+    on both sides — **no widening**, so the whole initiation-code thread (schema change, allowed-values
+    rules, reference-data decision) is gone. `gender`, `individual.selfDefinedInformation` and the
+    plea/verdict/allocationDecision identifiers are canonical-required but LIBRA-optional inside
+    **optional containers** — kept strict under FR2a, not relaxed.
 - **FR2 — For a field already in the canonical schema, only its required/optional status may
   change.** No `maxLength`, `minLength`, `pattern`, `minimum`, `maximum`, `type` or `enum` on an
   existing field is touched — oucode lengths, date patterns and value ranges all stay exactly as
   they are. The `anyOf` combinator counts as required-ness, since its branches are pure
   `{"required": […]}`. FR1 is an exhaustive list, not a category; anything not named there is
   unchanged. Where LIBRA's stated constraint is *tighter* than canonical, it belongs in the LIBRA
-  rules (FR12g), never in the schema.
-  - **One exception: `caseDetails.initiationCode`** (FR1). It cannot be left alone — `enum: ["O"]`
-    compiles to a single-constant Java enum, so a LIBRA `"S"` fails Jackson deserialization before
-    any code runs, and LIBRA could not be ingested at all. Widening to the platform's own seven
-    codes is the smallest change that unblocks it while keeping the field typed.
+  rules (FR12g), never in the schema. Confirmed against the two schema artefacts: LIBRA 0.13 and
+  XHIBIT 0.12 differ **only** in `required` arrays — there are no `type`/`maxLength`/`enum`/`pattern`
+  divergences on any shared field, so FR2 holds with no exception. In particular `initiationCode` is
+  `enum: ["O"]` on both sides and is not changed by this story.
 - **FR2a — An object may be absent; if it is present, its fields keep their strictness.** Container
   optionality is how the schema accommodates data a source system does not hold. Weakening the
   fields *inside* an optional object buys nothing — the object can simply be omitted — and costs the
-  guarantee that a container, once sent, is well-formed. **Six constraints the impact CSV reports as
-  `relax-required` stay exactly as they are on this basis:**
+  guarantee that a container, once sent, is well-formed. **Eleven constraints canonical requires and
+  LIBRA 0.13 leaves optional stay exactly as they are on this basis** — each sits in a container that
+  LIBRA may omit, so LIBRA either omits the container or sends it well-formed:
 
-  | Withdrawn | Container | Why it never fires |
+  | Kept strict | Container | Why it never fires when the container is absent |
   |---|---|---|
   | `…personalInformation.address.address1` | `address` | optional — `personal-information.json` requires only `surname` |
   | `…parentGuardianInformation.address.address1` | `parentGuardianInformation` | optional — `individual.json` requires only `personalInformation`, `selfDefinedInformation` |
   | `…parentGuardianInformation.personalInformation.address.address1` | as above | optional |
   | `…parentGuardianInformation.personalInformation.surname` | as above | optional |
   | `hearings[*].weekCommencingDate.startDate` | `weekCommencingDate` | optional — not in `migrated-hearing.json`'s `required` |
-  | `caseDetails.caseMarkers[*].markerTypeCode` | `caseMarkers` | optional — LIBRA omits the marker rather than sending one without a code |
+  | `caseDetails.caseMarkers[*].markerTypeCode` | `caseMarkers` | required within `case-marker.json`; the marker object itself is optional in canonical |
+  | `defendants[*].individual.selfDefinedInformation` | `individual` | optional on `migrated-defendant.json` |
+  | `…individual.selfDefinedInformation.gender` | `selfDefinedInformation` | optional in LIBRA — see the container above |
+  | `…offences[*].plea.id` | `plea` | optional on `migrated-offence.json` |
+  | `…offences[*].verdict.id` | `verdict` | optional on `migrated-offence.json` |
+  | `…offences[*].allocationDecision.motReasonId` | `allocationDecision` | optional on `migrated-offence.json` |
 
-  The CSV flags these because it tests the field without checking whether its parent is reachable.
-  The last is the only one where LIBRA's own sheet disagrees: it marks `markerTypeCode`
-  optional/conditional. **The sheet is corrected to match XHIBIT** rather than the schema relaxed —
-  see FR19/R5.
+  The last five are the `schema-diff_3` reconciliation call (kept strict, not relaxed): canonical
+  requires them, LIBRA 0.13 does not, but each is inside an optional object, so LIBRA must send a
+  well-formed container or none. **If the LIBRA extract genuinely sends a present-but-incomplete
+  container** — a `plea` without an `id`, an `individual` without `selfDefinedInformation`, or a
+  `caseMarkers` entry without `markerTypeCode` — that field returns as a schema decision, exactly as
+  `markerTypeCode` did. All six such points are routed to the extract team under FR19/R5.
   Consequences worth stating: no schema `$ref`'d from more than one parent is modified, so no
   definition needs splitting; and `weekCommencingDate.startDate` staying mandatory means the
   `LocalDate.parse(null)` hazard never becomes reachable.
@@ -117,15 +130,19 @@ XHIBIT rule**, so that **XHIBIT's behaviour is provably unchanged**.
 ### B. Add the LIBRA fields
 
 Selection rule: **add what has a home in Progression; leave what is ambiguous or has no home.**
-38 of the 44 fields LIBRA adds are declared; 6 are not.
+LIBRA 0.13 adds 38 fields the canonical schema does not have; 35 are declared, 3 are not.
+(Earlier drafts counted 44/38 — LIBRA 0.13 dropped `summonsCode`, `writtenChargePostingDate`,
+`organisationTelephoneNumber` and the three `backDuty*` fields, and now carries `emailAddress1/2`
+on both sides rather than LIBRA-only.)
 
-- **FR5 — Declare the 12 fields that flow end to end today, and map them (Group A).** A counterpart
+- **FR5 — Declare the 11 fields that flow end to end today, and map them (Group A).** A counterpart
   exists in both PCFDLRM and Progression's `courtReferral.json` closure, so these need changes in
   this repo alone:
-  `caseDetails.summonsCode`; `defendants[*]` `driverNumber`, `nationalInsuranceNumber`,
-  `occupation`, `defendantOccupationCode`, `licenseCode`; `defendants[*].offences[*]`
-  `statementOfFacts`, `statementOfFactsWelsh`, `vehicleCode`, `vehicleMake`,
-  `vehicleRegistrationMark`; `…individual.selfDefinedInformation.additionalNationality`.
+  `defendants[*]` `driverNumber`, `nationalInsuranceNumber`, `occupation`, `defendantOccupationCode`,
+  `licenseCode`; `defendants[*].offences[*]` `statementOfFacts`, `statementOfFactsWelsh`,
+  `vehicleCode`, `vehicleMake`, `vehicleRegistrationMark`;
+  `…individual.selfDefinedInformation.additionalNationality`.
+  (`caseDetails.summonsCode` was Group A in earlier drafts; LIBRA 0.13 no longer carries it.)
 - **FR6 — Declare fields at PCFDLRM's nesting level, following the existing XHIBIT convention.**
   This is not a new rule — it is how the pipeline already works. Canonical is a strict **subset of
   PCFDLRM at every level**: comparing the two schema sets, no canonical property sits at a different
@@ -140,20 +157,23 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
   spreadsheet layout, not the payload contract — see FR19/R5 and the DD-43086 gate schema.
 - **FR7 — Reuse existing definitions rather than re-declaring types.** `nationalInsuranceNumber` in
   particular already has a pattern defined in `pcf-definitions.json` that nothing references.
-- **FR8 — Declare the 20 fields Progression models but PCFDLRM does not (Group B).** Schema only —
+- **FR8 — Declare the 19 fields Progression models but PCFDLRM does not (Group B).** Schema only —
   the converter mapping is FR14. `officerInCase`: `forename`, `forename2`, `surname`,
   `policeOfficerRank`, `policeWorkerReferenceNumber`, `policeWorkerLocationCode`, `primaryEmail`,
   `secondaryEmail`, `workTelephoneNumber`, `mobileTelephoneNumber`, `faxNumber`;
-  `officerInCase.address`: `address1`–`address5`, `postcode`; `defendants[*]`
-  `numPreviousConvictions`, `organisationTelephoneNumber`; `defendants[*].offences[*].convictionDate`.
+  `officerInCase.address`: `address1`–`address5`, `postcode`;
+  `defendants[*].numPreviousConvictions`; `defendants[*].offences[*].convictionDate`.
+  (`organisationTelephoneNumber` was Group B in earlier drafts; LIBRA 0.13 no longer carries it,
+  resolving the suspected `companyTelephoneNumber` duplicate under FR19.)
 - **FR9 — `officerInCase` is a new container on `migratedCase` and must be declared.**
   `migratedCase` is `additionalProperties: false`, so an undeclared officer block is a terminal 4xx
   on every LIBRA submission carrying one. Its declaration is not contingent on the PCFDLRM gap.
-- **FR10 — Declare 6 fields as accepted-but-unmapped (Group C).** `caseDetails` `informant`,
-  `writtenChargePostingDate`; `defendants[*].prosecutorCosts`; `officerInCase` `dxAddress`,
-  `forename3`, `uniquePropertyReferenceNumber`. Nothing downstream models them, but each sits in a
+- **FR10 — Declare 5 fields as accepted-but-unmapped (Group C).** `caseDetails.informant`;
+  `defendants[*].prosecutorCosts`; `officerInCase` `dxAddress`, `forename3`,
+  `uniquePropertyReferenceNumber`. Nothing downstream models them, but each sits in a
   **closed** canonical object that LIBRA populates, so ignoring them is not available. Declared
   optional, documented as unmapped, and deliberately not propagated.
+  (`writtenChargePostingDate` was Group C in earlier drafts; LIBRA 0.13 no longer carries it.)
 - **FR11 — Every added field is optional.** No addition may make an XHIBIT payload invalid.
 
 ### C. Restore enforcement in code, per source system
@@ -194,20 +214,20 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
     duplicate and invalid is reported as a duplicate, exactly as today. Accepted consequence: since
     `sendEventToGrid` suppresses EventGrid for duplicates, such a payload produces **no outcome file
     at all** — unchanged behaviour, but now reachable by a second route.
-  - **FR12f — XHIBIT rules re-impose all 10 relaxations from FR1.** One rule per relaxed constraint.
-    Net behavioural change for XHIBIT must be zero. For `initiationCode` this is an **allowed-values
-    rule**, not a presence rule: the widened schema now admits all seven platform codes, so the
-    XHIBIT rule must restrict XHIBIT submissions to XHIBIT's own set. That set is `["O"]` as the
-    schema has it today, but the workbook's XHIBIT tab documents more than one code — confirm under
-    FR19/R5 before pinning it, or the rule will replicate a constraint that was already wrong.
-  - **FR12g — LIBRA rules enforce the 9 constraints the workbook states and the shared schema
-    cannot.** Eight are fields where LIBRA is stricter than canonical: `hearings[*].dateOfHearing`,
-    `hearings[*].timeOfHearing` and `…personalInformation.forename` are mandatory for LIBRA;
-    `individualAliases[*]` `firstName`, `givenName2`, `givenName3`, `lastName` and
-    `migrationSourceSystem.migrationSourceSystemCaseIdentifier` carry tighter length limits. The
-    ninth is a consequence of FR1's widening: a LIBRA **allowed-values rule** restricting
-    `initiationCode` to `["C","J","Q","S"]`, since the schema now also admits `R`, `Z` and `O`,
-    which LIBRA does not send. Without it, widening for LIBRA silently widens LIBRA too.
+  - **FR12f — XHIBIT rules re-impose all 5 relaxations from FR1.** One rule per relaxed constraint:
+    four presence rules (`dateReceived`, `receiptType`, `receivingCourt`, `retrialIndicator`) and one
+    at-least-one-of rule (`dateOfCommittal` / `dateOfSending`). Net behavioural change for XHIBIT must
+    be zero. No `initiationCode` rule — the field is unchanged, so nothing was relaxed to re-impose.
+  - **FR12g — LIBRA rules enforce the 5 constraints LIBRA states and the shared schema cannot** —
+    all presence rules for fields LIBRA requires and canonical leaves optional:
+    `hearings[*].dateOfHearing`, `hearings[*].timeOfHearing`, `hearings[*].courtRoomId`,
+    `caseDetails.caseMarkers`, and `defendants[*].address`. No length rules survive — LIBRA 0.13 and
+    canonical carry identical `maxLength`/`pattern` on every shared field (FR2), so the earlier
+    `forename`, `individualAliases[*]` and `migrationSourceSystemCaseIdentifier` rules are gone, as is
+    the `initiationCode` allowed-values rule (no widening). **Note:** LIBRA's `parentGuardianInformation`
+    branches require `gender` + `personalInformation` (person) and `organisationName` (organisation)
+    where canonical does not; because `parentGuardianInformation` is an optional `oneOf` container,
+    this is deferred to the extract team under FR19/R5 rather than added as a rule.
   - **FR12h — LIBRA rule *content* is revisable without structural change.** It derives from
     workbook V0.13 with no real sample to validate against, so it will move.
 - **FR13 — On validation failure the aggregate raises `MigratedCaseSubmissionRejected` +
@@ -249,18 +269,17 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
 
 ### D. Propagate through the converter
 
-- **FR14 — Map Group A's 12 fields in `MigratedCaseConvertor`**, honouring PCFDLRM's names where
+- **FR14 — Map Group A's 11 fields in `MigratedCaseConvertor`**, honouring PCFDLRM's names where
   they differ (`defendantOccupationCode` → `occupationCode`, `licenseCode` → `driverLicenceCode`).
-  Group B's 20 fields are **not** mapped in this story: the converter's target types are generated
+  Group B's 19 fields are **not** mapped in this story: the converter's target types are generated
   from `pcfdlrm-domain-value-schema` pinned at `pcfdlrm.version` 17.104.21, so the builder methods
   do not exist. That mapping is a follow-up gated on a PCFDLRM release and a version bump here.
   Group C is never mapped.
-- **FR15 — `initiationCode` needs no converter change, and that is a reason for FR1's widening.**
-  Because the field stays a typed enum, `MigratedCaseConvertor:256`'s
-  `.getInitiationCode().name()` keeps compiling; the generated enum simply gains constants, and
-  `name()` returns the code itself for all seven. This is why FR1 widens the enum rather than
-  removing it: a plain `String` getter would break that call, the only compiled-type ripple of its
-  kind in the codebase. The value reaches PCFDLRM unchanged, where `initiationCode` is a plain string.
+- **FR15 — `initiationCode` needs no change at all.** LIBRA 0.13 sends `["O"]`, the same single
+  constant the schema already declares, so there is no schema change, no converter change, and
+  `MigratedCaseConvertor:256`'s `.getInitiationCode().name()` keeps compiling unchanged. The value
+  reaches PCFDLRM unchanged, where `initiationCode` is a plain string. (Earlier drafts widened the
+  enum to the platform's seven codes; LIBRA 0.13 no longer requires it.)
 - **FR16 — No source-system branching in the converter.** Divergence lives in the FR12 rules.
   The converter stays a single typed mapping for both source systems.
 
@@ -271,7 +290,7 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
   `FixtureLoader` / `WholePayloadMatcher` support. Source system stays a scenario parameter (DD-43078
   FR3), so no LIBRA-specific test class and no `if` on source system inside a test.
 - **FR18 — The XHIBIT whole-payload fixtures are the regression gate and must not change.** If a
-  DD-43078 XHIBIT expectation moves, the relaxation has leaked. Each of the 10 relaxations needs
+  DD-43078 XHIBIT expectation moves, the relaxation has leaked. Each of the 5 relaxations needs
   XHIBIT coverage proving the constraint still rejects — now via the FR12f rule and the FR13
   outcome file rather than via schema — and LIBRA coverage proving it now passes.
 - **FR18a — Prove the invalid case is not forwarded.** A rejected submission must produce no
@@ -282,9 +301,12 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
 ### F. Cross-team and workbook outputs
 
 - **FR19 — Produce the LIBRA-workbook corrections as a deliverable**, in a form that can go to the
-  workbook owner: the three FR4 constraint conflicts, the `prosecutorOffenceId` dangling reference,
-  the suspected `organisationTelephoneNumber` duplicate, and the finding that `enum: ["O"]` already
-  contradicted the workbook's XHIBIT tab before LIBRA was considered.
+  workbook owner: the three FR4 constraint conflicts, and the six FR2a strictness points that LIBRA
+  0.13 marks optional inside an optional container (`gender`, `selfDefinedInformation`, the three
+  plea/verdict/allocationDecision identifiers, and `markerTypeCode`) — confirm LIBRA sends a
+  well-formed container or none. LIBRA 0.13 already resolved earlier corrections: `prosecutorOffenceId`
+  is now required on both sides (no dangling reference), `organisationTelephoneNumber` is gone (the
+  suspected duplicate), and `initiationCode` is `["O"]` on both sides (no enum contradiction).
 - **FR20 — Publish the exclusion register.** The fields this story deliberately does not implement,
   each with its reason and the specific question it raises, for the Technical Architect —
   `00-input-brief.md` R1–R6.
@@ -319,15 +341,15 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
   produces a `migrated-case-submission-received` event.
 - **AC2** — Every DD-43078 XHIBIT whole-payload fixture passes byte-identically, with no fixture
   edited.
-- **AC3** — For each of the 10 relaxed constraints: an XHIBIT payload violating it is rejected, and
+- **AC3** — For each of the 5 relaxed constraints: an XHIBIT payload violating it is rejected, and
   the rejection names that constraint in its outcome file.
-- **AC4** — For each of the 9 LIBRA rules: a LIBRA payload violating it is rejected and named; the
+- **AC4** — For each of the 5 LIBRA rules: a LIBRA payload violating it is rejected and named; the
   same payload shape submitted as XHIBIT is unaffected.
-- **AC5** — All 38 declared fields (Groups A–C) round-trip through schema validation on a LIBRA
+- **AC5** — All 35 declared fields (Groups A–C) round-trip through schema validation on a LIBRA
   payload without a validation error.
-- **AC6** — Group A's 12 fields appear with correct values and PCFDLRM's names in the outbound
+- **AC6** — Group A's 11 fields appear with correct values and PCFDLRM's names in the outbound
   PCFDLRM payload, asserted as a whole payload.
-- **AC7** — Group C's 6 fields are accepted on input and absent from the outbound PCFDLRM payload.
+- **AC7** — Group C's 5 fields are accepted on input and absent from the outbound PCFDLRM payload.
 - **AC8** — A rule rejection appends `MigratedCaseSubmissionRejected` + `MigratedCaseSubmissionProcessed`
   and no `MigratedCaseSubmissionReceived`, and produces an outcome file carrying the `submissionId`,
   the failed rules and a non-null `azureLocation` — on a **first** submission, where no prior
@@ -335,12 +357,6 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
 - **AC8a** — On that same rejection, `system-id-mapper` is not called and nothing is sent to pcfdlrm.
 - **AC8b** — A payload that is both a duplicate and rule-invalid reports as a duplicate and emits no
   outcome file, unchanged from today.
-- **AC9** — `initiationCode` values C, J, Q and S submitted as LIBRA pass the schema, deserialize
-  without error, and reach the outbound PCFDLRM payload unchanged; `O` still passes for XHIBIT.
-- **AC9a** — A code outside the platform's seven (e.g. `"H"`) is rejected by the schema for both
-  source systems, and a code inside the seven but outside a source system's own set — `R` or `Z` as
-  LIBRA, or a non-XHIBIT code as XHIBIT — is rejected by the FR12f/FR12g allowed-values rule and
-  named in the outcome file.
 - **AC10** — A LIBRA payload carrying `officerInCase`, including the three unmapped officer fields,
   is accepted rather than rejected as an additional property.
 - **AC11** — `mvn clean install` is green with no hand-edits to generated sources.
@@ -355,27 +371,29 @@ Selection rule: **add what has a home in Progression; leave what is ambiguous or
 Carried from `00-input-brief.md` R1–R6 as explicit non-requirements — each is a decision, not an
 omission.
 
-- **6 LIBRA fields dropped from the schema (R1)** — `backDuty`, `backDutyDateFrom`, `backDutyDateTo`,
-  `prosecutorOfferAOCP`, `prosecutorCompensation`, `middleName2`. All exist in PCFDLRM but have no
-  schema reachable from `courtReferral.json`, and their canonical containers are open, so omitting
-  them is a true no-op. Open question: is PCFDLRM the intended consumer?
-- **Propagation of the 6 declared-unmapped fields (R2)** — accepted, then discarded. Confirm with
+- **3 LIBRA fields dropped from the schema (R1)** — `prosecutorOfferAOCP`, `prosecutorCompensation`,
+  `middleName2`. All exist in PCFDLRM but have no schema reachable from `courtReferral.json`, and their
+  canonical containers are open, so omitting them is a true no-op. Open question: is PCFDLRM the
+  intended consumer? (The `backDuty*` trio that was here in earlier drafts is gone from LIBRA 0.13
+  entirely, so it is no longer even a decision.)
+- **Propagation of the 5 declared-unmapped fields (R2)** — accepted, then discarded. Confirm with
   the TA that the data is genuinely not needed downstream.
-- **plea / verdict / allocationDecision code → UUID resolution (R3)** — the workbook models codes,
-  canonical models resolved UUIDs, and nothing in the pipeline resolves between them. Affects XHIBIT
-  equally, so it is a pre-existing gap. Needs a follow-up ticket.
+- **plea / verdict / allocationDecision code → UUID resolution (R3) — resolved by LIBRA 0.13.** Both
+  source systems now model these as UUID identifiers (`plea.id`, `verdict.id`,
+  `allocationDecision.motReasonId`); there is no code→UUID resolution to do. The only divergence left
+  is required (XHIBIT) vs optional-in-an-optional-container (LIBRA), handled under FR2a. No follow-up
+  ticket needed.
 - **`officerInCase` converter mapping (R4)** — schema here, mapping when PCFDLRM has the fields.
 - **The Function App LIBRA gate and schema-selection strategy** — DD-43086, including how deep the
   LIBRA gate should validate.
 - **All PCFDLRM work** — the source-system axis on `CcProsecutionValidationRuleProvider`, the
   `officerInCase` block, the three tier-4 fields, and the three XHIBIT-only guards.
 - **Progression** — no change identified; regression validation only.
+- **Deciding LIBRA's `initiationCode` value(s)** — no longer in play. LIBRA 0.13 sends `["O"]`, the
+  same value the schema already declares, so there is no widening and no reference-data decision.
 - **Reconciliation tooling `--source-system`** — the hardcoded `SOURCE="XHIBIT"` in the shell
   scripts stays a separate operational ticket. FR21 covers only rejection *visibility*, which is a
   consequence of an event this story introduces.
-- **Deciding LIBRA's `initiationCode` value(s)** — a reference-data decision. This story makes the
-  schema accept any of the platform's seven; the LIBRA allowed-values rule (FR12g) is where the
-  agreed set is pinned once confirmed.
 
 ## Risks and notes
 
@@ -386,21 +404,13 @@ omission.
   fixtures are the containment.
 - **Relaxation is only half-safe until FR12f lands.** Between the schema relaxation and the XHIBIT
   rules, XHIBIT is under-validated. They ship together or the story is not done.
-- **Group B ships write-only.** 20 fields validated on input and dropped at the converter until
+- **Group B ships write-only.** 19 fields validated on input and dropped at the converter until
   PCFDLRM catches up. Deliberate — the alternative is rejecting LIBRA payloads that carry them — but
   it must be visible, not discovered later as data loss.
-- **`organisationTelephoneNumber` may not exist.** In Group B, but suspected a workbook duplicate of
-  `companyTelephoneNumber` (FR19). If confirmed, drop it — 37 declared fields, not 38.
-- **`prosecutorOffenceId` becomes a dangling reference.** FR1 makes it optional, but canonical uses
-  it as the target of `listedOffences`. A LIBRA case omitting it leaves those references pointing at
-  nothing. FR19 raises it; the design stage needs a position on what the pipeline does meanwhile.
-- **Widening `initiationCode` couples this schema to core's code list.** A code added to
-  `uk.gov.justice.core.courts.InitiationCode` in future needs a matching schema change here, or the
-  platform accepts a value stagingDLRM rejects. Accepted in exchange for keeping the field typed —
-  but it is a standing alignment obligation, not a one-off edit. Note also that the func-app's own
-  `command-helper` test fixtures currently use `initiationCode: "H"`, which is in neither the
-  current nor the widened enum; confirm whether `H` is dead test data or a real code before pinning
-  the list (FR19).
+- **FR2a strictness may return as a schema decision.** With no real LIBRA sample, the six FR2a points
+  (`gender`, `selfDefinedInformation`, the three plea/verdict/allocationDecision identifiers,
+  `markerTypeCode`) assume LIBRA sends a well-formed container or omits it. If the extract instead
+  sends a present-but-incomplete container, that point flips to a relaxation — FR19 raises all six.
 
 ## Notes for the design stage
 
@@ -410,15 +420,17 @@ omission.
 - FR13 changes an existing domain event's schema. Check the event-store transformation /
   anonymisation rules in `stagingdlrm-domain-transformation-anonymise` and whether a dormant,
   never-emitted event needs a versioning step at all.
-- FR1 and FR12f are the same 10 constraints expressed twice, in different languages. Design should
+- FR1 and FR12f are the same 5 constraints expressed twice, in different languages. Design should
   say how they are kept in step — a single declarative source is worth considering over two
   hand-maintained lists.
 - Still open from the FR13 discussion, deliberately left to design: whether `createdBy`, which
   nothing populates, is kept or dropped; and whether rejections need to reach the view store for
   query-api or the event-store record suffices. (The third question — whether `Rejected` carries the
   whole submission — is now settled by FR21's reconciliation needs, see FR13d.)
-- `MigratedCaseConvertor` is 341 lines of explicit mapping across ~24 build methods. FR5's 12 fields
-  land across four of them; FR8's 20 would add a new officer branch later.
-- The 10 relaxations and 8 of the 9 LIBRA rules are filterable from
-  `docs/analysis/libra-ingestion/libra-schema-impact.csv` on `change_type` — `relax-*` and
-  `libra-rule-only` respectively — so the design does not need to re-derive them.
+- `MigratedCaseConvertor` is 341 lines of explicit mapping across ~24 build methods. FR5's 11 fields
+  land across four of them; FR8's 19 would add a new officer branch later.
+- `libra-schema-impact.csv` and the `dlrm-libra-0.13.json` / `dlrm-xhibit-0.12.json` artefacts predate
+  this revision and must be regenerated (`tools/schema-gen/regenerate.sh`) to match `schema-diff_3`;
+  the regeneration must also fix the two `dlrm-xhibit-0.12.json` cells that disagree with the live
+  schema (`migrationSourceSystem` required, and the `caseDetails` `anyOf`). Until then, derive the
+  5 relaxations and 5 LIBRA rules from FR1/FR12f/FR12g here, not from the stale CSV.

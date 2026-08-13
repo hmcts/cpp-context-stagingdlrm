@@ -38,11 +38,15 @@ WITH batch_streams AS (
         CASE name
             WHEN 'stagingdlrm.events.migrated-case-submission-received'
                 THEN payload::jsonb #>> '{migratedCaseSubmission,migratedCase,caseDetails,prosecutorCaseReference}'
+            WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
+                THEN payload::jsonb #>> '{migratedCaseSubmission,migratedCase,caseDetails,prosecutorCaseReference}'
             WHEN 'stagingdlrm.events.error-migrated-case-submission-received'
                 THEN payload::jsonb #>> '{errorMigratedCaseSubmission,caseUrn}'
         END AS case_urn,
         CASE name
             WHEN 'stagingdlrm.events.migrated-case-submission-received'
+                THEN payload::jsonb #>> '{migratedCaseSubmission,azureLocation}'
+            WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
                 THEN payload::jsonb #>> '{migratedCaseSubmission,azureLocation}'
             WHEN 'stagingdlrm.events.error-migrated-case-submission-received'
                 THEN payload::jsonb #>> '{errorMigratedCaseSubmission,azureLocation}'
@@ -55,9 +59,13 @@ WITH batch_streams AS (
         CASE name
             WHEN 'stagingdlrm.events.migrated-case-submission-received'
                 THEN jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,migratedCase,hearings}')
+            WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
+                THEN jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,migratedCase,hearings}')
         END AS hearing_count,
         CASE name
             WHEN 'stagingdlrm.events.migrated-case-submission-received'
+                THEN jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,migratedCase,defendants}')
+            WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
                 THEN jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,migratedCase,defendants}')
         END AS defendant_count,
         -- Unlike hearings/defendants, `materials` is genuinely optional and
@@ -69,14 +77,19 @@ WITH batch_streams AS (
         CASE name
             WHEN 'stagingdlrm.events.migrated-case-submission-received'
                 THEN COALESCE(jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,materials}'), 0)
+            WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
+                THEN COALESCE(jsonb_array_length(payload::jsonb #> '{migratedCaseSubmission,materials}'), 0)
         END AS material_count
     FROM event_log
     WHERE name IN (
         'stagingdlrm.events.migrated-case-submission-received',
+        'stagingdlrm.events.migrated-case-submission-rejected',
         'stagingdlrm.events.error-migrated-case-submission-received'
     )
     AND CASE name
         WHEN 'stagingdlrm.events.migrated-case-submission-received'
+            THEN payload::jsonb #>> '{migratedCaseSubmission,azureLocation}'
+        WHEN 'stagingdlrm.events.migrated-case-submission-rejected'
             THEN payload::jsonb #>> '{migratedCaseSubmission,azureLocation}'
         WHEN 'stagingdlrm.events.error-migrated-case-submission-received'
             THEN payload::jsonb #>> '{errorMigratedCaseSubmission,azureLocation}'
@@ -153,6 +166,9 @@ SELECT
              AND lpc.description = 'Duplicate Submission ID' THEN 'DUPLICATE'
         WHEN lpc.event_name = 'stagingdlrm.events.migrated-case-submission-processed'
              AND lpc.description = 'Case Already exists in progression' THEN 'CASE_ALREADY_EXISTS'
+        WHEN lpc.event_name = 'stagingdlrm.events.migrated-case-submission-processed'
+             AND lpc.description = 'Migrated case submission rejected by validation rule(s)' THEN 'VALIDATION_REJECTED'
+        WHEN lpc.event_name = 'stagingdlrm.events.migrated-case-submission-rejected' THEN 'VALIDATION_REJECTED'
         WHEN lpc.event_name = 'stagingdlrm.events.migrated-case-submission-processed'
              AND lpc.processing_successful IS FALSE THEN 'PROCESSED_FAILED'
         WHEN lpc.event_name = 'stagingdlrm.events.error-migrated-case-submission-received' THEN 'ERROR'
