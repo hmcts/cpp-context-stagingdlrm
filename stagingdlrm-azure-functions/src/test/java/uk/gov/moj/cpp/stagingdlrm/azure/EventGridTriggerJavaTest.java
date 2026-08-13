@@ -43,9 +43,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
  *
  * <p>Verified against {@code EventGridTriggerJava.run}: {@code dlrm_batch_name} is a comma-separated
  * list, trimmed, matched case-insensitively, with a leading {@code *} meaning "match anything".
- * {@code dlrm_folder_name} is none of those — a single {@code trim().equalsIgnoreCase()} — so a
- * comma-separated folder list does not work today. The row saying so is what flips when DD-43086
- * adds support.
+ * {@code dlrm_folder_name} was none of those — a single {@code trim().equalsIgnoreCase()}.
+ *
+ * <p>DD-43086 LIBRA01 (FR1/FR7) flips that: the folder gate now accepts a comma-separated
+ * source-system list too, routed through the same {@code validateConfiguredNames} helper the batch
+ * gate uses — but with {@code wildcardAllowed=false}, because the folder name <i>is</i> the
+ * source-system gate and a {@code *} must never widen it (AC2). The row that previously pinned the
+ * gap ("a comma-separated folder list is NOT supported yet") is now the AC1 acceptance row, and
+ * new rows pin the AC2 wildcard rejection. Every batch-name row stays exactly as it was — the batch
+ * gate's {@code *} behaviour is unchanged (AC9 regression).
  */
 @ExtendWith(MockitoExtension.class)
 class EventGridTriggerJavaTest {
@@ -117,9 +123,23 @@ class EventGridTriggerJavaTest {
                         "  xhibit  ", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
                 arguments("FR9 a folder other than the configured one is dropped",
                         FOLDER_ENV, BATCH_ENV, submissionPath("XHIBIT1", "Batch0001"), false),
-                // Flips when DD-43086 adds source-system-keyed folders.
-                arguments("FR9 a comma-separated folder list is NOT supported yet — pins today's gap",
-                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false),
+                // DD-43086 LIBRA01/AC1 — the folder gate now accepts a comma-separated source-system list.
+                // This row was the "NOT supported yet" gap-pinning row; it flips to accepted here.
+                arguments("LIBRA01/AC1 a comma-separated folder list accepts its first member (XHIBIT)",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), true),
+                arguments("LIBRA01/AC1 a comma-separated folder list accepts its second member (LIBRA)",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("LIBRA", "Batch0001"), true),
+                arguments("LIBRA01/AC1 a folder outside the configured source-system list is dropped (COMPASS)",
+                        "XHIBIT,LIBRA", BATCH_ENV, submissionPath("COMPASS", "Batch0001"), false),
+                arguments("LIBRA01/AC1 the folder list is trimmed and matched case-insensitively (LIBRA)",
+                        " xhibit , libra ", BATCH_ENV, submissionPath("LIBRA", "Batch0001"), true),
+                // DD-43086 LIBRA01/AC2 — the wildcard must NOT widen the source-system gate, unlike batch.
+                arguments("LIBRA01/AC2 dlrm_folder_name=* must NOT widen the folder gate — a literal * is not a configured folder (XHIBIT)",
+                        "*", BATCH_ENV, submissionPath("XHIBIT", "Batch0001"), false),
+                arguments("LIBRA01/AC2 dlrm_folder_name=* rejects a LIBRA folder too — the wildcard never applies to the folder gate",
+                        "*", BATCH_ENV, submissionPath("LIBRA", "Batch0001"), false),
+                arguments("LIBRA01/AC2 a wildcard entry inside the folder list still does not widen the folder gate",
+                        "XHIBIT,*", BATCH_ENV, submissionPath("COMPASS", "Batch0001"), false),
                 arguments("FR9 a path with fewer than four tokens is dropped",
                         FOLDER_ENV, BATCH_ENV, "test1.json", false));
     }

@@ -81,7 +81,12 @@ public class EventGridTriggerJava {
 
         requireNonNull(folderName, "dlrm_folder_name env var not configured.");
 
-        if (!folderName.trim().equalsIgnoreCase(tokens.get(0))) {
+        final List<String> folderNames = Arrays.stream(folderName.split(","))
+                .map(s -> s.trim().toLowerCase())
+                .toList();
+
+        // FR1: the folder name IS the source-system gate — wildcard is NOT allowed (AC2).
+        if (!validateConfiguredNames(folderNames, tokens.get(0).toLowerCase(), false)) {
             loggerHelper.logInfo(context, submissionId, "Received invalid dlrm folder name : {0}", tokens.get(0));
             return;
         }
@@ -94,9 +99,8 @@ public class EventGridTriggerJava {
                 .map(s -> s.trim().toLowerCase())
                 .toList();
 
-        boolean validBatchName = validateBatchNames(batchNames, tokens.get(1).toLowerCase());
-
-        if (!validBatchName) {
+        // Batch name keeps its wildcard behaviour unchanged (AC9 regression).
+        if (!validateConfiguredNames(batchNames, tokens.get(1).toLowerCase(), true)) {
             loggerHelper.logInfo(context, submissionId, "Received invalid dlrm batch name : {0}", tokens.get(1));
             return;
         }
@@ -116,13 +120,22 @@ public class EventGridTriggerJava {
         loggerHelper.logInfo(context, submissionId, "EventGridTriggerJava processing complete.");
     }
 
-    private boolean validateBatchNames(final List<String> batchNames, String token) {
-
-        if (batchNames.get(0).equalsIgnoreCase("*")) {
+    /**
+     * Shared membership check for the folder-name and batch-name gates (FR1). The only difference
+     * between the two fields is whether the {@code *} wildcard is honoured, passed as a parameter
+     * rather than duplicated as a second method: the folder gate is the source-system boundary and
+     * must never be widened by a wildcard ({@code wildcardAllowed=false}, AC2), while the batch gate
+     * keeps its existing wildcard behaviour ({@code wildcardAllowed=true}).
+     */
+    private boolean validateConfiguredNames(final List<String> configuredNames,
+                                            final String token,
+                                            final boolean wildcardAllowed) {
+        // Matches the pre-existing validateBatchNames behaviour exactly: only a *leading* wildcard
+        // short-circuits the rest of the list, not "*" anywhere in the configured values.
+        if (wildcardAllowed && configuredNames.get(0).equalsIgnoreCase("*")) {
             return true;
         }
-
-        return batchNames.contains(token);
+        return configuredNames.contains(token);
     }
 
     private void setStorageCloudClient(final ExecutionContext context) {

@@ -38,7 +38,6 @@ class MigratedCaseSubmissionAggregateTest {
 
     private static final String XHIBIT = "XHIBIT";
 
-    private static final String XHIBIT_JSON_PATH = "json/aggregate/xhibit/";
 
     private static final UUID WITH_MATERIALS_SUBMISSION_ID = UUID.fromString("11111111-2222-3333-4444-555555555555");
 
@@ -64,46 +63,46 @@ class MigratedCaseSubmissionAggregateTest {
                 Arguments.of(
                         "FR2 migrated-case-submission-received carries the whole submission with materials (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission(XHIBIT_JSON_PATH + "submission-with-materials.json",
-                                        expect(XHIBIT_JSON_PATH + "expected-received-with-materials.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))),
                 Arguments.of(
                         "FR2 migrated-case-submission-received carries the whole submission without materials (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission(XHIBIT_JSON_PATH + "submission-without-materials.json",
-                                        expect(XHIBIT_JSON_PATH + "expected-received-without-materials.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))),
                 Arguments.of(
                         "FR2 recording a processing output appends migrated-case-submission-processed (XHIBIT)",
                         scenario(XHIBIT)
                                 .recordProcessingOutput(standaloneOutput(),
-                                        expect(XHIBIT_JSON_PATH + "expected-processed.json"))),
+                                        expect("json/aggregate/xhibit/expected-processed.json"))),
                 Arguments.of(
                         "FR2 a repeat submission is flagged duplicate then processed unsuccessfully (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission(XHIBIT_JSON_PATH + "submission-with-materials.json",
-                                        expect(XHIBIT_JSON_PATH + "expected-received-with-materials.json"))
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-with-materials.json"))
                                 .recordProcessingOutput(duplicateOutput(),
-                                        expect(XHIBIT_JSON_PATH + "expected-processed-intermediate.json"))
-                                .receiveSubmission(XHIBIT_JSON_PATH + "submission-with-materials.json",
-                                        expect(XHIBIT_JSON_PATH + "expected-duplicated.json"),
-                                        expect(XHIBIT_JSON_PATH + "expected-processed-duplicate.json"))),
+                                        expect("json/aggregate/xhibit/expected-processed-intermediate.json"))
+                                .receiveSubmission("json/aggregate/xhibit/submission-with-materials.json",
+                                        expect("json/aggregate/xhibit/expected-duplicated.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-duplicate.json"))),
                 Arguments.of(
                         "FR2 a case already in progression is recorded then processed unsuccessfully (XHIBIT)",
                         scenario(XHIBIT)
-                                .receiveSubmission(XHIBIT_JSON_PATH + "submission-without-materials.json",
-                                        expect(XHIBIT_JSON_PATH + "expected-received-without-materials.json"))
-                                .caseAlreadyProcessed(XHIBIT_JSON_PATH + "submission-without-materials.json", PROGRESSION_CASE_ID,
-                                        expect(XHIBIT_JSON_PATH + "expected-already-processed.json"),
-                                        expect(XHIBIT_JSON_PATH + "expected-processed-already.json"))),
+                                .receiveSubmission("json/aggregate/xhibit/submission-without-materials.json",
+                                        expect("json/aggregate/xhibit/expected-received-without-materials.json"))
+                                .caseAlreadyProcessed("json/aggregate/xhibit/submission-without-materials.json", PROGRESSION_CASE_ID,
+                                        expect("json/aggregate/xhibit/expected-already-processed.json"),
+                                        expect("json/aggregate/xhibit/expected-processed-already.json"))),
                 Arguments.of(
                         "FR2 an error submission appends error-migrated-case-submission-received (XHIBIT)",
                         scenario(XHIBIT)
                                 .receiveError(errorSubmission(),
-                                        expect(XHIBIT_JSON_PATH + "expected-error.json"))));
+                                        expect("json/aggregate/xhibit/expected-error.json"))));
     }
 
     @Test
     void aggregateInputFixtureRoundTripsUnchanged() {
-        final String json = fixture(XHIBIT_JSON_PATH + "submission-with-materials.json", of("SOURCE_SYSTEM", XHIBIT));
+        final String json = fixture("json/aggregate/xhibit/submission-with-materials.json", of("SOURCE_SYSTEM", XHIBIT));
 
         final MigratedCaseSubmission submission = CONVERTER.convert(readJson(json), MigratedCaseSubmission.class);
 

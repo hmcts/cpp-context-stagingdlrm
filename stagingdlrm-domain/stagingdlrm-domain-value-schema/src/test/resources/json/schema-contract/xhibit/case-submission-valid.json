@@ -13,7 +13,15 @@
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
       "receiptType": "Either way case",
-      "retrialIndicator": false
+      "retrialIndicator": false,
+      "caseMarkers": [
+        {
+          "markerTypeCode": "CD"
+        },
+        {
+          "markerTypeCode": "YO"
+        }
+      ]
     },
     "hearings": [
       {
@@ -25,15 +33,15 @@
         "hearingType": "Trial",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "prosecutorDefendantId": "def-ref-0001",
             "listedOffences": [
-              "LIBRA-offence-id-1"
+              "off-ref-0001"
             ]
           },
           {
-            "prosecutorDefendantId": "LIBRA-defendant-id-2",
+            "prosecutorDefendantId": "def-ref-0002",
             "listedOffences": [
-              "LIBRA-offence-id-2"
+              "off-ref-0002"
             ]
           }
         ]
@@ -41,7 +49,8 @@
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "prosecutorDefendantId": "def-ref-0001",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -62,7 +71,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "prosecutorOffenceId": "off-ref-0001",
             "offenceCode": "CA03013",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -74,7 +83,8 @@
         ]
       },
       {
-        "prosecutorDefendantId": "LIBRA-defendant-id-2",
+        "id": "aaaaaaaa-0000-0000-0000-000000000002",
+        "prosecutorDefendantId": "def-ref-0002",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
@@ -95,7 +105,7 @@
         },
         "offences": [
           {
-            "prosecutorOffenceId": "LIBRA-offence-id-2",
+            "prosecutorOffenceId": "off-ref-0002",
             "offenceCode": "DA03014",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2018-09-10",
@@ -108,21 +118,21 @@
       }
     ],
     "migrationSourceSystem": {
-      "migrationSourceSystemName": "LIBRA",
-      "migrationSourceSystemCaseIdentifier": "This is from Libra"
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "case-identifier-0001"
     }
   },
   "materials": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
-      "azureLocation": "http://inazure/secrets/1",
+      "azureLocation": "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-one.wav",
       "fileName": "Audio Recording one",
       "fileType": ".wav",
       "documentType": 3
     },
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
-      "azureLocation": "http://inazure/secrets/2",
+      "azureLocation": "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555/recording-two.wav",
       "fileName": "Audio Recording two",
       "fileType": ".wav",
       "documentType": 3
@@ -132,6 +142,6 @@
     "id": "550e8400-e29b-41d4-a716-446655440003",
     "numberOfMaterials": 2
   },
-  "submissionId": "SUBMISSION_ID",
-  "azureLocation": "TVL55117DFXXV"
+  "submissionId": "11111111-2222-3333-4444-555555555555",
+  "azureLocation": "{{SOURCE_SYSTEM}}/20082025/case-identifier-0001/11111111-2222-3333-4444-555555555555"
 }

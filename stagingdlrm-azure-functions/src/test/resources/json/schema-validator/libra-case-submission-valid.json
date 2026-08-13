@@ -1,0 +1,40 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "LIB55117DFXXV",
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "C",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "summonsCode": "A",
+      "informant": "PC 1234 {{SOURCE_SYSTEM}}",
+      "writtenChargePostingDate": "2024-01-15",
+      "cpsOrganisation": "CPS0007",
+      "caseMarkers": [
+        {
+          "markerTypeCode": "YOU"
+        }
+      ]
+    },
+    "defendants": [
+      {
+        "prosecutorDefendantId": "D1",
+        "documentationLanguage": "E",
+        "hearingLanguage": "E",
+        "address": {
+          "address1": "1 Test Street"
+        },
+        "offences": [
+          {
+            "offenceCode": "CODE0001",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2024-01-01",
+            "offenceDateCode": 1,
+            "offenceWording": "Test offence wording"
+          }
+        ]
+      }
+    ]
+  }
+}
