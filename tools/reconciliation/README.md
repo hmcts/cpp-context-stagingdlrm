@@ -168,10 +168,10 @@ prefix.
 |---|---|
 | `batch_id` | The batch identifier passed as the script's argument. |
 | `submission_id` | stagingdlrm's identifier for this submission — the `event_log` stream ID. |
-| `case_urn` | The prosecutor's case reference, resolved from the submission's entry event (`received` or `error`). |
+| `case_urn` | The prosecutor's case reference, resolved from the submission's entry event (`received`, `rejected` or `error`). |
 | `case_id` | The CPP Case File UUID, resolved via `system-id-mapper`. Only set once a `processed` event exists — blank for `RECEIVED`/`ERROR`. |
-| `status` | `RECEIVED` (validated, nothing since) / `PROCESSED` / `DUPLICATE` / `CASE_ALREADY_EXISTS` / `PROCESSED_FAILED` (other failed-processing reason) / `ERROR` (schema/validation failure) / `UNKNOWN` (defensive fallback). |
-| `description` | Failure reason for `PROCESSED_FAILED`/`DUPLICATE`/`CASE_ALREADY_EXISTS`/`ERROR`. Blank on success. |
+| `status` | `RECEIVED` (validated, nothing since) / `PROCESSED` / `DUPLICATE` / `CASE_ALREADY_EXISTS` / `VALIDATION_REJECTED` (refused by a stagingDLRM business rule) / `PROCESSED_FAILED` (other failed-processing reason) / `ERROR` (schema/validation failure) / `UNKNOWN` (defensive fallback). |
+| `description` | Failure reason for `PROCESSED_FAILED`/`DUPLICATE`/`CASE_ALREADY_EXISTS`/`VALIDATION_REJECTED`/`ERROR`. Blank on success. |
 | `duplicate_submissions_received` | Count of duplicate-resubmission events, independent of `status`. |
 | `azure_location` | The blob path (`source/batch/case/submissionId`) — cross-reference with the funcapp report. |
 | `hearing_count` | Number of hearings in the submitted case. Blank for `ERROR` rows. |
@@ -234,7 +234,7 @@ the only optional input (a missing one just blanks the `funcapp_*` columns and d
 | `listing_case_reference` / `listing_hearing_count` | From `listing_report.csv` — only populated once `pcf_status=PROCESSED` **and** the case was actually found in listing. |
 | `case_reference_match` / `hearing_count_match` | `true`/`false` comparison of staging vs. listing values, computed only when listing data was found. A mismatch does **not** change `overall_status` — it's a separate data-consistency signal, surfaced via `overall_description`. |
 | `hearing_status` | Aggregate hearing-allocation status from listing's `hearings` array, computed only when listing data was found: semicolon-joined counts of matching hearings per category — `allocated_hearing=<n>` / `unscheduled_hearing=<n>` / `week_commencing_hearing=<n>` / `unallocated_hearing=<n>` (any combination can appear together; a category is omitted entirely when its count is `0`). E.g. a case with 2 week-commencing hearings and 1 unallocated hearing reads `week_commencing_hearing=2; unallocated_hearing=1`. Blank if no listing data or `hearings` is empty. |
-| `overall_status` | `NEVER_INGESTED` (never reached stagingdlrm) / `STUCK_AT_STAGINGDLRM` (staging status is `ERROR`/`RECEIVED`/`DUPLICATE`/`CASE_ALREADY_EXISTS`/`PROCESSED_FAILED`/`UNKNOWN`) / `STUCK_AT_PCFDLRM` (staging succeeded, pcf hasn't) / `PROCESSED_NO_HEARING_TO_LIST` (staging+pcf succeeded, case has no hearings — never reaches Listing by design) / `STUCK_AT_LISTING` (staging+pcf succeeded, case has hearings, but absent from Listing) / `PROCESSED` (all three stages succeeded) / `UNKNOWN` (defensive fallback). **First column to check when triaging a batch.** |
+| `overall_status` | `NEVER_INGESTED` (never reached stagingdlrm) / `STUCK_AT_STAGINGDLRM` (staging status is `ERROR`/`RECEIVED`/`DUPLICATE`/`CASE_ALREADY_EXISTS`/`VALIDATION_REJECTED`/`PROCESSED_FAILED`/`UNKNOWN`) / `STUCK_AT_PCFDLRM` (staging succeeded, pcf hasn't) / `PROCESSED_NO_HEARING_TO_LIST` (staging+pcf succeeded, case has no hearings — never reaches Listing by design) / `STUCK_AT_LISTING` (staging+pcf succeeded, case has hearings, but absent from Listing) / `PROCESSED` (all three stages succeeded) / `UNKNOWN` (defensive fallback). **First column to check when triaging a batch.** |
 | `overall_description` | Blank unless a match-flag mismatch was found, in which case it names the field(s) and both values (e.g. `hearing_count mismatch: staging='3' vs listing='2'`). Also populated (with an explanatory note) for `PROCESSED_NO_HEARING_TO_LIST` rows. Does not affect `overall_status`. |
 
 This summary deliberately omits columns available in the per-script CSVs (`latest_event`,

@@ -5,6 +5,27 @@ Reads the 'Libra Case - Min Data' tab and emits a draft-04 JSON Schema shaped li
 runtime schema: a `migratedCase` envelope over caseDetails / hearings / defendants[], with shared
 `definitions`.
 
+TWO FILES come out of this. The schema is written to be SHARED — with the LIBRA extract team, the
+func-app owner, anyone building against it — so it carries no trace of the workbook: no sheet names,
+no row numbers, no Format cells, no internal notes, and it follows the live XHIBIT schema's shape
+and conventions down to definition order. Everything the workbook says goes to the provenance
+sidecar beside it (`<schema>.provenance.json`), which is internal and is what
+build-schema-impact.py reads.
+
+The workbook is NOT the naming or typing authority. It is read alongside the two live contracts —
+the flattened canonical schema (--reference) and the live XHIBIT schema (--xhibit) — and wherever
+the contract already models a field, the contract wins:
+
+  * NAMES — the sheet's own field name is mapped onto the contract's property name (CONTRACT_ALIASES,
+    every target checked against the live XHIBIT schema at generation time).
+  * DEFINITIONS — a field the contract already declares takes the contract's fragment verbatim
+    ($ref/type/maxLength/pattern/enum), not the derivation from the sheet's Format cell. Where the
+    two disagree, the contract is emitted and the sheet's reading goes to the sidecar and the report,
+    classified as a conflict, an unstated Format cell, or the contract merely being looser.
+  * SHAPE — definitions the contract reuses in several places are reused here too (MERGED_CONTAINERS),
+    so `required` on a shared definition is the intersection of its contributors.
+  * `required` is the one thing that stays sheet-derived: it is LIBRA's own mandatoriness.
+
 Only LIBRA is generated. XHIBIT is already in production — its live contract is the func-app's
 own schema resources (stagingdlrm-azure-functions/src/main/resources) plus the canonical
 stagingdlrm-domain-value-schema module, both read directly by the other scripts here. There is
@@ -34,6 +55,9 @@ Design decisions baked in (see docs/analysis/libra-ingestion-analysis.md):
   reference schema at generation time rather than re-typed here, so the regexes cannot drift.
   The reference is the flattened canonical schema, so the primitives come from what stagingDLRM
   actually enforces today — run flatten-canonical-schema.py first (regenerate.sh does).
+* Contract lookup is per CONTAINER, not by bare property name: `officerInCase.surname` is a
+  LIBRA-only field even though `personalInformation.surname` exists, and the parent-guardian
+  block resolves against the contract's own oneOf branches instead of reading as unmodelled.
 
 Usage:
     python3 tools/schema-gen/generate-dlrm-schema.py            # write + report
@@ -55,6 +79,8 @@ REPO = Path(__file__).resolve().parents[2]
 DEFAULT_WORKBOOK = REPO / "docs/analysis/libra-ingestion/DLRM - CP Migration Data Schema V0.13.xlsx"
 DEFAULT_REFERENCE = (REPO / "docs/analysis/libra-ingestion/schema/canonical"
                      / "staging-dlrm-canonical-flattened.json")
+DEFAULT_XHIBIT = (REPO / "docs/analysis/libra-ingestion/schema/xhibit"
+                  / "dlrm-xhibit-0.12.json")
 
 # The sheet documents initiation codes (LIBRA C/S/Q/J). Emitted as plain
 # strings with the values in the description rather than an `enum`, because an over-tight enum
@@ -64,6 +90,12 @@ EMIT_CODE_ENUMS = False
 
 # Primitive definitions copied verbatim from the reference schema (never re-typed here).
 COPIED_DEFINITIONS = ["date", "datePattern", "uuid", "phone", "email", "migrationSourceSystemName"]
+
+# The schema is the shareable artefact; everything the workbook says about a field lands here.
+PROVENANCE_SUFFIX = ".provenance.json"
+
+# The envelope property both contracts hang the case model off.
+REFERENCE_ROOT_PROPERTY = "migratedCase"
 
 NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
@@ -75,12 +107,16 @@ OUCODE_PROPERTIES = {"prosecutingAuthority", "originatingOrganisation", "cpsOrga
                      "courtHearingLocation", "policeWorkerLocationCode", "sendingCourt",
                      "receivingCourt", "convictingCourtCode"}
 
-# The reference definition the novel-field check is scoped to — see reference_property_index().
-REFERENCE_ROOT_DEFINITION = "migratedCase"
-
-# Sheet names the canonical schema carries under a different property name, so they are NOT novel.
-# Mirrors RENAMES in build-schema-impact.py, which owns the canonical-side mapping.
-REFERENCE_ALIASES = {"pleaCode", "verdictCode", "allocationDecisionCode"}
+# Property names whose fragment is a generator CONVENTION rather than a reading of the sheet's
+# Format cell (see by_property()). A difference between one of these and the contract is not a
+# workbook signal, so it is not reported as one.
+CONVENTION_PROPERTIES = {"postcode", "primaryEmail", "secondaryEmail", "emailAddress1",
+                         "emailAddress2", "work", "home", "mobile", "workTelephoneNumber",
+                         "mobileTelephoneNumber", "homeTelephoneNumber",
+                         "telephoneNumberBusiness", "companyTelephoneNumber",
+                         "organisationTelephoneNumber", "faxNumber",
+                         "migrationSourceSystemName", "listedOffences", "aliasForCorporate",
+                         "startDate"}
 
 
 # --------------------------------------------------------------------------------------
@@ -88,6 +124,33 @@ REFERENCE_ALIASES = {"pleaCode", "verdictCode", "allocationDecisionCode"}
 #   key: (definition name, parent container key, property on parent, array?, strict?)
 # `strict` mirrors whether the reference schema sets additionalProperties:false there.
 # --------------------------------------------------------------------------------------
+
+# Containers that do NOT get a definition of their own: their fields are unioned into another
+# container's, because the live contract reuses one definition in both places and this schema
+# follows its shape. `required` on a shared definition is the INTERSECTION of its contributors — a
+# field is mandatory only where every section that supplies it says so, the same rule the generator
+# already applies across the sheet's case-type columns. Each intersection that actually drops a
+# `required` is reported, never silent.
+MERGED_CONTAINERS = {
+    "pgPersonalInfo":   "personalInfo",
+    "pgContactDetails": "contactDetails",
+    "pgAddress":        "address",
+    "pgOrgAddress":     "address",
+    "officerAddress":   "address",
+}
+
+# The two parent-guardian containers render as one definition holding a oneOf of two inline
+# branches, which is how both live contracts model it.
+PG_BRANCHES = ("pgPerson", "pgOrg")
+PG_DEFINITION = "parentGuardianInformation"
+
+# Containers whose JSONPath parent cannot be read off CONTAINERS: pgOrg is the second branch of the
+# same oneOf pgPerson attaches through, so both sit at the same path.
+PATH_PARENT = {"pgOrg": ("individual", "parentGuardianInformation")}
+
+# Definition-level descriptions for the definitions the live contract does not have. Every other
+# definition takes the contract's own wording, so the two files read alike.
+LIBRA_ONLY_DESCRIPTIONS = {"officerInCase": "Officer in Case"}
 
 CONTAINERS = OrderedDict([
     ("caseDetails",       ("caseDetails", None, "caseDetails", False, True)),
@@ -109,10 +172,10 @@ CONTAINERS = OrderedDict([
     ("plea",              ("plea", "offence", "plea", False, True)),
     ("verdict",           ("verdict", "offence", "verdict", False, True)),
     ("allocation",        ("allocationDecision", "offence", "allocationDecision", False, True)),
-    # Parent guardian gets its own definitions rather than reusing the shared
-    # personalInformation/address/contactDetails ones (which is what the canonical schema does),
-    # because the sheet's mandatoriness for these rows differs from the defendant's — sharing would
-    # silently weaken the defendant's own required list. Reported as a deviation.
+    # Parent guardian and the officer's address reuse the shared personalInformation / address /
+    # contactDetails definitions, as both live contracts do — see MERGED_CONTAINERS. These keys
+    # still exist because they are how the sheet's sections route, and because the ATTACHMENT and
+    # its mandatoriness are derived per section; only the definition is shared.
     ("pgPerson",          ("parentGuardianPerson", "individual", "parentGuardianInformation", False, True)),
     ("pgPersonalInfo",    ("parentGuardianPersonalInformation", "pgPerson", "personalInformation", False, False)),
     ("pgContactDetails",  ("parentGuardianContactDetails", "pgPersonalInfo", "contactDetails", False, True)),
@@ -124,10 +187,65 @@ CONTAINERS = OrderedDict([
     ("officerAddress",    ("officerInCaseAddress", "officerInCase", "address", False, True)),
 ])
 
-# Containers with no counterpart anywhere in the reference schema — every field inside them is
-# source-system-only, even where the property name (surname, address1, ...) coincides with one
-# used elsewhere in the reference.
-UNREFERENCED_CONTAINERS = {"officerInCase", "officerAddress"}
+# --------------------------------------------------------------------------------------
+# Where each container lives in the two live contracts: (definition name, oneOf discriminator).
+# The discriminator is a property that must appear in the branch, so the parent-guardian lookup
+# does not depend on the order of the contract's oneOf. None = the definition's own properties.
+#
+# `None` for the whole entry means the container has NO counterpart in either contract: every
+# field inside it is LIBRA-only, even where the property name (surname, address1, ...) coincides
+# with one the contract uses elsewhere.
+# --------------------------------------------------------------------------------------
+
+LIVE_DEFINITIONS = {
+    "caseDetails":      ("caseDetails", None),
+    "prosecutor":       ("prosecutor", None),
+    "caseMarkers":      ("caseMarkers", None),
+    "migrationSource":  ("migrationSourceSystem", None),
+    "hearing":          ("hearing", None),
+    "weekCommencing":   ("weekCommencingDate", None),
+    "listedDefendant":  ("listedDefendant", None),
+    "defendant":        ("defendant", None),
+    "address":          ("address", None),
+    "individual":       ("individual", None),
+    "personalInfo":     ("personalInformation", None),
+    "contactDetails":   ("contactDetails", None),
+    "selfDefinedInfo":  ("selfDefinedInformation", None),
+    "individualAlias":  ("individualAlias", None),
+    "offence":          ("offence", None),
+    "alcohol":          ("alcoholRelatedOffence", None),
+    "plea":             ("plea", None),
+    "verdict":          ("verdict", None),
+    "allocation":       ("allocationDecision", None),
+    # The contract models parent guardian as one oneOf(person | organisation); the generator gives
+    # each side its own definition, so both resolve against the same contract definition.
+    "pgPerson":         ("parentGuardianInformation", "personalInformation"),
+    "pgPersonalInfo":   ("personalInformation", None),
+    "pgContactDetails": ("contactDetails", None),
+    "pgAddress":        ("address", None),
+    "pgOrg":            ("parentGuardianInformation", "organisationName"),
+    "pgOrgAddress":     ("address", None),
+    # LIBRA-only section — nothing in either contract models an officer in case. Its ADDRESS is not
+    # LIBRA-only, though: it shares the contract's address definition (MERGED_CONTAINERS), so it
+    # resolves there and its fields take the contract's definitions like any other.
+    "officerInCase":    None,
+    "officerAddress":   ("address", None),
+}
+
+# The sheet names a field differently from the live contract. Keyed by (container key, the name
+# LIBRA_FIELDS produces) -> the contract's own property name. Every target is checked against the
+# live XHIBIT schema at generation time, so a stale entry fails the run rather than quietly
+# emitting a name no contract has.
+#
+# These three are the same concept under another name AND another type: LIBRA supplies a
+# reference-data code where the contract expects an already-resolved UUID. The contract's name and
+# type are emitted; that LIBRA sends a code is recorded in the description, because nothing in the
+# pipeline performs code -> UUID resolution (libra-workbook-corrections.md D4).
+CONTRACT_ALIASES = {
+    ("plea", "pleaCode"): "id",
+    ("verdict", "verdictCode"): "id",
+    ("allocation", "allocationDecisionCode"): "motReasonId",
+}
 
 
 # --------------------------------------------------------------------------------------
@@ -151,8 +269,10 @@ LIBRA_FIELDS = {
     "casemarker/casemarker":                    ("caseMarkers", "markerTypeCode"),
     # --- Future Hearing(s) ------------------------------------------------------------
     "hearing/courthearinglocation":             ("hearing", "courtHearingLocation"),
+    "hearing/courtroomid":                      ("hearing", "courtRoomId"),
     "hearing/dateofhearing":                    ("hearing", "dateOfHearing"),
     "hearing/timeofhearing":                    ("hearing", "timeOfHearing"),
+    "hearing/durationminutes":                  ("hearing", "durationMinutes"),
     "hearing/hearingtype":                      ("hearing", "hearingType"),
     # --- Listed Defendants / Listed Offences ------------------------------------------
     "listeddefendants/prosecutordefendantid":   ("listedDefendant", "prosecutorDefendantId"),
@@ -176,6 +296,11 @@ LIBRA_FIELDS = {
     "officerincase/mobiletelephonenumber":      ("officerInCase", "mobileTelephoneNumber"),
     "officerincase/primaryemail":               ("officerInCase", "primaryEmail"),
     "officerincase/secondaryemail":             ("officerInCase", "secondaryEmail"),
+    # The revised sheet calls the officer's two addresses emailAddress1/2. Nothing in either
+    # contract models an officer, so the generator keeps the primary/secondary naming the rest of
+    # the analysis and PCFDLRM's contact-details schema use.
+    "officerincase/emailaddress1":              ("officerInCase", "primaryEmail"),
+    "officerincase/emailaddress2":              ("officerInCase", "secondaryEmail"),
     "officerincase/faxnumber":                  ("officerInCase", "faxNumber"),
     "officerincase/dxaddress":                  ("officerInCase", "dxAddress"),
     # --- Defendant --------------------------------------------------------------------
@@ -198,6 +323,10 @@ LIBRA_FIELDS = {
     "defendant/mobiletelephonenumber":          ("contactDetails", "mobile"),
     "defendant/primaryemail":                   ("contactDetails", "primaryEmail"),
     "defendant/secondaryemail":                 ("contactDetails", "secondaryEmail"),
+    # The revised sheet renamed these; the contract holds both on the defendant itself, not under
+    # personalInformation.contactDetails, so they map there.
+    "defendant/emailaddress1":                  ("defendant", "emailAddress1"),
+    "defendant/emailaddress2":                  ("defendant", "emailAddress2"),
     "defendant/dateofbirth":                    ("selfDefinedInfo", "dateOfBirth"),
     "defendant/gender":                         ("selfDefinedInfo", "gender"),
     "defendant/observedethnicity":              ("personalInfo", "observedEthnicity"),
@@ -251,7 +380,11 @@ LIBRA_FIELDS = {
     "parentguardian/parentguardian-address5":               ("pgAddress", "address5"),
     "parentguardian/parentguardian-postcode":               ("pgAddress", "postcode"),
     # --- Offence ----------------------------------------------------------------------
+    "offence/prosecutoroffenceid":              ("offence", "prosecutorOffenceId"),
+    # The sheet renamed cjsOffenceCode to offenceCode, matching the contract; both keys are kept so
+    # an earlier revision of the workbook still generates.
     "offence/cjsoffencecode":                   ("offence", "offenceCode"),
+    "offence/offencecode":                      ("offence", "offenceCode"),
     "offence/offencesequenceno":                ("offence", "offenceSequenceNumber"),
     "offence/chargedate":                       ("offence", "chargeDate"),
     "offence/offencedatecode":                  ("offence", "offenceDateCode"),
@@ -276,10 +409,12 @@ LIBRA_FIELDS = {
     "offence/pleacode":                         ("plea", "pleaCode"),
     "offence/pleadate":                         ("plea", "pleaDate"),
     "offence/verdictcode":                      ("verdict", "verdictCode"),
+    "offence/verdicttype":                      ("verdict", "verdictCode"),
     "offence/verdictdate":                      ("verdict", "verdictDate"),
     "offence/convictiondate":                   ("offence", "convictionDate"),
     "offence/allocationdecision":               ("allocation", "allocationDecisionCode"),
     "offence/allocationdecisionrecordeddate":   ("allocation", "allocationDecisionDate"),
+    "offence/allocationdecisiondate":           ("allocation", "allocationDecisionDate"),
 }
 
 LIBRA_SECTIONS = [
@@ -288,6 +423,8 @@ LIBRA_SECTIONS = [
     ("futurehearing", "hearing"),
     ("listeddefendants", "listeddefendants"),
     ("listedoffences", "listedoffences"),
+    # The revised sheet renamed the heading to "Individual Alias Array - TO Change per v12 - ...".
+    ("individualalias", "aliasarray"),
     ("aliasarray", "aliasarray"),
     ("parentguardian", "parentguardian"),
     ("offencerelatedfields", "offence"),
@@ -390,16 +527,15 @@ def norm(text):
 # Format code -> JSON Schema fragment
 # --------------------------------------------------------------------------------------
 
-def fragment_for(fmt, prop, notes, postcode_pattern):
-    """Translate a sheet Format code into a JSON Schema fragment.
+def by_property(prop, postcode):
+    """The fragment this generator uses for a property by convention, or None.
 
-    A<n>=text(n)  N<n>=integer(n digits)  D10=ISO date  T8=hh:mm:ss  S1=single-char code
-    (+)N<n>.<d>=non-negative decimal  Boolean  Axx/TBC/blank=unknown length
+    These never come from the sheet's Format cell — the shared primitives and the two array
+    shapes are fixed by the contract's own vocabulary — so they are also the fragments whose
+    disagreement with the contract is not a workbook signal (CONVENTION_PROPERTIES).
     """
-    fmt = (fmt or "").strip()
-
     if prop == "postcode":
-        return {"type": "string", "pattern": postcode_pattern, "maxLength": 8}
+        return dict(postcode)
     if prop in ("primaryEmail", "secondaryEmail", "emailAddress1", "emailAddress2"):
         return {"$ref": "#/definitions/email"}
     if prop in ("work", "home", "mobile", "workTelephoneNumber", "mobileTelephoneNumber",
@@ -414,6 +550,20 @@ def fragment_for(fmt, prop, notes, postcode_pattern):
         return {"type": "array", "items": {"type": "string"}}
     if prop == "startDate":
         return {"$ref": "#/definitions/datePattern"}
+    return None
+
+
+def fragment_for(fmt, prop, notes, postcode):
+    """Translate a sheet Format code into a JSON Schema fragment.
+
+    A<n>=text(n)  N<n>=integer(n digits)  D10=ISO date  T8=hh:mm:ss  S1=single-char code
+    (+)N<n>.<d>=non-negative decimal  Boolean  Axx/TBC/blank=unknown length
+    """
+    fmt = (fmt or "").strip()
+
+    convention = by_property(prop, postcode)
+    if convention is not None:
+        return convention
 
     if fmt.upper().startswith("D"):
         return {"$ref": "#/definitions/date"}
@@ -458,6 +608,181 @@ def coded_values(text):
 
 
 # --------------------------------------------------------------------------------------
+# The live contracts: names and definitions the workbook does not get to override
+# --------------------------------------------------------------------------------------
+
+COMPARE_KEYS = ("type", "maxLength", "minLength", "maximum", "minimum", "pattern", "enum",
+                "minItems", "format")
+
+
+def live_properties(schema, locator):
+    """{property: fragment} for a container in a live contract. {} if it has no counterpart."""
+    if locator is None:
+        return {}
+    name, discriminator = locator
+    entry = schema.get("definitions", {}).get(name, {})
+    if discriminator is None:
+        return entry.get("properties") or {}
+    for branch in entry.get("oneOf", []) or entry.get("anyOf", []) or []:
+        properties = branch.get("properties") or {}
+        if discriminator in properties:
+            return properties
+    return {}
+
+
+def flatten_constraints(fragment, definitions):
+    """A fragment's effective constraints, following one level of local $ref.
+
+    So `{$ref: ukGovPostCode}` and the same pattern written inline compare equal — the contract
+    and the sheet often express one constraint two ways, and only a real difference is a signal.
+    """
+    node = fragment
+    ref = fragment.get("$ref", "")
+    if ref.startswith("#/definitions/"):
+        target = definitions.get(ref.split("/")[-1], {})
+        node = {**target, **{k: v for k, v in fragment.items() if k != "$ref"}}
+    out = {k: node[k] for k in COMPARE_KEYS if k in node}
+    if isinstance(node.get("items"), dict):
+        out["items"] = flatten_constraints(node["items"], definitions)
+    return out
+
+
+def summarise_fragment(fragment):
+    """A one-line human reading of a fragment, for the report and the description."""
+    if "$ref" in fragment:
+        return f"$ref {fragment['$ref'].split('/')[-1]}"
+    bits = [str(fragment.get("type", "?"))]
+    for key in ("maxLength", "minLength", "maximum", "minimum"):
+        if key in fragment:
+            bits.append(f"{key} {fragment[key]}")
+    if "pattern" in fragment:
+        bits.append("pattern")
+    if "enum" in fragment:
+        bits.append("enum " + "/".join(map(str, fragment["enum"])))
+    return " ".join(bits)
+
+
+# How a sheet reading and a contract definition disagree. Only CONFLICT (and, weakly, UNSTATED)
+# is a question for the workbook owner; CONTRACT_LOOSER says the gate enforces less than LIBRA's
+# own data dictionary does, which is a note about the contract, not about the sheet.
+OVERRIDE_UNSTATED = "sheet unstated"
+OVERRIDE_CONFLICT = "conflict"
+OVERRIDE_LOOSER = "contract looser"
+
+OVERRIDE_HEADINGS = {
+    OVERRIDE_UNSTATED: ("SHEET FORMAT UNSTATED, CONTRACT USED",
+                        "the Format cell is blank/TBC/Axx, so the contract's definition fills the "
+                        "gap. Confirm the real LIBRA constraint"),
+    OVERRIDE_CONFLICT: ("SHEET AND CONTRACT CONFLICT",
+                        "the sheet states a constraint the contract contradicts — a different "
+                        "type, an enum the sheet does not mention, or a different bound. The "
+                        "contract wins; each of these needs adjudicating"),
+    OVERRIDE_LOOSER: ("CONTRACT LOOSER THAN THE SHEET",
+                      "same type, but the contract does not carry a bound the sheet states, so "
+                      "the gate will accept values LIBRA says cannot occur. Informational"),
+}
+
+
+def override_kind(fmt, sheet_constraints, contract_constraints):
+    """Classify a sheet-vs-contract disagreement. See OVERRIDE_HEADINGS."""
+    if (fmt or "").strip().lower() in ("", "axx", "tbc"):
+        return OVERRIDE_UNSTATED
+    if sheet_constraints.get("type") != contract_constraints.get("type"):
+        return OVERRIDE_CONFLICT
+    if any(key in contract_constraints and key not in sheet_constraints
+           for key in ("enum", "pattern")):
+        return OVERRIDE_CONFLICT
+    if any(sheet_constraints[key] != contract_constraints[key]
+           for key in set(sheet_constraints) & set(contract_constraints)):
+        return OVERRIDE_CONFLICT
+    return OVERRIDE_LOOSER
+
+
+def contract_index(canonical, xhibit):
+    """{container key: {property: fragment}} across both live contracts, plus their drift.
+
+    Both contracts define the same fields; where both have one, the LIVE XHIBIT fragment is the one
+    copied, because this schema is written to XHIBIT's shape and conventions and XHIBIT expresses a
+    few constraints differently (an inline postcode pattern where the canonical module holds a
+    shared `ukGovPostCode`, an inline integer where it holds `positiveInteger`). Semantics come from
+    canonical either way — the two are compared field by field and any real difference is reported
+    as module-vs-production drift, which is a finding about the contracts, not about LIBRA.
+    Canonical fills in anything the live schema does not carry.
+    """
+    canon_defs = canonical.get("definitions", {})
+    xhibit_defs = xhibit.get("definitions", {})
+    index, drift = {}, []
+
+    for key, locator in LIVE_DEFINITIONS.items():
+        canon_props = live_properties(canonical, locator)
+        xhibit_props = live_properties(xhibit, locator)
+        # Live-schema order first: the emitted schema follows it, so the two files diff side by side.
+        merged = OrderedDict()
+        for prop in list(xhibit_props) + [p for p in canon_props if p not in xhibit_props]:
+            in_canon, in_xhibit = prop in canon_props, prop in xhibit_props
+            if not in_xhibit:
+                drift.append((key, prop, "in canonical only"))
+            elif not in_canon:
+                drift.append((key, prop, "in the live XHIBIT schema only"))
+            elif (flatten_constraints(canon_props[prop], canon_defs)
+                  != flatten_constraints(xhibit_props[prop], xhibit_defs)):
+                drift.append((key, prop,
+                              f"canonical {summarise_fragment(canon_props[prop])} vs live XHIBIT "
+                              f"{summarise_fragment(xhibit_props[prop])} — XHIBIT's is emitted"))
+            merged[prop] = xhibit_props[prop] if in_xhibit else canon_props[prop]
+        index[key] = merged
+
+    return index, drift
+
+
+def contract_shape(xhibit):
+    """(definition descriptions, definition order, root property order) from the live contract.
+
+    The shared schema takes all three, so it reads and diffs like the contract DLRM already has: the
+    same wording on each definition, and the same order both down the file and within each object.
+    """
+    definitions = xhibit.get("definitions", {})
+    descriptions = {name: entry["description"] for name, entry in definitions.items()
+                    if isinstance(entry, dict) and entry.get("description")}
+    root = ((xhibit.get("properties") or {}).get(REFERENCE_ROOT_PROPERTY) or {})
+    return descriptions, list(definitions), list(root.get("properties") or {})
+
+
+def check_aliases(index, xhibit):
+    """Every alias must land on a property the live XHIBIT schema actually declares."""
+    stale = []
+    for (container_key, sheet_name), target in sorted(CONTRACT_ALIASES.items()):
+        live = live_properties(xhibit, LIVE_DEFINITIONS.get(container_key))
+        if target not in live:
+            stale.append(f"{container_key}.{sheet_name} -> {target}: the live XHIBIT schema's "
+                         f"{container_key} has no {target!r} (it has: "
+                         f"{', '.join(sorted(live)) or 'nothing'})")
+        elif container_key not in index:
+            stale.append(f"{container_key}.{sheet_name} -> {target}: {container_key} is not a "
+                         "known container")
+    if stale:
+        sys.exit("error: CONTRACT_ALIASES no longer match the live XHIBIT schema:\n  "
+                 + "\n  ".join(stale))
+
+
+def referenced_definitions(fragment, definitions, found):
+    """Collect the local definitions a copied fragment depends on, transitively."""
+    if isinstance(fragment, dict):
+        ref = fragment.get("$ref", "")
+        if ref.startswith("#/definitions/"):
+            name = ref.split("/")[-1]
+            if name not in found:
+                found.add(name)
+                referenced_definitions(definitions.get(name, {}), definitions, found)
+        for value in fragment.values():
+            referenced_definitions(value, definitions, found)
+    elif isinstance(fragment, list):
+        for item in fragment:
+            referenced_definitions(item, definitions, found)
+    return found
+
+
+# --------------------------------------------------------------------------------------
 # Build
 # --------------------------------------------------------------------------------------
 
@@ -471,44 +796,59 @@ def mandatoriness(cells, profile):
     return marks
 
 
-def describe(row_no, cells, marks, notes, unreferenced, profile, reference_name):
-    parts = []
+MARK_LABELS = {"M": "Mandatory", "O": "Optional", "CM": "Conditionally mandatory",
+               "N/A": "Not applicable"}
+
+
+def sheet_meaning(cells, profile):
+    """The field's meaning as the sheet states it — the Description column and nothing else.
+
+    This is the only workbook text that reaches the shared schema, and only for a field the live
+    contract does not already describe. Mandatoriness, business rules, comments, ref-data sources
+    and row numbers are provenance, not contract, and go to the sidecar.
+    """
+    text = (cells.get(profile.desc) or "").strip().rstrip(".")
+    return f"{text}." if text else None
+
+
+def provenance_for(row_no, section, cells, marks, profile, container_key, prop, required,
+                   unreferenced, difference, sheet_fragment, values):
+    """Everything the sheet says about a field, for the sidecar. Never for the shared schema."""
+    record = OrderedDict()
+    record["sheetRow"] = row_no
+    record["sheetSection"] = section
+    record["sheetField"] = cells.get(profile.field, "")
+    record["definition"] = definition_of(container_key)
+    record["property"] = prop
     if cells.get(profile.desc):
-        parts.append(cells[profile.desc].rstrip("."))
-
-    labels = {"M": "Mandatory", "O": "Optional", "CM": "Conditionally mandatory",
-              "N/A": "Not applicable"}
-
-    def summarise(pairs):
-        grouped = OrderedDict()
-        for case_type, mark in pairs:
-            if mark:
-                grouped.setdefault(mark, []).append(case_type)
-        return "; ".join(f"{labels.get(m, m)}: {', '.join(v)}" for m, v in grouped.items())
-
-    primary = summarise(marks.items())
-    if primary:
-        parts.append(primary)
-
+        record["description"] = cells[profile.desc]
+    record["format"] = cells.get(profile.fmt, "")
+    record["mandatoriness"] = OrderedDict(
+        (case_type, MARK_LABELS.get(mark, mark)) for case_type, mark in marks.items() if mark)
+    record["required"] = required
     if cells.get(profile.rules):
-        parts.append(f"Business rules: {cells[profile.rules].rstrip('.')}")
+        record["businessRules"] = cells[profile.rules]
     if cells.get(profile.comment):
-        parts.append(f"Comment: {cells[profile.comment].rstrip('.')}")
+        record["comment"] = cells[profile.comment]
     if cells.get(profile.refdata[0]):
-        parts.append(f"Ref data source: {cells[profile.refdata[0]]}")
-    parts.extend(notes)
-    if unreferenced:
-        parts.append(f"NOT IN {reference_name} — no equivalent in the reference schema")
-    parts.append(f"Sheet row {row_no}")
-    return ". ".join(parts) + "."
+        record["referenceDataSource"] = cells[profile.refdata[0]]
+    if values:
+        record["documentedValues"] = values
+    record["inContract"] = not unreferenced
+    if difference is not None:
+        record["sheetConstraint"] = OrderedDict([("reads", sheet_fragment),
+                                                 ("difference", difference)])
+    return record
 
 
-def build(rows, reference, profile, reference_name, postcode_pattern):
+def build(rows, reference, live, profile, reference_name, postcode):
     containers = {key: {"props": OrderedDict(), "required": [], "rows": {}} for key in CONTAINERS}
     report = {"unmapped": [], "unreferenced": [], "conflicts": [], "attachment_marks": {},
+              "renamed": [], "inherited": [], "overridden": [], "copied_refs": set(),
+              "provenance": [], "intersected": [],
               "counts": {"total": len(rows), "blank": 0, "section": 0, "header": 0,
                          "field": 0, "structural": 0}}
-    ref_props = reference_property_index(reference)
+    reference_defs = reference.get("definitions", {})
 
     section = None
     for row_no, cells in rows:
@@ -540,28 +880,87 @@ def build(rows, reference, profile, reference_name, postcode_pattern):
             report["counts"]["structural"] += 1
             if lookup in ATTACHMENT_ROWS:
                 marks = mandatoriness(cells, profile)
-                report["attachment_marks"][ATTACHMENT_ROWS[lookup]] = (
-                    all(m == "M" for m in marks.values() if m),
-                    describe(row_no, cells, marks, [], False, profile, reference_name),
-                )
+                container_key = ATTACHMENT_ROWS[lookup]
+                parent, prop = CONTAINERS[container_key][1], CONTAINERS[container_key][2]
+                required = all(m == "M" for m in marks.values() if m)
+                report["attachment_marks"][container_key] = required
+                record = provenance_for(row_no, section, cells, marks, profile, parent, prop,
+                                        required, False, None, None, None)
+                # The row declares a nested array, not a field: it has no constraints of its own,
+                # and its mandatoriness is carried by the attachment.
+                record["attachment"] = True
+                report["provenance"].append((parent, prop, record))
             continue
 
-        container_key, prop = mapping
-        notes = []
-        fragment = fragment_for(cells.get(profile.fmt, ""), prop, notes, postcode_pattern)
-        values = coded_values(f"{cells.get(profile.rules, '')} {cells.get(profile.comment, '')}")
-        if values and fragment.get("type") == "string" and len(values) > 1:
-            if EMIT_CODE_ENUMS:
-                fragment["enum"] = values
-            else:
-                notes.append(f"Documented values: {', '.join(values)} (not enforced as an enum here)")
+        container_key, sheet_prop = mapping
+        # The contract's name wins over the sheet's. check_aliases() has already verified that
+        # every target exists in the live XHIBIT schema.
+        prop = CONTRACT_ALIASES.get((container_key, sheet_prop), sheet_prop)
+        if norm(name) != norm(prop):
+            report["renamed"].append((row_no, container_key, name, prop,
+                                      "CONTRACT_ALIASES" if prop != sheet_prop else "field map"))
 
-        unreferenced = container_key in UNREFERENCED_CONTAINERS or prop not in ref_props
-        marks = mandatoriness(cells, profile)
-        fragment["description"] = describe(row_no, cells, marks, notes, unreferenced,
-                                           profile, reference_name)
+        fmt = cells.get(profile.fmt, "")
+        sheet_notes = []
+        sheet_fragment = fragment_for(fmt, prop, sheet_notes, postcode)
+
+        # A field the contract already declares takes the contract's definition, not the sheet's.
+        inherited = live.get(container_key, {}).get(prop)
+        difference = None            # how the sheet's own reading disagrees, if it does
+        if inherited is None:
+            fragment, notes = sheet_fragment, sheet_notes
+        else:
+            fragment = json.loads(json.dumps(inherited))     # copied, never referenced in place
+            fragment.pop("description", None)
+            report["inherited"].append((container_key, prop))
+            notes = []
+            # Only a Format-cell reading can disagree with the contract in a way the workbook owner
+            # can act on; a CONVENTION_PROPERTIES fragment is this generator's own choice.
+            sheet_constraints = flatten_constraints(sheet_fragment, reference_defs)
+            contract_constraints = flatten_constraints(fragment, reference_defs)
+            if prop not in CONVENTION_PROPERTIES and sheet_constraints != contract_constraints:
+                difference = override_kind(fmt, sheet_constraints, contract_constraints)
+                sheet_reading = summarise_fragment(sheet_fragment)
+                contract_reading = summarise_fragment(fragment)
+                notes.append(f"Sheet format {fmt or '(blank)'} reads as {sheet_reading}; the "
+                             f"contract's {contract_reading} is used instead ({difference})")
+                report["overridden"].append((difference, row_no, container_key, prop,
+                                             fmt or "(blank)", sheet_reading, contract_reading))
+
+        values = coded_values(f"{cells.get(profile.rules, '')} {cells.get(profile.comment, '')}")
+        if values and len(values) > 1 and EMIT_CODE_ENUMS and "enum" not in fragment \
+                and fragment.get("type") == "string":
+            fragment["enum"] = values
+
+        # Whatever the fragment ended up being, the definitions it points at have to travel with it.
+        referenced_definitions(fragment, reference_defs, report["copied_refs"])
+
+        unreferenced = inherited is None
+        # The shared schema carries the contract's own wording where it has one, the sheet's
+        # Description column where it does not, and nothing else. Everything the sheet says about
+        # the field — its name there, its Format cell, mandatoriness per case type, business rules,
+        # comments, row number — is provenance and goes to the sidecar.
         if unreferenced:
-            report["unreferenced"].append((row_no, section, name, prop))
+            meaning = sheet_meaning(cells, profile)
+            if meaning:
+                fragment["description"] = meaning
+        elif "description" in fragment and not fragment["description"].strip():
+            fragment.pop("description")
+
+        marks = mandatoriness(cells, profile)
+        # Required only if the row is marked, and every mark it does carry is `M`. A BLANK cell
+        # means "not stated for this case type", not "optional" — the sheet leaves whole column
+        # groups blank per section, so treating blank as non-mandatory would drop almost every
+        # required field. Any O/CM/N/A anywhere disqualifies: a single shared schema cannot
+        # demand a field that some case type says is optional or inapplicable.
+        stated = [m for m in marks.values() if m]
+        required = bool(stated) and all(m == "M" for m in stated)
+
+        report["provenance"].append((container_key, prop, provenance_for(
+            row_no, section, cells, marks, profile, container_key, prop, required, unreferenced,
+            difference, sheet_fragment, values if len(values) > 1 else None)))
+        if unreferenced:
+            report["unreferenced"].append((row_no, section, name, f"{container_key}.{prop}"))
 
         bucket = containers[container_key]
         if prop in bucket["props"]:
@@ -569,76 +968,62 @@ def build(rows, reference, profile, reference_name, postcode_pattern):
             continue
         bucket["props"][prop] = fragment
         bucket["rows"][prop] = row_no
-        # Required only if the row is marked, and every mark it does carry is `M`. A BLANK cell
-        # means "not stated for this case type", not "optional" — the sheet leaves whole column
-        # groups blank per section, so treating blank as non-mandatory would drop almost every
-        # required field. Any O/CM/N/A anywhere disqualifies: a single shared schema cannot
-        # demand a field that some case type says is optional or inapplicable.
-        stated = [m for m in marks.values() if m]
-        if stated and all(m == "M" for m in stated):
+        if required:
             bucket["required"].append(prop)
 
     return containers, report
 
 
-def reference_postcode_pattern(schema):
-    """The reference's address.postcode regex, following one level of local $ref.
+def reference_postcode(schema):
+    """The fragment to use for a postcode the contract does not model (the officer's address).
 
-    The canonical schema holds it behind a shared `ukGovPostCode` definition rather than inline,
-    so the pattern has to be chased through the $ref instead of read straight off the property.
+    Reuses the reference's own `address.postcode` — a `$ref` to the shared `ukGovPostCode`
+    definition where it has one, so the regex lives in exactly one place, and the inline pattern
+    otherwise. Returns None if the reference has no postcode at all.
     """
     definitions = schema.get("definitions", {})
     node = definitions.get("address", {}).get("properties", {}).get("postcode", {})
     ref = node.get("$ref", "")
+    if ref.startswith("#/definitions/") and "pattern" in definitions.get(ref.split("/")[-1], {}):
+        return {"$ref": ref}
+    return ({"type": "string", "pattern": node["pattern"], "maxLength": 8}
+            if "pattern" in node else None)
+
+
+def is_structural(fragment, definitions):
+    """True if a contract property is a nested object/array, not a leaf the sheet would supply."""
+    node = fragment
+    ref = fragment.get("$ref", "")
     if ref.startswith("#/definitions/"):
         node = definitions.get(ref.split("/")[-1], {})
-    return node.get("pattern")
+    if node.get("properties") or node.get("oneOf") or node.get("anyOf"):
+        return True
+    items = node.get("items")
+    return isinstance(items, dict) and is_structural(items, definitions)
 
 
-def reference_property_index(schema):
-    """Property names reachable from the reference's `migratedCase` definition.
-
-    Scoped rather than whole-document: the flattened canonical schema also carries the submission
-    envelope and the outcome/error payloads, so an unscoped walk would count `fileName`, `payload`
-    or `errorMessage` as case-model fields and quietly mark a genuinely novel LIBRA field as
-    already present.
-
-    Falls back to the whole document when there is no `migratedCase` definition, so an arbitrary
-    --reference still works.
-    """
-    definitions = schema.get("definitions", {})
-    root = definitions.get(REFERENCE_ROOT_DEFINITION, schema)
-
-    found, seen = set(), set()
-
-    def walk(node):
-        if isinstance(node, dict):
-            ref = node.get("$ref", "")
-            if ref.startswith("#/definitions/"):
-                name = ref.split("/")[-1]
-                if name not in seen:
-                    seen.add(name)
-                    walk(definitions.get(name, {}))
-            for key, value in node.items():
-                if key == "properties" and isinstance(value, dict):
-                    found.update(value)
-                walk(value)
-        elif isinstance(node, list):
-            for item in node:
-                walk(item)
-
-    walk(root)
-    return found | REFERENCE_ALIASES
+def ordered(props, reference_order):
+    """`props` in the live contract's own order, with anything it does not have kept last."""
+    rank = {name: i for i, name in enumerate(reference_order)}
+    return OrderedDict(sorted(props.items(), key=lambda kv: rank.get(kv[0], len(rank))))
 
 
-def assemble(containers, reference, workbook, profile, report):
+def definition_of(key):
+    """The definition a container's fields end up in — its own, or the one it shares."""
+    if key in PG_BRANCHES:
+        return PG_DEFINITION
+    return CONTAINERS[MERGED_CONTAINERS.get(key, key)][0]
+
+
+def assemble(containers, reference, live, live_descriptions, live_order, root_order,
+             workbook, profile, report):
     definitions = OrderedDict()
 
     # Child containers attach into their parent as $ref before parents are emitted.
     # A child whose own contents include a mandatory field makes the attachment itself
     # mandatory in the parent (this is how the canonical schema ends up requiring
-    # caseDetails.prosecutor and defendant.offences). parentGuardianPerson is excluded: it attaches through a oneOf,
-    # and `M` marks there mean "mandatory within the block if a guardian exists".
+    # caseDetails.prosecutor and defendant.offences). pgPerson is excluded: it attaches through a
+    # oneOf, and `M` marks there mean "mandatory within the block if a guardian exists".
     derived_required, empty_attachments = [], []
     for key, (def_name, parent, prop, is_array, _strict) in CONTAINERS.items():
         if parent is None or prop is None:
@@ -651,45 +1036,91 @@ def assemble(containers, reference, workbook, profile, report):
         explicit = report["attachment_marks"].get(key)
         is_required = bool(containers[key]["required"]) and key != "pgPerson"
         if explicit is not None:
-            is_required = explicit[0]   # the sheet's own row for this container wins
+            is_required = explicit           # the sheet's own row for this container wins
 
-        ref = {"$ref": f"#/definitions/{def_name}"}
+        # A merged container attaches as a $ref to the definition it shares, not to one of its own.
+        ref = {"$ref": f"#/definitions/{definition_of(key)}"}
         attach = {"type": "array", "items": ref} if is_array else ref
         if is_array and is_required:
             attach["minItems"] = 1
-        if explicit is not None:
-            attach["description"] = explicit[1]
         containers[parent]["props"][prop] = attach
         if is_required:
             containers[parent]["required"].append(prop)
             if explicit is None:
-                derived_required.append(f"{CONTAINERS[parent][0]}.{prop}")
+                derived_required.append(f"{definition_of(parent)}.{prop}")
 
-    # parentGuardianInformation keeps the reference schema's oneOf(person | organisation).
-    if containers["pgOrg"]["props"] and containers["pgPerson"]["props"]:
-        containers["individual"]["props"]["parentGuardianInformation"] = {
-            "description": "Parent Guardian Information — an individual or an organisation.",
-            "oneOf": [{"$ref": "#/definitions/parentGuardianPerson"},
-                      {"$ref": "#/definitions/parentGuardianOrganisation"}],
-        }
-
-    for key, (def_name, _parent, _prop, _is_array, strict) in CONTAINERS.items():
-        bucket = containers[key]
-        if not bucket["props"]:
+    # parentGuardianInformation is ONE definition holding a oneOf of two inline branches, which is
+    # how both live contracts model it.
+    for key in PG_BRANCHES:
+        if not containers[key]["props"]:
             continue
-        entry = OrderedDict([("type", "object"), ("properties", bucket["props"])])
-        if bucket["required"]:
-            entry["required"] = sorted(bucket["required"])
+        containers["individual"]["props"].setdefault(
+            PG_DEFINITION, {"$ref": f"#/definitions/{PG_DEFINITION}"})
+
+    # One definition per distinct target, fields unioned and `required` INTERSECTED across the
+    # sections that contribute to it (MERGED_CONTAINERS).
+    contributors = OrderedDict()
+    for key in CONTAINERS:
+        if containers[key]["props"] and key not in PG_BRANCHES:   # the pg pair is emitted below
+            contributors.setdefault(definition_of(key), []).append(key)
+
+    for def_name, keys in contributors.items():
+        props, required, strict = OrderedDict(), None, False
+        for key in keys:
+            bucket = containers[key]
+            for prop, fragment in bucket["props"].items():
+                props.setdefault(prop, fragment)
+            own = set(bucket["required"])
+            # Plain intersection: a section that does not carry the field at all is a section that
+            # does not require it. Anything looser over-constrains whichever section lacks it —
+            # requiring `address` on the shared personalInformation because a parent guardian must
+            # have one would force one onto every defendant too.
+            required = own if required is None else required & own
+            strict = strict or CONTAINERS[key][4]
+        if len(keys) > 1:
+            for key in keys:
+                for prop in sorted(set(containers[key]["required"]) - required):
+                    report["intersected"].append((def_name, prop, key))
+        entry = OrderedDict([("type", "object")])
+        description = live_descriptions.get(def_name, LIBRA_ONLY_DESCRIPTIONS.get(def_name))
+        if description:
+            entry["description"] = description
+        entry["properties"] = ordered(props, live.get(keys[0], {}))
+        if required:
+            entry["required"] = sorted(required)
         if strict:
             entry["additionalProperties"] = False
         definitions[def_name] = entry
 
+    if all(containers[key]["props"] for key in PG_BRANCHES):
+        branches = []
+        for key in PG_BRANCHES:
+            branch = OrderedDict([("properties", ordered(containers[key]["props"],
+                                                         live.get(key, {})))])
+            if containers[key]["required"]:
+                branch["required"] = sorted(containers[key]["required"])
+            branch["additionalProperties"] = False
+            branches.append(branch)
+        entry = OrderedDict([("type", "object")])
+        if PG_DEFINITION in live_descriptions:
+            entry["description"] = live_descriptions[PG_DEFINITION]
+        entry["oneOf"] = branches
+        definitions[PG_DEFINITION] = entry
+
     report["derived_required"] = derived_required
     report["empty_attachments"] = empty_attachments
 
-    for name in COPIED_DEFINITIONS:
+    # Shared primitives: those the emitted fragments actually point at, and no others — an unused
+    # definition is noise in a schema meant to be read by the people building the extract.
+    extra = sorted(report["copied_refs"] - set(COPIED_DEFINITIONS) - set(definitions))
+    for name in COPIED_DEFINITIONS + extra:
+        if name not in report["copied_refs"]:
+            continue
         if name in reference.get("definitions", {}):
             definitions[name] = reference["definitions"][name]
+        else:
+            sys.exit(f"error: an emitted fragment references #/definitions/{name}, which the "
+                     "reference schema does not define")
 
     migrated_case = OrderedDict()
     for key, (def_name, parent, prop, is_array, _s) in CONTAINERS.items():
@@ -698,17 +1129,19 @@ def assemble(containers, reference, workbook, profile, report):
         ref = {"$ref": f"#/definitions/{def_name}"}
         migrated_case[prop] = {"type": "array", "items": ref} if is_array else ref
 
+    # Definition order follows the live contract's, so the two files diff cleanly side by side;
+    # definitions the contract does not have keep their CONTAINERS order and come last.
+    order = {name: i for i, name in enumerate(live_order)}
+    definitions = OrderedDict(sorted(definitions.items(),
+                                     key=lambda kv: order.get(kv[0], len(order))))
+
+    migrated_case = ordered(migrated_case, root_order)
+
     return OrderedDict([
         ("$schema", "http://json-schema.org/draft-04/schema#"),
         ("id", profile.schema_id),
         ("type", "object"),
-        ("description",
-         f"Migrated Case File Submission ({profile.name}) — generated from '{profile.sheet}' in "
-         f"{Path(workbook).name} by tools/schema-gen/generate-dlrm-schema.py. "
-         "Do not hand-edit; regenerate from the workbook. `required` is the intersection of the "
-         f"sheet's {', '.join(profile.marks.values())} columns — per-case-type mandatoriness is "
-         "in each field's description and must be enforced by the source-system validation "
-         "rules, not here."),
+        ("description", f"Migrated Case File Submission ({profile.name}) - Combined Schema"),
         ("properties", {"migratedCase": OrderedDict([
             ("type", "object"),
             ("properties", migrated_case),
@@ -726,17 +1159,9 @@ def assemble(containers, reference, workbook, profile, report):
 # Reporting
 # --------------------------------------------------------------------------------------
 
-STRUCTURAL_PROPERTIES = {
-    "migratedCase", "caseDetails", "hearings", "defendants", "migrationSourceSystem", "offences",
-    "individual", "personalInformation", "selfDefinedInformation", "parentGuardianInformation",
-    "contactDetails", "address", "caseMarkers", "individualAliases", "listedDefendants",
-    "alcoholRelatedOffence", "plea", "verdict", "allocationDecision", "prosecutor",
-    "weekCommencingDate",
-}
-
-
-def print_report(report, containers, reference, out_path, wrote, profile, reference_name):
-    ref_props = reference_property_index(reference)
+def print_report(report, containers, reference, live, drift, out_path, wrote, profile,
+                 reference_name):
+    reference_defs = reference.get("definitions", {})
     emitted = {p for c in containers.values() for p in c["props"]}
     counts = report["counts"]
     mapped = counts["field"] - len(report["unmapped"]) - counts["structural"] - len(report["conflicts"])
@@ -749,6 +1174,47 @@ def print_report(report, containers, reference, out_path, wrote, profile, refere
           f" + {len(report['unmapped'])} unmapped + {len(report['conflicts'])} conflicting")
     print(f"  definitions: {sum(1 for c in containers.values() if c['props'])}"
           f"   distinct property names: {len(emitted)}")
+    print(f"  contract-defined fields: {len(report['inherited'])} inherited"
+          f" ({len(report['overridden'])} overriding the sheet's own format)"
+          f" + {len(report['unreferenced'])} LIBRA-only")
+
+    if report["intersected"]:
+        print(f"\n  REQUIRED INTERSECTED AWAY ({len(report['intersected'])}) — the contract reuses"
+              " one definition where the")
+        print("  sheet marks the field differently per section, so it cannot be mandatory in the"
+              " schema. Enforce")
+        print("  these in the LIBRA validation rules:")
+        for def_name, prop, key in report["intersected"]:
+            print(f"    {def_name}.{prop}: mandatory at {container_path(key)},"
+                  f" not everywhere {def_name} is used")
+
+    if report["renamed"]:
+        print(f"\n  NAME MAPPED TO THE CONTRACT ({len(report['renamed'])}) — the sheet's own field"
+              " name is not the")
+        print("  contract's; the contract's name is emitted, the sheet's is recorded in the"
+              " provenance sidecar:")
+        for row_no, container_key, sheet_name, prop, source in report["renamed"]:
+            print(f"    row {row_no:>3}  {sheet_name} -> {CONTAINERS[container_key][0]}.{prop}"
+                  f"  [{source}]")
+
+    for kind in (OVERRIDE_CONFLICT, OVERRIDE_UNSTATED, OVERRIDE_LOOSER):
+        group = [o for o in report["overridden"] if o[0] == kind]
+        if not group:
+            continue
+        heading, explanation = OVERRIDE_HEADINGS[kind]
+        print(f"\n  {heading} ({len(group)}) — {explanation}:")
+        for _kind, row_no, container_key, prop, fmt, sheet_reading, contract in group:
+            print(f"    row {row_no:>3}  {CONTAINERS[container_key][0]}.{prop}")
+            print(f"             sheet {fmt}: {sheet_reading}")
+            print(f"             contract:   {contract}")
+
+    if drift:
+        print(f"\n  LIVE CONTRACT DRIFT ({len(drift)}) — the canonical module and the live XHIBIT"
+              " schema disagree.")
+        print("  Not a LIBRA finding; the canonical definition was used where both have the"
+              " field:")
+        for container_key, prop, detail in drift:
+            print(f"    {CONTAINERS[container_key][0]}.{prop}: {detail}")
 
     if report["unmapped"]:
         print(f"\n  UNMAPPED sheet rows ({len(report['unmapped'])}) — not in the profile's field map:")
@@ -772,10 +1238,19 @@ def print_report(report, containers, reference, out_path, wrote, profile, refere
         for row_no, section, name, prop in report["unreferenced"]:
             print(f"    row {row_no:>3}  [{section}] {name} -> {prop}")
 
-    missing = sorted(ref_props - emitted - STRUCTURAL_PROPERTIES)
+    # Reverse delta, per container: a contract field the sheet never supplies. Scoped by container
+    # rather than by bare name, so `officerInCase` no longer masks `personalInformation.surname`
+    # and the parent-guardian block is compared against the contract's own oneOf branches.
+    missing = []
+    for key, props in live.items():
+        if not containers[key]["props"]:
+            continue
+        for prop, fragment in props.items():
+            if prop not in containers[key]["props"] and not is_structural(fragment, reference_defs):
+                missing.append(f"{CONTAINERS[key][0]}.{prop}")
     if missing:
         print(f"\n  IN {reference_name}, ABSENT FROM THE SHEET ({len(missing)}) — reverse delta:")
-        print("    " + ", ".join(missing))
+        print("    " + ", ".join(sorted(missing)))
 
     if report.get("derived_required"):
         print(f"\n  DERIVED required ({len(report['derived_required'])}) — nested objects the sheet")
@@ -856,17 +1331,84 @@ def compare(generated, other, other_path):
           f"{len(req_diffs)} required, {len(con_diffs)} constraint differences.")
 
 
+# --------------------------------------------------------------------------------------
+# The provenance sidecar
+# --------------------------------------------------------------------------------------
+
+def container_path(key):
+    """The JSONPath prefix a container's fields sit at, e.g. $.migratedCase.defendants[*]."""
+    parent, prop = PATH_PARENT.get(key, (CONTAINERS[key][1], CONTAINERS[key][2]))
+    if prop is None:
+        return None
+    is_array = CONTAINERS[key][3]
+    suffix = f"{prop}[*]" if is_array else prop
+    if parent is None:
+        return f"$.migratedCase.{suffix}"
+    prefix = container_path(parent)
+    return f"{prefix}.{suffix}" if prefix else None
+
+
+def provenance_document(report, profile, workbook, reference_name):
+    """Everything the workbook says, keyed by JSONPath — the internal half of the generation.
+
+    Kept out of the schema so that file can be shared as a contract, and structured rather than
+    left in prose so build-schema-impact.py can join on it exactly.
+    """
+    fields = OrderedDict()
+    for container_key, prop, record in report["provenance"]:
+        prefix = container_path(container_key)
+        fields[f"{prefix}.{prop}" if prefix else prop] = record
+
+    deviations = []
+    for def_name, prop, key in report["intersected"]:
+        deviations.append(f"{def_name}.{prop}: the sheet makes it mandatory at "
+                          f"{container_path(key)}, but the contract reuses {def_name} elsewhere and "
+                          "the sheet does not make it mandatory there, so `required` was "
+                          "intersected away — enforce it in the LIBRA validation rules")
+    for kind, row_no, container_key, prop, fmt, sheet_reading, contract in report["overridden"]:
+        deviations.append(f"{definition_of(container_key)}.{prop}: sheet row {row_no} Format {fmt} "
+                          f"reads as {sheet_reading}; the contract's {contract} was emitted "
+                          f"({kind})")
+
+    return OrderedDict([
+        ("description",
+         f"Provenance for {profile.out} — what the workbook says about each field, and every point "
+         "at which the live contract overrode it. Generated with the schema by "
+         "tools/schema-gen/generate-dlrm-schema.py; do not hand-edit. This file is INTERNAL: the "
+         "schema is the shareable artefact and deliberately carries none of this."),
+        ("workbook", Path(workbook).name),
+        ("sheet", profile.sheet),
+        ("contract", reference_name),
+        ("caseTypeColumns", list(profile.marks.values())),
+        ("requiredRule",
+         "A field is `required` in the schema only where every case-type column that states a mark "
+         "says M. A blank cell means 'not stated for this case type' and is ignored; any O/CM/N/A "
+         "disqualifies. Per-case-type mandatoriness is in each field's `mandatoriness` below and "
+         "must be enforced by the source-system validation rules, not by the schema."),
+        ("deviations", deviations),
+        ("fields", fields),
+    ])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--workbook", default=str(DEFAULT_WORKBOOK))
     ap.add_argument("--sheet", help="override the sheet name")
     ap.add_argument("--reference", default=str(DEFAULT_REFERENCE),
-                    help="schema to copy shared primitives from and flag novel fields against "
-                         "(default: the flattened canonical schema — generate it first with "
-                         "flatten-canonical-schema.py)")
+                    help="the schema field definitions and shared primitives are taken from, and "
+                         "novel fields are flagged against (default: the flattened canonical "
+                         "schema — generate it first with flatten-canonical-schema.py)")
+    ap.add_argument("--xhibit", default=str(DEFAULT_XHIBIT),
+                    help="the live XHIBIT contract, used to check every name mapping and to fill "
+                         "in fields the canonical module does not carry "
+                         f"(default: {DEFAULT_XHIBIT.name})")
     ap.add_argument("--out-dir", default=".",
-                    help="directory to write the schema into (default: current directory)")
+                    help="directory to write the schema and its provenance sidecar into "
+                         "(default: current directory)")
     ap.add_argument("--out", help="explicit output path; overrides --out-dir")
+    ap.add_argument("--provenance",
+                    help="explicit path for the provenance sidecar (default: the schema's name "
+                         f"with '{PROVENANCE_SUFFIX}')")
     ap.add_argument("--compare", metavar="SCHEMA",
                     help="also diff the generated schema against an existing one")
     ap.add_argument("--dry-run", action="store_true", help="report only, write nothing")
@@ -876,27 +1418,40 @@ def main():
     sheet = args.sheet or profile.sheet
     out_path = Path(args.out) if args.out else Path(args.out_dir) / profile.out
 
-    for path in (args.workbook, args.reference):
+    for path in (args.workbook, args.reference, args.xhibit):
         if not Path(path).exists():
             sys.exit(f"error: not found: {path}")
 
     reference = json.loads(Path(args.reference).read_text(encoding="utf-8"))
     reference_name = Path(args.reference).name
+    xhibit = json.loads(Path(args.xhibit).read_text(encoding="utf-8"))
 
-    postcode_pattern = reference_postcode_pattern(reference)
-    if not postcode_pattern:
+    postcode = reference_postcode(reference)
+    if not postcode:
         sys.exit(f"error: no address.postcode pattern in {args.reference}")
 
+    live, drift = contract_index(reference, xhibit)
+    check_aliases(live, xhibit)
+    descriptions, order, root_order = contract_shape(xhibit)
+
     rows = read_sheet(args.workbook, sheet)
-    containers, report = build(rows, reference, profile, reference_name, postcode_pattern)
-    schema = assemble(containers, reference, args.workbook, profile, report)
+    containers, report = build(rows, reference, live, profile, reference_name, postcode)
+    schema = assemble(containers, reference, live, descriptions, order, root_order,
+                      args.workbook, profile, report)
+    provenance = provenance_document(report, profile, args.workbook, reference_name)
+    provenance_path = Path(args.provenance) if args.provenance else out_path.with_name(
+        out_path.stem + PROVENANCE_SUFFIX)
 
     if not args.dry_run:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(schema, indent=2, ensure_ascii=False) + "\n",
                             encoding="utf-8")
+        provenance_path.parent.mkdir(parents=True, exist_ok=True)
+        provenance_path.write_text(json.dumps(provenance, indent=2, ensure_ascii=False) + "\n",
+                                   encoding="utf-8")
 
-    print_report(report, containers, reference, out_path, not args.dry_run, profile, reference_name)
+    print_report(report, containers, reference, live, drift, out_path, not args.dry_run, profile,
+                 reference_name)
 
     if args.compare:
         if not Path(args.compare).exists():

@@ -1,0 +1,79 @@
+{
+  "migratedCaseSubmission" : {
+    "azureLocation" : "{{SOURCE_SYSTEM}}/20082025/case-identifier-0002/22222222-3333-4444-5555-666666666666",
+    "metadata" : {
+      "id" : "550e8400-e29b-41d4-a716-446655440004",
+      "numberOfMaterials" : 0
+    },
+    "migratedCase" : {
+      "caseDetails" : {
+        "dateOfCommittal" : "2024-01-15",
+        "dateOfSending" : "2024-08-23",
+        "dateReceived" : "2024-01-15",
+        "initiationCode" : "O",
+        "originatingOrganisation" : "G94DV00",
+        "prosecutor" : {
+          "prosecutingAuthority" : "GAEAA01"
+        },
+        "prosecutorCaseReference" : "TVL55117DFXXV",
+        "receiptType" : "Either way case",
+        "receivingCourt" : "B01LY00",
+        "retrialIndicator" : false,
+        "sendingCourt" : "C50EX00"
+      },
+      "defendants" : [ {
+        "documentationLanguage" : "W",
+        "hearingLanguage" : "W",
+        "id" : "aaaaaaaa-0000-0000-0000-000000000001",
+        "individual" : {
+          "personalInformation" : {
+            "address" : {
+              "address1" : "armagaddon house",
+              "postcode" : "M60 1NW"
+            },
+            "contactDetails" : { },
+            "forename" : "John",
+            "surname" : "Smith",
+            "title" : "Baron"
+          },
+          "selfDefinedInformation" : {
+            "ethnicity" : "W1",
+            "gender" : 1
+          }
+        },
+        "offences" : [ {
+          "chargeDate" : "2015-04-04",
+          "offenceCode" : "CA03013",
+          "offenceCommittedDate" : "2018-09-10",
+          "offenceDateCode" : 1,
+          "offenceLocation" : "Croydon",
+          "offenceSequenceNumber" : 1,
+          "offenceWording" : "TV Licence not paid",
+          "prosecutorOffenceId" : "off-ref-0001"
+        } ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      } ],
+      "hearings" : [ {
+        "courtHearingLocation" : "B01LY01",
+        "courtRoomId" : 60,
+        "dateOfHearing" : "2024-11-10",
+        "durationMinutes" : 60,
+        "hearingType" : "Trial",
+        "listedDefendants" : [ {
+          "listedOffences" : [ "off-ref-0001" ],
+          "prosecutorDefendantId" : "def-ref-0001"
+        } ],
+        "timeOfHearing" : "10:05:01"
+      } ],
+      "migrationSourceSystem" : {
+        "migrationSourceSystemCaseIdentifier" : "case-identifier-0002",
+        "migrationSourceSystemName" : "{{SOURCE_SYSTEM}}"
+      }
+    },
+    "submissionId" : "22222222-3333-4444-5555-666666666666"
+  },
+  "validationErrors" : [ {
+    "jsonPath" : "$",
+    "message" : "test-only always-failing rule"
+  } ]
+}

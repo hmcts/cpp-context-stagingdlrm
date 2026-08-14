@@ -1,0 +1,2586 @@
+{
+  "description": "Provenance for dlrm-libra-0.13.json — what the workbook says about each field, and every point at which the live contract overrode it. Generated with the schema by tools/schema-gen/generate-dlrm-schema.py; do not hand-edit. This file is INTERNAL: the schema is the shareable artefact and deliberately carries none of this.",
+  "workbook": "DLRM - CP Migration Data Schema V0.13.xlsx",
+  "sheet": "Libra Case - Min Data",
+  "contract": "staging-dlrm-canonical-flattened.json",
+  "caseTypeColumns": [
+    "SJP Referral",
+    "Summons",
+    "Charge",
+    "Postal Requisition"
+  ],
+  "requiredRule": "A field is `required` in the schema only where every case-type column that states a mark says M. A blank cell means 'not stated for this case type' and is ignored; any O/CM/N/A disqualifies. Per-case-type mandatoriness is in each field's `mandatoriness` below and must be enforced by the source-system validation rules, not by the schema.",
+  "deviations": [
+    "personalInformation.forename: the sheet makes it mandatory at $.migratedCase.defendants[*].individual.personalInformation, but the contract reuses personalInformation elsewhere and the sheet does not make it mandatory there, so `required` was intersected away — enforce it in the LIBRA validation rules",
+    "personalInformation.address: the sheet makes it mandatory at $.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation, but the contract reuses personalInformation elsewhere and the sheet does not make it mandatory there, so `required` was intersected away — enforce it in the LIBRA validation rules",
+    "caseDetails.initiationCode: sheet row 5 Format A1 reads as string maxLength 1; the contract's string enum O was emitted (conflict)",
+    "migrationSourceSystem.migrationSourceSystemCaseIdentifier: sheet row 7 Format A100 reads as string maxLength 100; the contract's string was emitted (contract looser)",
+    "hearing.courtRoomId: sheet row 16 Format A36 reads as string maxLength 36; the contract's integer was emitted (conflict)",
+    "hearing.durationMinutes: sheet row 19 Format N5 reads as integer maximum 99999 minimum 0; the contract's integer maximum 99999 was emitted (contract looser)",
+    "personalInformation.observedEthnicity: sheet row 70 Format N1 reads as integer maximum 9 minimum 0; the contract's integer was emitted (contract looser)",
+    "individualAlias.firstName: sheet row 95 Format A35 reads as string maxLength 35; the contract's string was emitted (contract looser)",
+    "individualAlias.givenName2: sheet row 96 Format A35 reads as string maxLength 35; the contract's string was emitted (contract looser)",
+    "individualAlias.givenName3: sheet row 97 Format A35 reads as string maxLength 35; the contract's string was emitted (contract looser)",
+    "individualAlias.lastName: sheet row 98 Format A35 reads as string maxLength 35; the contract's string was emitted (contract looser)",
+    "parentGuardianInformation.organisationName: sheet row 101 Format (blank) reads as string; the contract's string maxLength 255 was emitted (sheet unstated)",
+    "personalInformation.forename: sheet row 103 Format A35 reads as string maxLength 35; the contract's string maxLength 255 was emitted (conflict)",
+    "personalInformation.middleName: sheet row 104 Format A35 reads as string maxLength 35; the contract's string maxLength 255 was emitted (conflict)",
+    "personalInformation.surname: sheet row 106 Format A35 reads as string maxLength 35; the contract's string maxLength 255 was emitted (conflict)",
+    "personalInformation.observedEthnicity: sheet row 114 Format (blank) reads as string; the contract's integer was emitted (sheet unstated)",
+    "offence.offenceSequenceNumber: sheet row 126 Format N3 reads as integer maximum 999 minimum 0; the contract's integer maximum 999 was emitted (contract looser)",
+    "offence.offenceDateCode: sheet row 128 Format N1 reads as integer maximum 9 minimum 0; the contract's integer maximum 6 minimum 1 was emitted (conflict)",
+    "alcoholRelatedOffence.alcoholOrDrugLevelAmount: sheet row 133 Format N3 reads as integer maximum 999 minimum 0; the contract's integer maximum 999 was emitted (contract looser)",
+    "plea.id: sheet row 144 Format A36 reads as string maxLength 36; the contract's $ref uuid was emitted (conflict)",
+    "verdict.id: sheet row 146 Format A36 reads as string maxLength 36; the contract's $ref uuid was emitted (conflict)",
+    "allocationDecision.motReasonId: sheet row 149 Format A36 reads as string maxLength 36; the contract's $ref uuid was emitted (conflict)"
+  ],
+  "fields": {
+    "$.migratedCase.caseDetails.prosecutor.prosecutingAuthority": {
+      "sheetRow": 3,
+      "sheetSection": "case",
+      "sheetField": "prosecutingAuthority",
+      "definition": "prosecutor",
+      "property": "prosecutingAuthority",
+      "description": "Identifies the Prosecuting Organisation responsible for prosecuting the case in the Magistrate court.",
+      "format": "A7",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Valid CJS OU Code. CPS prosecutors to use OU code from cpsOrg tab (i.e. A codes)",
+      "comment": "Prosecutors that do not have a CJS OU Code should ask to be assigned one.",
+      "inContract": true
+    },
+    "$.migratedCase.caseDetails.originatingOrganisation": {
+      "sheetRow": 4,
+      "sheetSection": "case",
+      "sheetField": "originatingOrganisation",
+      "definition": "caseDetails",
+      "property": "originatingOrganisation",
+      "description": "The organisation that brought forward the case to the courts, typically the Police Force",
+      "format": "A7",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Valid CJS OU Code",
+      "comment": "CJS OU Code",
+      "inContract": true
+    },
+    "$.migratedCase.caseDetails.initiationCode": {
+      "sheetRow": 5,
+      "sheetSection": "case",
+      "sheetField": "initiationCode",
+      "definition": "caseDetails",
+      "property": "initiationCode",
+      "description": "Identifies the type of case initiation.",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "comment": "Current values are O = Other C = Charge Q = Postal Charge J = Single Justice Notice X = Remitted",
+      "documentedValues": [
+        "C",
+        "J",
+        "O",
+        "Q",
+        "X"
+      ],
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.caseDetails.prosecutorCaseReference": {
+      "sheetRow": 6,
+      "sheetSection": "case",
+      "sheetField": "prosecutorCaseReference",
+      "definition": "caseDetails",
+      "property": "prosecutorCaseReference",
+      "description": "Prosecutors reference for the case. e.g PTI-URN for Police",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "A case reference unique to the prosecuting authority.",
+      "comment": "Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“]",
+      "inContract": true
+    },
+    "$.migratedCase.migrationSourceSystem.migrationSourceSystemCaseIdentifier": {
+      "sheetRow": 7,
+      "sheetSection": "case",
+      "sheetField": "migrationSourceSystemCaseIdentifier",
+      "definition": "migrationSourceSystem",
+      "property": "migrationSourceSystemCaseIdentifier",
+      "description": "The unique case identifier used in the Heritage system. Either a Libra case reference number or Xhibit case identifier. TBC : (discussion with SB) Libra reuses Libra case number across case areas. So will likely need the case area, or a unique case area prefix added to the libra case number.",
+      "format": "A100",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Must be unique across all migrated cases sent across to CP",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.migrationSourceSystem.migrationSourceSystemName": {
+      "sheetRow": 8,
+      "sheetSection": "case",
+      "sheetField": "migrationSourceSystemName",
+      "definition": "migrationSourceSystem",
+      "property": "migrationSourceSystemName",
+      "description": "Identifies the source case management system from which the case is being migrated.",
+      "format": "A6",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "LIBRA' or 'XHIBIT'",
+      "inContract": true
+    },
+    "$.migratedCase.caseDetails.cpsOrganisation": {
+      "sheetRow": 9,
+      "sheetSection": "case",
+      "sheetField": "CPSOrganisation",
+      "definition": "caseDetails",
+      "property": "cpsOrganisation",
+      "description": "Identifies the CPS office responsible for prosecuting the case",
+      "format": "A7",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.caseDetails.informant": {
+      "sheetRow": 10,
+      "sheetSection": "case",
+      "sheetField": "Informant",
+      "definition": "caseDetails",
+      "property": "informant",
+      "description": "Name of the person to be named as the informant in this case.",
+      "format": "A92",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Mandatory",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.caseDetails.caseMarkers[*].markerTypeCode": {
+      "sheetRow": 12,
+      "sheetSection": "casemarker",
+      "sheetField": "caseMarker",
+      "definition": "caseMarkers",
+      "property": "markerTypeCode",
+      "description": "To be populated if a CJS agreed Case Marker applies. Multiple values to be separated by a space. To allow where markers not recognised, report to be produced by DLRM to allow manual update on Cp",
+      "format": "A3",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "CASE MARKER DESCRIPTIVE* [3] To be populated if a CJS agreed Case Marker applies i.e. DV for Domestic Violence cases. Multiple values to be separated by a space",
+      "comment": "DLRM to advise on maximum case markers that could be received. Only one can be set on Xhibit but may need to look at other fields e.g. VULNERABLE_VICTIM_INDICATOR",
+      "inContract": true
+    },
+    "$.migratedCase.hearings[*].courtHearingLocation": {
+      "sheetRow": 15,
+      "sheetSection": "hearing",
+      "sheetField": "courthearinglocation",
+      "definition": "hearing",
+      "property": "courtHearingLocation",
+      "description": "The OU code of the court house",
+      "format": "A7",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true
+    },
+    "$.migratedCase.hearings[*].courtRoomId": {
+      "sheetRow": 16,
+      "sheetSection": "hearing",
+      "sheetField": "courtRoomId",
+      "definition": "hearing",
+      "property": "courtRoomId",
+      "description": "Court Room identifier",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "If not provided will be defaulted to unallocated courtRoomId",
+      "comment": "As per CP Court Room Ref Data",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.hearings[*].dateOfHearing": {
+      "sheetRow": 17,
+      "sheetSection": "hearing",
+      "sheetField": "dateofhearing",
+      "definition": "hearing",
+      "property": "dateOfHearing",
+      "description": "Date of the Court Hearing",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true
+    },
+    "$.migratedCase.hearings[*].timeOfHearing": {
+      "sheetRow": 18,
+      "sheetSection": "hearing",
+      "sheetField": "timeofhearing",
+      "definition": "hearing",
+      "property": "timeOfHearing",
+      "description": "The actual start time of the Court Hearing",
+      "format": "T8",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true
+    },
+    "$.migratedCase.hearings[*].durationMinutes": {
+      "sheetRow": 19,
+      "sheetSection": "hearing",
+      "sheetField": "durationMinutes",
+      "definition": "hearing",
+      "property": "durationMinutes",
+      "description": "Hearing duration in minutes",
+      "format": "N5",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Duration will be converted to the required hours or days, e.g. 600 mins will be converted to 1 day hearing. Zero duration will be defaulted in CP to the appropriate duration (typically 20mins)",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.hearings[*].hearingType": {
+      "sheetRow": 20,
+      "sheetSection": "hearing",
+      "sheetField": "hearingType",
+      "definition": "hearing",
+      "property": "hearingType",
+      "description": "The hearing type code / description",
+      "format": "A10",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.forename": {
+      "sheetRow": 23,
+      "sheetSection": "officerincase",
+      "sheetField": "forename",
+      "definition": "officerInCase",
+      "property": "forename",
+      "description": "The first given name of a person, e.g., John",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.forename2": {
+      "sheetRow": 24,
+      "sheetSection": "officerincase",
+      "sheetField": "forename2",
+      "definition": "officerInCase",
+      "property": "forename2",
+      "description": "The second given name of a person, e.g., Ian",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.forename3": {
+      "sheetRow": 25,
+      "sheetSection": "officerincase",
+      "sheetField": "forename3",
+      "definition": "officerInCase",
+      "property": "forename3",
+      "description": "The third given name of a person, e.g., Barry.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.surname": {
+      "sheetRow": 26,
+      "sheetSection": "officerincase",
+      "sheetField": "surname",
+      "definition": "officerInCase",
+      "property": "surname",
+      "description": "Surname or Family name, e.g., Brown.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standards [2] section 3.39",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.policeOfficerRank": {
+      "sheetRow": 27,
+      "sheetSection": "officerincase",
+      "sheetField": "policeOfficerRank",
+      "definition": "officerInCase",
+      "property": "policeOfficerRank",
+      "description": "Indicates the rank of a police officer within a particular police force",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If it exceeds the field size, only the first 35 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.policeWorkerReferenceNumber": {
+      "sheetRow": 28,
+      "sheetSection": "officerincase",
+      "sheetField": "policeWorkerReferenceNumber",
+      "definition": "officerInCase",
+      "property": "policeWorkerReferenceNumber",
+      "description": "The unique number allocated to a police worker within a police force.",
+      "format": "A15",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If it exceeds the field size, only the first 15 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.policeWorkerLocationCode": {
+      "sheetRow": 29,
+      "sheetSection": "officerincase",
+      "sheetField": "policeWorkerLocationCode",
+      "definition": "officerInCase",
+      "property": "policeWorkerLocationCode",
+      "description": "The identification of the location where the officer in the case is based",
+      "format": "A10",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.uniquePropertyReferenceNumber": {
+      "sheetRow": 30,
+      "sheetSection": "officerincase",
+      "sheetField": "uniquePropertyReferenceNumber",
+      "definition": "officerInCase",
+      "property": "uniquePropertyReferenceNumber",
+      "format": "N12",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "Value = positive integer min 1 digit max 12 digits",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.address.address1": {
+      "sheetRow": 31,
+      "sheetSection": "officerincase",
+      "sheetField": "address1",
+      "definition": "address",
+      "property": "address1",
+      "description": "Address Line 1",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.address.address2": {
+      "sheetRow": 32,
+      "sheetSection": "officerincase",
+      "sheetField": "address2",
+      "definition": "address",
+      "property": "address2",
+      "description": "Address Line 2",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.address.address3": {
+      "sheetRow": 33,
+      "sheetSection": "officerincase",
+      "sheetField": "address3",
+      "definition": "address",
+      "property": "address3",
+      "description": "Address Line 3",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.address.address4": {
+      "sheetRow": 34,
+      "sheetSection": "officerincase",
+      "sheetField": "address4",
+      "definition": "address",
+      "property": "address4",
+      "description": "Address Line 4",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.address.address5": {
+      "sheetRow": 35,
+      "sheetSection": "officerincase",
+      "sheetField": "address5",
+      "definition": "address",
+      "property": "address5",
+      "description": "Address Line 5",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.address.postcode": {
+      "sheetRow": 36,
+      "sheetSection": "officerincase",
+      "sheetField": "postcode",
+      "definition": "address",
+      "property": "postcode",
+      "description": "Post code",
+      "format": "A8",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.officerInCase.workTelephoneNumber": {
+      "sheetRow": 37,
+      "sheetSection": "officerincase",
+      "sheetField": "workTelephoneNumber",
+      "definition": "officerInCase",
+      "property": "workTelephoneNumber",
+      "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.mobileTelephoneNumber": {
+      "sheetRow": 38,
+      "sheetSection": "officerincase",
+      "sheetField": "mobileTelephoneNumber",
+      "definition": "officerInCase",
+      "property": "mobileTelephoneNumber",
+      "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.primaryEmail": {
+      "sheetRow": 39,
+      "sheetSection": "officerincase",
+      "sheetField": "emailAddress1",
+      "definition": "officerInCase",
+      "property": "primaryEmail",
+      "description": "The identification of the first e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.secondaryEmail": {
+      "sheetRow": 40,
+      "sheetSection": "officerincase",
+      "sheetField": "emailAddress2",
+      "definition": "officerInCase",
+      "property": "secondaryEmail",
+      "description": "The identification of the second e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.faxNumber": {
+      "sheetRow": 41,
+      "sheetSection": "officerincase",
+      "sheetField": "faxNumber",
+      "definition": "officerInCase",
+      "property": "faxNumber",
+      "description": "The identification of the FAX address",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.officerInCase.dxAddress": {
+      "sheetRow": 42,
+      "sheetSection": "officerincase",
+      "sheetField": "DXAddress",
+      "definition": "officerInCase",
+      "property": "dxAddress",
+      "description": "The identification of an address as defined by DX group",
+      "format": "A80",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.hearings[*].listedDefendants[*].prosecutorDefendantId": {
+      "sheetRow": 45,
+      "sheetSection": "listeddefendants",
+      "sheetField": "prosecutorDefendantId",
+      "definition": "listedDefendant",
+      "property": "prosecutorDefendantId",
+      "description": "Defendant Id for defendant listed for a particular hearing",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "see prosecutorDefendantId within the Defendant element",
+      "referenceDataSource": "M",
+      "inContract": true
+    },
+    "$.migratedCase.hearings[*].listedDefendants[*].listedOffences": {
+      "sheetRow": 47,
+      "sheetSection": "listedoffences",
+      "sheetField": "offenceID",
+      "definition": "listedDefendant",
+      "property": "listedOffences",
+      "description": "A unique reference to an offence associated to a specific defendant and hearing within a prosecution.",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“].",
+      "referenceDataSource": "M",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].prosecutorDefendantId": {
+      "sheetRow": 51,
+      "sheetSection": "defendant",
+      "sheetField": "prosecutorDefendantId",
+      "definition": "defendant",
+      "property": "prosecutorDefendantId",
+      "description": "A unique reference to a defendant within a prosecution.",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“]. Default to 1.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].asn": {
+      "sheetRow": 52,
+      "sheetSection": "defendant",
+      "sheetField": "asn",
+      "definition": "defendant",
+      "property": "asn",
+      "description": "Arrest Summons Number",
+      "format": "A20",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "To be provided where an ASN has been generated and received",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].pncIdentifier": {
+      "sheetRow": 53,
+      "sheetSection": "defendant",
+      "sheetField": "PNCIdentifier",
+      "definition": "defendant",
+      "property": "pncIdentifier",
+      "description": "Person/organisation PNC identifier.",
+      "format": "A13",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.107 for details",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].croNumber": {
+      "sheetRow": 54,
+      "sheetSection": "defendant",
+      "sheetField": "CRONumber",
+      "definition": "defendant",
+      "property": "croNumber",
+      "description": "National Identification Service (formerly Criminal Records Office) Number",
+      "format": "A12",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Used for previous offenders See CJS Data Standard [2] section 3.24 for details",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.title": {
+      "sheetRow": 55,
+      "sheetSection": "defendant",
+      "sheetField": "Title",
+      "definition": "personalInformation",
+      "property": "title",
+      "description": "Title by which a person is addressed",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.104 for details",
+      "comment": "Alphanumeric The full available range of generally recognised titles is permitted. Guidance based on CJS standards is below: • Mr • Mrs • Ms • Dr • Rev • Sir • Lady • Lord • Dame",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.forename": {
+      "sheetRow": 56,
+      "sheetSection": "defendant",
+      "sheetField": "forename",
+      "definition": "personalInformation",
+      "property": "forename",
+      "description": "The first given name of a person, e.g., John",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.middleName": {
+      "sheetRow": 57,
+      "sheetSection": "defendant",
+      "sheetField": "forename2",
+      "definition": "personalInformation",
+      "property": "middleName",
+      "description": "The second given name of a person, e.g., Ian",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.middleName2": {
+      "sheetRow": 58,
+      "sheetSection": "defendant",
+      "sheetField": "forename3",
+      "definition": "personalInformation",
+      "property": "middleName2",
+      "description": "The third given name of a person, e.g., Barry.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.surname": {
+      "sheetRow": 59,
+      "sheetSection": "defendant",
+      "sheetField": "surname",
+      "definition": "personalInformation",
+      "property": "surname",
+      "description": "Surname or Family name, e.g., Brown.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standards [2] section 3.39",
+      "comment": "Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].organisationName": {
+      "sheetRow": 60,
+      "sheetSection": "defendant",
+      "sheetField": "organisationName",
+      "definition": "defendant",
+      "property": "organisationName",
+      "description": "Name of an organisation, e.g. Marks and Spencer. To be p",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "To be provided where the defendant is an organisation, person defendant name not to be provided",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.selfDefinedInformation.nationality": {
+      "sheetRow": 61,
+      "sheetSection": "defendant",
+      "sheetField": "nationality",
+      "definition": "selfDefinedInformation",
+      "property": "nationality",
+      "description": "Country of origin as stated by the defendant",
+      "format": "A3",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.103",
+      "comment": "Needs to conform to ISO 3166-1 alpha-3. Example value GBR.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.selfDefinedInformation.additionalNationality": {
+      "sheetRow": 62,
+      "sheetSection": "defendant",
+      "sheetField": "additionalNationality",
+      "definition": "selfDefinedInformation",
+      "property": "additionalNationality",
+      "description": "Additional country of origin as stated by the defendant",
+      "format": "A3",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.103",
+      "comment": "Needs to conform to ISO 3166-1 alpha-3. Example value GBR.",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.contactDetails.work": {
+      "sheetRow": 63,
+      "sheetSection": "defendant",
+      "sheetField": "workTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "work",
+      "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.contactDetails.home": {
+      "sheetRow": 64,
+      "sheetSection": "defendant",
+      "sheetField": "homeTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "home",
+      "description": "A home telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.contactDetails.mobile": {
+      "sheetRow": 65,
+      "sheetSection": "defendant",
+      "sheetField": "mobileTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "mobile",
+      "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].emailAddress1": {
+      "sheetRow": 66,
+      "sheetSection": "defendant",
+      "sheetField": "emailAddress1",
+      "definition": "defendant",
+      "property": "emailAddress1",
+      "description": "The identification of the first e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].emailAddress2": {
+      "sheetRow": 67,
+      "sheetSection": "defendant",
+      "sheetField": "emailAddress2",
+      "definition": "defendant",
+      "property": "emailAddress2",
+      "description": "The identification of the second e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.selfDefinedInformation.dateOfBirth": {
+      "sheetRow": 68,
+      "sheetSection": "defendant",
+      "sheetField": "dateOfBirth",
+      "definition": "selfDefinedInformation",
+      "property": "dateOfBirth",
+      "description": "The date when a person was born.",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Date must not be in the future.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.selfDefinedInformation.gender": {
+      "sheetRow": 69,
+      "sheetSection": "defendant",
+      "sheetField": "gender",
+      "definition": "selfDefinedInformation",
+      "property": "gender",
+      "description": "Identifies the gender of a person.",
+      "format": "N1",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.45 Mandatory if defendant is a person. Otherwise field must be null, e.g., organisation.",
+      "comment": "0=Not Known 1=Male 2=Female 9=Not specified",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.personalInformation.observedEthnicity": {
+      "sheetRow": 70,
+      "sheetSection": "defendant",
+      "sheetField": "observedEthnicity",
+      "definition": "personalInformation",
+      "property": "observedEthnicity",
+      "description": "The values used in various Police applications to describe a person’s ethnic appearance to a third party.",
+      "format": "N1",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Ethnicity Observed 4 Plus 1 Code or Ethnicity Observed 6 Plus 1 Code tbc",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.selfDefinedInformation.ethnicity": {
+      "sheetRow": 71,
+      "sheetSection": "defendant",
+      "sheetField": "selfDefinedEthnicity",
+      "definition": "selfDefinedInformation",
+      "property": "ethnicity",
+      "description": "Person’s ethnic self-assessment",
+      "format": "A2",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "The constrained list of values for this field is the “16+1” list as first used in the 2001 census. See CJS Data Standards [2] section 3.37",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].occupation": {
+      "sheetRow": 72,
+      "sheetSection": "defendant",
+      "sheetField": "occupation",
+      "definition": "defendant",
+      "property": "occupation",
+      "description": "The description of an occupation.",
+      "format": "A54",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.77",
+      "comment": "Description related to value in the occupation code field",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].defendantOccupationCode": {
+      "sheetRow": 73,
+      "sheetSection": "defendant",
+      "sheetField": "defendantOccupationCode",
+      "definition": "defendant",
+      "property": "defendantOccupationCode",
+      "description": "An occupation code",
+      "format": "N5",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.77",
+      "comment": "Value in the occupation code field",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].driverNumber": {
+      "sheetRow": 74,
+      "sheetSection": "defendant",
+      "sheetField": "driverNumber",
+      "definition": "defendant",
+      "property": "driverNumber",
+      "description": "A driver’s licence number",
+      "format": "A16",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "DRIVER NUMBER [4] To be provided when offences are endorseable and defendant is a UK licence record holder.",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].licenseCode": {
+      "sheetRow": 75,
+      "sheetSection": "defendant",
+      "sheetField": "licenseCode",
+      "definition": "defendant",
+      "property": "licenseCode",
+      "description": "Identifies the type of driving licence. Previously known as Licence Type.",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "F = Full P = Provisional NB: This field not to be populated on advice from DVLA",
+      "documentedValues": [
+        "F",
+        "P"
+      ],
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].documentationLanguage": {
+      "sheetRow": 76,
+      "sheetSection": "defendant",
+      "sheetField": "documentationLanguage",
+      "definition": "defendant",
+      "property": "documentationLanguage",
+      "description": "Identifies the language to be used in documents",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standard [2] section 3.5.1 - default E",
+      "comment": "Values E = English W =Welsh",
+      "documentedValues": [
+        "E",
+        "W"
+      ],
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].hearingLanguage": {
+      "sheetRow": 77,
+      "sheetSection": "defendant",
+      "sheetField": "hearingLanguage",
+      "definition": "defendant",
+      "property": "hearingLanguage",
+      "description": "Identifies the language to be used during hearings",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standard [2] section 3.5.1 - default E",
+      "comment": "Values E = English W =Welsh",
+      "documentedValues": [
+        "E",
+        "W"
+      ],
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].languageRequirement": {
+      "sheetRow": 78,
+      "sheetSection": "defendant",
+      "sheetField": "languageRequirement",
+      "definition": "defendant",
+      "property": "languageRequirement",
+      "description": "Notes about the defendant’s language needs, e.g. interpreter details",
+      "format": "A150",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].specificRequirements": {
+      "sheetRow": 79,
+      "sheetSection": "defendant",
+      "sheetField": "specificRequirements",
+      "definition": "defendant",
+      "property": "specificRequirements",
+      "description": "Notes about any help that the defendant may need when attending court – e.g. wheelchair access.",
+      "format": "A150",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.custodyStatus": {
+      "sheetRow": 80,
+      "sheetSection": "defendant",
+      "sheetField": "custodyStatus",
+      "definition": "individual",
+      "property": "custodyStatus",
+      "description": "Identifies if the defendant has been granted bail by the police or held in custody pending hearing at court",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "B = Conditional Bail U = Unconditional Bail C = Custody R = Re-arrested after release on bail Mandatory if Initiation Code is Charge Null if initiation type is summons, SJPN or postal charge",
+      "documentedValues": [
+        "B",
+        "C",
+        "R",
+        "U"
+      ],
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.bailConditions": {
+      "sheetRow": 81,
+      "sheetSection": "defendant",
+      "sheetField": "bailConditions",
+      "definition": "individual",
+      "property": "bailConditions",
+      "description": "Defines the conditions that have been imposed by the police.",
+      "format": "A2500",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "Free text field. Mandatory if custody status has been recorded as B (Conditional Bail) Otherwise field must be null.",
+      "comment": "Need to check with BPO",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.address1": {
+      "sheetRow": 82,
+      "sheetSection": "defendant",
+      "sheetField": "address1",
+      "definition": "address",
+      "property": "address1",
+      "description": "Address Line 1 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "If the defendant's address is not known by the prosecutor populate this field with the standard 3 character code for no fixed address",
+      "comment": "Also used where the defendant is a company",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.address2": {
+      "sheetRow": 83,
+      "sheetSection": "defendant",
+      "sheetField": "address2",
+      "definition": "address",
+      "property": "address2",
+      "description": "Address Line 2 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.address3": {
+      "sheetRow": 84,
+      "sheetSection": "defendant",
+      "sheetField": "address3",
+      "definition": "address",
+      "property": "address3",
+      "description": "Address Line 3 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.address4": {
+      "sheetRow": 85,
+      "sheetSection": "defendant",
+      "sheetField": "address4",
+      "definition": "address",
+      "property": "address4",
+      "description": "Address Line 4 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.address5": {
+      "sheetRow": 86,
+      "sheetSection": "defendant",
+      "sheetField": "address5",
+      "definition": "address",
+      "property": "address5",
+      "description": "Address Line 5 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].address.postcode": {
+      "sheetRow": 87,
+      "sheetSection": "defendant",
+      "sheetField": "postcode",
+      "definition": "address",
+      "property": "postcode",
+      "description": "Post code for the defendant",
+      "format": "A8",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].numPreviousConvictions": {
+      "sheetRow": 88,
+      "sheetSection": "defendant",
+      "sheetField": "numPreviousConvictions",
+      "definition": "defendant",
+      "property": "numPreviousConvictions",
+      "description": "Number of previous convictions cited by prosecutor",
+      "format": "N3",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "Numeric only field used by Common Platform.",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].nationalInsuranceNumber": {
+      "sheetRow": 89,
+      "sheetSection": "defendant",
+      "sheetField": "nationalInsuranceNumber",
+      "definition": "defendant",
+      "property": "nationalInsuranceNumber",
+      "description": "National Insurance Number",
+      "format": "A9",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].prosecutorCosts": {
+      "sheetRow": 90,
+      "sheetSection": "defendant",
+      "sheetField": "prosecutorCosts",
+      "definition": "defendant",
+      "property": "prosecutorCosts",
+      "description": "Costs claimed by the prosecutor",
+      "format": "(+)N16.2",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "Following CJS Standards for money format and complies with e-GIF “Amount Sterling” hence the inclusion of the + or – sign e.g. +0.01 to +999999999999.99",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].individualAliases": {
+      "sheetRow": 91,
+      "sheetSection": "defendant",
+      "sheetField": "individualAliases",
+      "definition": "defendant",
+      "property": "individualAliases",
+      "description": "Aliases for individual person defendants",
+      "format": "Array",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Alias names for individual defendants",
+      "comment": "individualAlias type",
+      "referenceDataSource": "O",
+      "inContract": true,
+      "attachment": true
+    },
+    "$.migratedCase.defendants[*].aliasForCorporate": {
+      "sheetRow": 92,
+      "sheetSection": "defendant",
+      "sheetField": "aliasForCorporate",
+      "definition": "defendant",
+      "property": "aliasForCorporate",
+      "description": "Aliases for organisation defendants",
+      "format": "Array",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Alias names for organisation defendants",
+      "referenceDataSource": "O",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individualAliases[*].firstName": {
+      "sheetRow": 95,
+      "sheetSection": "aliasarray",
+      "sheetField": "Alias - Forename",
+      "definition": "individualAlias",
+      "property": "firstName",
+      "description": "The first given name of a person, e.g., John",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].individualAliases[*].givenName2": {
+      "sheetRow": 96,
+      "sheetSection": "aliasarray",
+      "sheetField": "Alias – Forename2",
+      "definition": "individualAlias",
+      "property": "givenName2",
+      "description": "The second given name of a person, e.g., Ian",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].individualAliases[*].givenName3": {
+      "sheetRow": 97,
+      "sheetSection": "aliasarray",
+      "sheetField": "Alias – Forename3",
+      "definition": "individualAlias",
+      "property": "givenName3",
+      "description": "The third given name of a person, e.g., Barry.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].individualAliases[*].lastName": {
+      "sheetRow": 98,
+      "sheetSection": "aliasarray",
+      "sheetField": "Alias - Surname",
+      "definition": "individualAlias",
+      "property": "lastName",
+      "description": "Surname or Family name, e.g., Brown.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Standards [2] section 3.39",
+      "comment": "Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.organisationName": {
+      "sheetRow": 101,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - organisationName",
+      "definition": "parentGuardianInformation",
+      "property": "organisationName",
+      "description": "Name of an organisation, e.g. Marks and Spencer.",
+      "format": "",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string"
+        },
+        "difference": "sheet unstated"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.companyTelephoneNumber": {
+      "sheetRow": 102,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - compantTelephoneNumber",
+      "definition": "parentGuardianInformation",
+      "property": "companyTelephoneNumber",
+      "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.forename": {
+      "sheetRow": 103,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - Forename",
+      "definition": "personalInformation",
+      "property": "forename",
+      "description": "The first given name of a person, e.g., John",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.middleName": {
+      "sheetRow": 104,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – Forename2",
+      "definition": "personalInformation",
+      "property": "middleName",
+      "description": "The second given name of a person, e.g., Ian",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.middleName2": {
+      "sheetRow": 105,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – Forename3",
+      "definition": "personalInformation",
+      "property": "middleName2",
+      "description": "The third given name of a person, e.g., Barry.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standard [2] section 3.50 for details.",
+      "comment": "Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source.",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.surname": {
+      "sheetRow": 106,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - Surname",
+      "definition": "personalInformation",
+      "property": "surname",
+      "description": "Surname or Family name, e.g., Brown.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standards [2] section 3.39",
+      "comment": "Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.contactDetails.work": {
+      "sheetRow": 107,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian -workTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "work",
+      "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.contactDetails.home": {
+      "sheetRow": 108,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - homeTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "home",
+      "description": "A home telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.contactDetails.mobile": {
+      "sheetRow": 109,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - mobileTelephoneNumber",
+      "definition": "contactDetails",
+      "property": "mobile",
+      "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means.",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character",
+      "comment": "Replaced E-GIF standard and CJS standard with Common Platform standard.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.contactDetails.primaryEmail": {
+      "sheetRow": 110,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – primaryEmail",
+      "definition": "contactDetails",
+      "property": "primaryEmail",
+      "description": "The identification of the first e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.contactDetails.secondaryEmail": {
+      "sheetRow": 111,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - secondaryEmail",
+      "definition": "contactDetails",
+      "property": "secondaryEmail",
+      "description": "The identification of the second e-mail address.",
+      "format": "A255",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "comment": "from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.dateOfBirth": {
+      "sheetRow": 112,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - dateofbirth",
+      "definition": "parentGuardianInformation",
+      "property": "dateOfBirth",
+      "description": "The date when a person was born.",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Date must not be in the future.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.gender": {
+      "sheetRow": 113,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - gender",
+      "definition": "parentGuardianInformation",
+      "property": "gender",
+      "description": "Identifies the gender of a person.",
+      "format": "N1",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standards [2] section 3.45 Mandatory if defendant is a person. Otherwise field must be null, e.g., organisation.",
+      "comment": "0=Not Known 1=Male 2=Female 9=Not specified",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.observedEthnicity": {
+      "sheetRow": 114,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - observedEthnicity",
+      "definition": "personalInformation",
+      "property": "observedEthnicity",
+      "description": "Ethnicity Self Defined Code",
+      "format": "",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string"
+        },
+        "difference": "sheet unstated"
+      }
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.selfDefinedEthnicity": {
+      "sheetRow": 115,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - selfDefinedEthnicity",
+      "definition": "parentGuardianInformation",
+      "property": "selfDefinedEthnicity",
+      "description": "Person’s ethnic self-assessment",
+      "format": "A2",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "The constrained list of values for this field is the “16+1” list as first used in the 2001 census. See CJS Data Standards [2] section 3.37",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.address1": {
+      "sheetRow": 116,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – address1",
+      "definition": "address",
+      "property": "address1",
+      "description": "Address Line 1 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "If the defendant's address is not known by the prosecutor populate this field with the standard 3 character code for no fixed address",
+      "comment": "Also used where the defendant is a company",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.address2": {
+      "sheetRow": 117,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – address2",
+      "definition": "address",
+      "property": "address2",
+      "description": "Address Line 2 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.address3": {
+      "sheetRow": 118,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – address3",
+      "definition": "address",
+      "property": "address3",
+      "description": "Address Line 3 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.address4": {
+      "sheetRow": 119,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – address4",
+      "definition": "address",
+      "property": "address4",
+      "description": "Address Line 4 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.address5": {
+      "sheetRow": 120,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian – address5",
+      "definition": "address",
+      "property": "address5",
+      "description": "Address Line 5 for the defendant",
+      "format": "A35",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].individual.parentGuardianInformation.personalInformation.address.postcode": {
+      "sheetRow": 121,
+      "sheetSection": "parentguardian",
+      "sheetField": "Parent Guardian - postcode",
+      "definition": "address",
+      "property": "postcode",
+      "description": "Post code for the defendant",
+      "format": "A8",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].prosecutorOffenceId": {
+      "sheetRow": 124,
+      "sheetSection": "offence",
+      "sheetField": "prosecutorOffenceID",
+      "definition": "offence",
+      "property": "prosecutorOffenceId",
+      "description": "A unique reference to an offence associated to a specific defendant within a prosecution.",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“].",
+      "referenceDataSource": "M",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceCode": {
+      "sheetRow": 125,
+      "sheetSection": "offence",
+      "sheetField": "offenceCode",
+      "definition": "offence",
+      "property": "offenceCode",
+      "description": "Identifies the CJS code applicable to offence.",
+      "format": "A8",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standard [2] section 3.11",
+      "comment": "Need to verify of CP offence codes can be mapped to DLRM offence codes",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceSequenceNumber": {
+      "sheetRow": 126,
+      "sheetSection": "offence",
+      "sheetField": "offenceSequenceNo",
+      "definition": "offence",
+      "property": "offenceSequenceNumber",
+      "description": "Allows for multiple offences",
+      "format": "N3",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "Number starting at 1",
+      "comment": "Allows for multiple offences",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].chargeDate": {
+      "sheetRow": 127,
+      "sheetSection": "offence",
+      "sheetField": "chargeDate",
+      "definition": "offence",
+      "property": "chargeDate",
+      "description": "The date the defendant was charged",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Not applicable",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": false,
+      "businessRules": "See CJS Standard [2] section 3.46 for date format. Date must not be in the future.",
+      "comment": "CCYY-MM-DD",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceDateCode": {
+      "sheetRow": 128,
+      "sheetSection": "offence",
+      "sheetField": "offenceDateCode",
+      "definition": "offence",
+      "property": "offenceDateCode",
+      "description": "The code for the offence date to be used within the offence wording, e.g., \"1\" is used where the date does not specify a particular day or a particular day and month, e.g., \"In July 2000\", \"In the year 1997\".",
+      "format": "N1",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standard [2] section 3.80 Values: 1 = on or in 2 = before 3 = after 4 = between 5 = on or about 6 = on or before",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceCommittedDate": {
+      "sheetRow": 129,
+      "sheetSection": "offence",
+      "sheetField": "offenceCommittedDate",
+      "definition": "offence",
+      "property": "offenceCommittedDate",
+      "description": "Date offence committed, Or start date for period in which offence committed",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Standard [2] section 3.46 for date format Date must not be in the future.",
+      "comment": "CCYY-MM-DD",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceCommittedEndDate": {
+      "sheetRow": 130,
+      "sheetSection": "offence",
+      "sheetField": "offenceCommittedEndDate",
+      "definition": "offence",
+      "property": "offenceCommittedEndDate",
+      "description": "End date for period in which offence committed",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "See standard [2] section 3.46 for date format Mandatory if Offence Date Code = 4. Otherwise field must be blank. Day Number or both Day and Month Number in the date may be zero. Date must be after the Offence Start Date and must not be in the future.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].arrestDate": {
+      "sheetRow": 131,
+      "sheetSection": "offence",
+      "sheetField": "arrestDate",
+      "definition": "offence",
+      "property": "arrestDate",
+      "description": "Date arrested",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Not applicable",
+        "Summons": "Not applicable",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Not applicable"
+      },
+      "required": false,
+      "businessRules": "See CJS Standard [2] section 3.46 for date format Date must not be in the future.",
+      "comment": "CCYY-MM-DD",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].alcoholRelatedOffence.alcoholOrDrugLevelMethod": {
+      "sheetRow": 132,
+      "sheetSection": "offence",
+      "sheetField": "alcoholOrDrugLevelMethod",
+      "definition": "alcoholRelatedOffence",
+      "property": "alcoholOrDrugLevelMethod",
+      "description": "Method by which alcohol or drugs level measured",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "ALCOHOL LEVEL METHOD* [3] This is to be provided for drink driving or drug driving offences.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].alcoholRelatedOffence.alcoholOrDrugLevelAmount": {
+      "sheetRow": 133,
+      "sheetSection": "offence",
+      "sheetField": "AlcoholOrDrugLevelAmount",
+      "definition": "alcoholRelatedOffence",
+      "property": "alcoholOrDrugLevelAmount",
+      "description": "The amount of alcohol or drugs present in the blood, urine or breath of the defendant.",
+      "format": "N3",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "ALCOHOL LEVEL AMOUNT [3] Mandatory if Alcohol Level Method field populated. Otherwise null.",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "difference": "contract looser"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceLocation": {
+      "sheetRow": 134,
+      "sheetSection": "offence",
+      "sheetField": "offenceLocation",
+      "definition": "offence",
+      "property": "offenceLocation",
+      "description": "Free text description of the location where the offence was committed",
+      "format": "A80",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Must be included where the CJS Offence Code full offence wording includes a location element.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceWording": {
+      "sheetRow": 135,
+      "sheetSection": "offence",
+      "sheetField": "offenceWording",
+      "definition": "offence",
+      "property": "offenceWording",
+      "description": "Details of Information or Charge to be laid before the court",
+      "format": "A2500",
+      "mandatoriness": {
+        "SJP Referral": "Mandatory",
+        "Summons": "Mandatory",
+        "Charge": "Mandatory",
+        "Postal Requisition": "Mandatory"
+      },
+      "required": true,
+      "businessRules": "See CJS Data Standards [2] section 3.134. Does not include the legislative element of the offence.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].offenceWordingWelsh": {
+      "sheetRow": 136,
+      "sheetSection": "offence",
+      "sheetField": "offenceWordingWelsh",
+      "definition": "offence",
+      "property": "offenceWordingWelsh",
+      "description": "Details of Information or Charge to be laid before the court in Welsh",
+      "format": "A2500",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "See CJS Data Standards [2] section 3.134. Does not include the legislative element of the offence. If the document language is Welsh then the correct format is English wording and Welsh wording (optional).",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].statementOfFacts": {
+      "sheetRow": 137,
+      "sheetSection": "offence",
+      "sheetField": "statementOfFacts",
+      "definition": "offence",
+      "property": "statementOfFacts",
+      "description": "Statement of facts",
+      "format": "A4000",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].statementOfFactsWelsh": {
+      "sheetRow": 138,
+      "sheetSection": "offence",
+      "sheetField": "statementOfFactsWelsh",
+      "definition": "offence",
+      "property": "statementOfFactsWelsh",
+      "description": "Statement of facts in Welsh",
+      "format": "A4000",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Where a Statement of Facts is supplied, and the documentation language is W Welsh, then a Welsh statement of facts should be supplied",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].prosecutorCompensation": {
+      "sheetRow": 139,
+      "sheetSection": "offence",
+      "sheetField": "prosecutorCompensation",
+      "definition": "offence",
+      "property": "prosecutorCompensation",
+      "description": "Compensation claimed by the prosecutor.",
+      "format": "(+)N16.2",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].vehicleCode": {
+      "sheetRow": 140,
+      "sheetSection": "offence",
+      "sheetField": "vehicleCode",
+      "definition": "offence",
+      "property": "vehicleCode",
+      "description": "Identifies offences involving an LGV or PCV that are of interest to the DfT. Previously known as Vehicle Type.",
+      "format": "A1",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "L = Large Goods Vehicle or Passenger Carrying Vehicle, O = Other",
+      "documentedValues": [
+        "L",
+        "O"
+      ],
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].vehicleMake": {
+      "sheetRow": 141,
+      "sheetSection": "offence",
+      "sheetField": "vehicleMake",
+      "definition": "offence",
+      "property": "vehicleMake",
+      "description": "For traffic related prosecutions",
+      "format": "A60",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].vehicleRegistrationMark": {
+      "sheetRow": 142,
+      "sheetSection": "offence",
+      "sheetField": "vehicleRegistrationMark",
+      "definition": "offence",
+      "property": "vehicleRegistrationMark",
+      "description": "For traffic related prosecutions",
+      "format": "A11",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].prosecutorOfferAOCP": {
+      "sheetRow": 143,
+      "sheetSection": "offence",
+      "sheetField": "prosecutorOfferAOCP",
+      "definition": "offence",
+      "property": "prosecutorOfferAOCP",
+      "format": "Boolean",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Not applicable",
+        "Charge": "Not applicable",
+        "Postal Requisition": "Not applicable"
+      },
+      "required": false,
+      "comment": "true/false based on whether prosecutor wants to offence AOCP on a particular offence",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].plea.id": {
+      "sheetRow": 144,
+      "sheetSection": "offence",
+      "sheetField": "pleaCode",
+      "definition": "plea",
+      "property": "id",
+      "description": "The latest plea for this offence.",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Please see \"Plea Types\" tab for values",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].plea.pleaDate": {
+      "sheetRow": 145,
+      "sheetSection": "offence",
+      "sheetField": "pleaDate",
+      "definition": "plea",
+      "property": "pleaDate",
+      "description": "The date the plea has been submitted.",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "To be provided where a Plea has been provided.",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].verdict.id": {
+      "sheetRow": 146,
+      "sheetSection": "offence",
+      "sheetField": "verdictType",
+      "definition": "verdict",
+      "property": "id",
+      "description": "The verdict given by the courts for this offence",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "businessRules": "Please see \"Verdict Types\" tab for values",
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].verdict.verdictDate": {
+      "sheetRow": 147,
+      "sheetSection": "offence",
+      "sheetField": "verdictDate",
+      "definition": "verdict",
+      "property": "verdictDate",
+      "description": "The verdict date.",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "To be provided where a Verdict is present",
+      "inContract": true
+    },
+    "$.migratedCase.defendants[*].offences[*].convictionDate": {
+      "sheetRow": 148,
+      "sheetSection": "offence",
+      "sheetField": "ConvictionDate",
+      "definition": "offence",
+      "property": "convictionDate",
+      "description": "The conviction date",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "Provided where there has been a conviction",
+      "inContract": false
+    },
+    "$.migratedCase.defendants[*].offences[*].allocationDecision.motReasonId": {
+      "sheetRow": 149,
+      "sheetSection": "offence",
+      "sheetField": "allocationDecision",
+      "definition": "allocationDecision",
+      "property": "motReasonId",
+      "description": "The allocation decision (model of trial) made regarding the jurisdiction required or elected for dealing with the offence in question and based on the indicated plea. Useful from an MI perspective.",
+      "format": "A36",
+      "mandatoriness": {
+        "SJP Referral": "Optional",
+        "Summons": "Optional",
+        "Charge": "Optional",
+        "Postal Requisition": "Optional"
+      },
+      "required": false,
+      "inContract": true,
+      "sheetConstraint": {
+        "reads": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "difference": "conflict"
+      }
+    },
+    "$.migratedCase.defendants[*].offences[*].allocationDecision.allocationDecisionDate": {
+      "sheetRow": 150,
+      "sheetSection": "offence",
+      "sheetField": "allocationDecisionDate",
+      "definition": "allocationDecision",
+      "property": "allocationDecisionDate",
+      "description": "The date on which the decision the allocation was made",
+      "format": "D10",
+      "mandatoriness": {
+        "SJP Referral": "Conditionally mandatory",
+        "Summons": "Conditionally mandatory",
+        "Charge": "Conditionally mandatory",
+        "Postal Requisition": "Conditionally mandatory"
+      },
+      "required": false,
+      "businessRules": "Should be provided if allocation decision is provided",
+      "inContract": true
+    }
+  }
+}
