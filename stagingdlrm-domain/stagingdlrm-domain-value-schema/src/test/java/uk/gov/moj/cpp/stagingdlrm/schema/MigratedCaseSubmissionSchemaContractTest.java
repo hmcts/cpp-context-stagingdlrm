@@ -29,8 +29,6 @@ class MigratedCaseSubmissionSchemaContractTest {
 
     private static final String BASE_FIXTURE = "json/schema-contract/xhibit/case-submission-valid.json";
 
-    private static final String CASE_DETAILS_MESSAGE = "#/migratedCase/caseDetails: #: only 1 subschema matches out of 2";
-
     private static final Schema SCHEMA = loadSchema();
 
     @ParameterizedTest(name = "{0}")
@@ -47,49 +45,40 @@ class MigratedCaseSubmissionSchemaContractTest {
 
     static Stream<Arguments> acceptScenarios() {
         return Stream.of(
-                Arguments.of("FR5 pin1 caseDetails.dateReceived present is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin2 caseDetails.receiptType present is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin3 caseDetails.receivingCourt present is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin4 caseDetails.retrialIndicator present is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin5 caseDetails.initiationCode 'O' is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin6 caseDetails with dateOfCommittal only is accepted (XHIBIT)",
+                Arguments.of("T2 relaxation caseDetails.dateReceived absent is accepted at schema (XHIBIT)",
+                        mutation(r -> caseDetails(r).remove("dateReceived"))),
+                Arguments.of("T2 relaxation caseDetails.receiptType absent is accepted at schema (XHIBIT)",
+                        mutation(r -> caseDetails(r).remove("receiptType"))),
+                Arguments.of("T2 relaxation caseDetails.receivingCourt absent is accepted at schema (XHIBIT)",
+                        mutation(r -> caseDetails(r).remove("receivingCourt"))),
+                Arguments.of("T2 relaxation caseDetails.retrialIndicator absent is accepted at schema (XHIBIT)",
+                        mutation(r -> caseDetails(r).remove("retrialIndicator"))),
+                Arguments.of("T2 relaxation caseDetails with neither dateOfCommittal nor dateOfSending is accepted (XHIBIT)",
+                        mutation(r -> { caseDetails(r).remove("dateOfCommittal"); caseDetails(r).remove("dateOfSending"); })),
+                Arguments.of("caseDetails.initiationCode 'O' is accepted (XHIBIT)", identity()),
+                Arguments.of("caseDetails with dateOfCommittal only is accepted (XHIBIT)",
                         mutation(r -> caseDetails(r).remove("dateOfSending"))),
-                Arguments.of("FR5 pin6 caseDetails with dateOfSending only is accepted (XHIBIT)",
+                Arguments.of("caseDetails with dateOfSending only is accepted (XHIBIT)",
                         mutation(r -> caseDetails(r).remove("dateOfCommittal"))),
-                Arguments.of("FR5 pin7 hearings[*].durationMinutes present is accepted (XHIBIT)", identity()),
-                Arguments.of("FR5 pin8 offences[*].prosecutorOffenceId present is accepted (XHIBIT)", identity()));
+                Arguments.of("hearings[*].durationMinutes present is accepted (XHIBIT)", identity()),
+                Arguments.of("offences[*].prosecutorOffenceId present is accepted (XHIBIT)", identity()));
     }
 
     static Stream<Arguments> rejectScenarios() {
         return Stream.of(
-                Arguments.of("FR5 pin1 caseDetails.dateReceived required — reject when absent (XHIBIT)",
-                        mutation(r -> caseDetails(r).remove("dateReceived")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin2 caseDetails.receiptType required — reject when absent (XHIBIT)",
-                        mutation(r -> caseDetails(r).remove("receiptType")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin3 caseDetails.receivingCourt required — reject when absent (XHIBIT)",
-                        mutation(r -> caseDetails(r).remove("receivingCourt")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin4 caseDetails.retrialIndicator required — reject when absent (XHIBIT)",
-                        mutation(r -> caseDetails(r).remove("retrialIndicator")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin5 caseDetails.initiationCode enum ['O'] — reject other values (XHIBIT)",
+                Arguments.of("caseDetails.initiationCode enum ['O'] — reject other values (XHIBIT)",
                         mutation(r -> caseDetails(r).put("initiationCode", "X")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin6 caseDetails anyOf[dateOfCommittal|dateOfSending] — reject when neither (XHIBIT)",
-                        mutation(r -> { caseDetails(r).remove("dateOfCommittal"); caseDetails(r).remove("dateOfSending"); }),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin7 hearings[*].durationMinutes required — reject when absent (XHIBIT)",
+                        "#/migratedCase/caseDetails/initiationCode: X is not a valid enum value"),
+                Arguments.of("hearings[*].durationMinutes required — reject when absent (XHIBIT)",
                         mutation(r -> hearing0(r).remove("durationMinutes")),
                         "#/migratedCase/hearings/0: required key [durationMinutes] not found"),
-                Arguments.of("FR5 pin8 offences[*].prosecutorOffenceId required — reject when absent (XHIBIT)",
+                Arguments.of("offences[*].prosecutorOffenceId required — reject when absent (XHIBIT)",
                         mutation(r -> offence0(r).remove("prosecutorOffenceId")),
                         "#/migratedCase/defendants/0/offences/0: required key [prosecutorOffenceId] not found"),
-                Arguments.of("FR5 pin9 caseMarkers[*].markerTypeCode required — stays enforced (XHIBIT)",
+                Arguments.of("caseMarkers[*].markerTypeCode required — stays enforced (XHIBIT)",
                         mutation(r -> caseDetails(r).getJSONArray("caseMarkers").getJSONObject(0).remove("markerTypeCode")),
-                        CASE_DETAILS_MESSAGE),
-                Arguments.of("FR5 pin10 selfDefinedInformation.gender required — stays enforced (XHIBIT)",
+                        "#/migratedCase/caseDetails/caseMarkers/0: required key [markerTypeCode] not found"),
+                Arguments.of("selfDefinedInformation.gender required — stays enforced (XHIBIT)",
                         mutation(r -> defendant0(r).getJSONObject("individual").getJSONObject("selfDefinedInformation").remove("gender")),
                         "#/migratedCase/defendants/0/individual/selfDefinedInformation: required key [gender] not found"),
                 Arguments.of("FR5 pin11 offences[*].offenceDateCode maximum 6 — stays enforced (XHIBIT)",

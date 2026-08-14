@@ -71,23 +71,7 @@
     "prosecutorCaseReference",
     "originatingOrganisation",
     "initiationCode",
-    "prosecutor",
-    "dateReceived",
-    "retrialIndicator",
-    "receiptType",
-    "receivingCourt"
-  ],
-  "anyOf": [
-    {
-      "required": [
-        "dateOfCommittal"
-      ]
-    },
-    {
-      "required": [
-        "dateOfSending"
-      ]
-    }
+    "prosecutor"
   ],
   "additionalProperties": false
 }
