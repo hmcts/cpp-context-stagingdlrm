@@ -276,10 +276,12 @@ on both sides rather than LIBRA-only.)
 
 - **FR14 — Map Group A's 11 fields in `MigratedCaseConvertor`**, honouring PCFDLRM's names where
   they differ (`defendantOccupationCode` → `occupationCode`, `licenseCode` → `driverLicenceCode`).
-  Group B's 19 fields are **not** mapped in this story: the converter's target types are generated
-  from `pcfdlrm-domain-value-schema` pinned at `pcfdlrm.version` 17.104.21, so the builder methods
-  do not exist. That mapping is a follow-up gated on a PCFDLRM release and a version bump here.
-  Group C is never mapped.
+  The offence vehicle fields are re-nested by the converter: `vehicleMake` flat, `vehicleCode` and
+  `vehicleRegistrationMark` into PCFDLRM's nested `vehicleRelatedOffence` (the only home PCFDLRM
+  reads into `offenceFacts`). Under LIBRA 0.13.1 **Group B is one field**
+  (`numPreviousConvictions`) and is **not** mapped: PCFDLRM at `pcfdlrm.version` 17.104.21 has no
+  home for it, so it is write-only until a PCFDLRM release and a version bump here. Group C
+  (`informant`, `prosecutorCosts`) is never mapped.
 - **FR15 — `initiationCode` needs no change at all.** LIBRA 0.13 sends `["O"]`, the same single
   constant the schema already declares, so there is no schema change, no converter change, and
   `MigratedCaseConvertor:256`'s `.getInitiationCode().name()` keeps compiling unchanged. The value

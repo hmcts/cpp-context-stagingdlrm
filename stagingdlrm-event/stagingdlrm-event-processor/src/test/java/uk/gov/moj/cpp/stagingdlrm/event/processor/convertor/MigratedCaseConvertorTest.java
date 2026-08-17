@@ -12,8 +12,11 @@ import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedCa
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.CaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Individual;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.ParentGuardianInformation;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.SelfDefinedInformation;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Offence;
 
 import java.util.List;
 import java.util.UUID;
@@ -100,6 +103,56 @@ class MigratedCaseConvertorTest {
         assertEquals(NOT_SPECIFIED.name(), migratedCaseDetails.getDefendants().get(1).getIndividual().getSelfDefinedInformation().getGender());
         assertEquals(NOT_SPECIFIED.name(), migratedCaseDetails.getDefendants().get(1).getIndividual().getSelfDefinedInformation().getGender());
         assertEquals(migratedCase.getCaseDetails().getCaseMarkers().get(0).getMarkerTypeCode(), migratedCaseDetails.getCaseDetails().getCaseMarkers().get(0).getMarkerTypeCode());
+    }
+
+    @Test
+    void shouldPropagateGroupAFieldsWithPcfdlrmNames() {
+
+        final UUID caseId = UUID.randomUUID();
+
+        final MigratedCase migratedCase = MigratedCase.migratedCase()
+                .withDefendants(List.of(Defendant.defendant()
+                        .withIndividual(Individual.individual()
+                                .withDriverNumber("DRV1234567890123")
+                                .withNationalInsuranceNumber("SYNTHETIC-NI")
+                                .withLicenseCode("A")
+                                .withPersonalInformation(PersonalInformation.personalInformation()
+                                        .withSurname("Brown")
+                                        .withOccupation("Bricklayer")
+                                        .withDefendantOccupationCode(12345)
+                                        .build())
+                                .withSelfDefinedInformation(SelfDefinedInformation.selfDefinedInformation()
+                                        .withGender(1)
+                                        .withAdditionalNationality("FRA")
+                                        .build())
+                                .build())
+                        .withOffences(List.of(Offence.offence()
+                                .withStatementOfFacts("The facts")
+                                .withStatementOfFactsWelsh("Y ffeithiau")
+                                .withVehicleMake("Ford")
+                                .withVehicleCode("L")
+                                .withVehicleRegistrationMark("AB12CDE")
+                                .build()))
+                        .build()))
+                .build();
+
+        final MigratedCaseDetails result = migratedCaseConvertor.buildMigratedCasedetails(migratedCase, caseId);
+
+        final var individual = result.getDefendants().get(0).getIndividual();
+        assertEquals("DRV1234567890123", individual.getDriverNumber());
+        assertEquals("SYNTHETIC-NI", individual.getNationalInsuranceNumber());
+        assertEquals("A", individual.getDriverLicenceCode());
+        assertEquals("Bricklayer", individual.getPersonalInformation().getOccupation());
+        assertEquals(12345, individual.getPersonalInformation().getOccupationCode());
+        assertEquals("FRA", individual.getSelfDefinedInformation().getAdditionalNationality());
+
+        final var offence = result.getDefendants().get(0).getOffences().get(0);
+        assertEquals("The facts", offence.getStatementOfFacts());
+        assertEquals("Y ffeithiau", offence.getStatementOfFactsWelsh());
+        assertEquals("Ford", offence.getVehicleMake());
+        assertNotNull(offence.getVehicleRelatedOffence());
+        assertEquals("L", offence.getVehicleRelatedOffence().getVehicleCode());
+        assertEquals("AB12CDE", offence.getVehicleRelatedOffence().getVehicleRegistrationMark());
     }
 
     @Test

@@ -199,25 +199,29 @@ Groups A (11), B (1) and C (2) per FR5/FR8/FR10, across `case-details.json`, `in
 
 ### Scope
 
-`MigratedCaseConvertor` — `buildIndividual` (3), `buildPersonalInformation` (2, renamed to
-`occupationCode` / `driverLicenceCode`), `buildOffences` (5), `buildSelfDefinedInformation` (1).
-No `buildCaseDetails` change — `summonsCode` was the only Group A field there, and LIBRA 0.13 no
-longer carries it.
+`MigratedCaseConvertor` — `buildIndividual` (3: `driverNumber`, `nationalInsuranceNumber`,
+`licenseCode`→`driverLicenceCode`), `buildPersonalInformation` (2: `occupation`,
+`defendantOccupationCode`→`occupationCode`), `buildOffences` (5), `buildSelfDefinedInformation`
+(1: `additionalNationality`). No `buildCaseDetails` change — `summonsCode` was the only Group A field
+there and LIBRA 0.13.1 does not carry it.
 
-Not all five offence fields map flat: `vehicleMake` and `vehicleRegistrationMark` are flat on
-PCFDLRM's `migrated-offence.json`, but `vehicleCode` sits on a nested `vehicleRelatedOffence`
-object — the shape `buildAlcoholRelatedOffence` already handles (design F4).
+> **Vehicle nesting is a converter concern (per the T3 decision).** stagingDLRM canonical carries
+> `vehicleCode`, `vehicleMake`, `vehicleRegistrationMark` **flat** (no canonical
+> `vehicle-related-offence.json`). The converter re-nests: `vehicleMake` → flat on PCFDLRM's
+> `migrated-offence`; `vehicleCode` **and** `vehicleRegistrationMark` → PCFDLRM's nested
+> `vehicleRelatedOffence` object (built like `buildAlcoholRelatedOffence`). PCFDLRM's schema is
+> unchanged.
 
 ### Acceptance criteria
 
-1. All 11 Group A fields appear with correct values and PCFDLRM's names in the outbound payload, asserted as a **whole payload**.
-2. Group C's 5 fields are accepted on input and **absent** from the outbound payload.
-3. Group B's 19 fields are not mapped, recorded in code as deliberate rather than omitted silently.
+1. All 11 Group A fields appear with correct values and PCFDLRM's names in the outbound payload.
+2. Group C's 2 fields (`informant`, `prosecutorCosts`) are accepted on input and **absent** from the outbound payload.
+3. Group B's 1 field (`numPreviousConvictions`) is not mapped, recorded in code as deliberate rather than omitted silently.
 4. `initiationCode` (`["O"]`) reaches PCFDLRM unchanged; `.getInitiationCode().name()` is untouched (FR15).
 5. No source-system branching anywhere in the converter (FR16).
 6. Every DD-43078 XHIBIT outbound fixture passes byte-identically.
 7. `vehicleCode` is written to the nested `vehicleRelatedOffence` object, built the way `buildAlcoholRelatedOffence` builds its counterpart.
-8. `vehicleRegistrationMark` is written to whichever of its **two** PCFDLRM homes reaches Progression's `offenceFacts.vehicleRegistration` — confirm with the PCFDLRM team before mapping.
+8. `vehicleRegistrationMark` is written to the nested `vehicleRelatedOffence` object — **resolved** (AC8 was "confirm with PCFDLRM"): PCFDLRM's `ProsecutionCaseFileMigratedOffenceToCourtsOffenceConverter` reads only `vehicleRelatedOffence.getVehicleRegistrationMark()`/`.getVehicleCode()` into `offenceFacts`, so the nested home is the one that reaches Progression.
 
 **Traceability:** FR14, FR15, FR16 · AC6, AC7 · design F4
 
