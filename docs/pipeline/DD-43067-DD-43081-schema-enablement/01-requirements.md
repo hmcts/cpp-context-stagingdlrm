@@ -34,7 +34,7 @@ accept LIBRA without weakening XHIBIT**
 
 ### Summary (JIRA summary line)
 
-`[LIBRA enabler] stagingDLRM schema enablement: relax 5 constraints for LIBRA, add 35 LIBRA fields, re-impose XHIBIT rules in code, wire the rejection path`
+`[LIBRA enabler] stagingDLRM schema enablement: relax 5 constraints for LIBRA, add 14 LIBRA fields (0.13.1), re-impose XHIBIT rules in code, wire the rejection path`
 
 ### User story
 
@@ -135,6 +135,11 @@ LIBRA 0.13 adds 38 fields the canonical schema does not have; 35 are declared, 3
 `organisationTelephoneNumber` and the three `backDuty*` fields, and now carries `emailAddress1/2`
 on both sides rather than LIBRA-only.)
 
+> **Updated for LIBRA 0.13.1** (`schema-diff.html`): 0.13.1 no longer sends `officerInCase` (14
+> fields: 11 Group B + 3 Group C) or `offence.convictionDate` (1 Group B). With those gone, the
+> declared total is **14** — Group A 11, Group B 1 (`numPreviousConvictions`), Group C 2
+> (`informant`, `prosecutorCosts`). FR8–FR10 below are updated; FR9 is void.
+
 - **FR5 — Declare the 11 fields that flow end to end today, and map them (Group A).** A counterpart
   exists in both PCFDLRM and Progression's `courtReferral.json` closure, so these need changes in
   this repo alone:
@@ -149,31 +154,31 @@ on both sides rather than LIBRA-only.)
   level from its PCFDLRM counterpart, and `MigratedCaseConvertor` **renames but never re-nests**
   (`forename` → `firstName`, `surname` → `lastName`). PCFDLRM already holds `driverNumber`,
   `nationalInsuranceNumber` and `driverLicenceCode` on `individual`, `occupation` and
-  `occupationCode` on `personalInformation`, and `vehicleCode` on a `vehicleRelatedOffence` object
-  alongside the `alcoholRelatedOffence` canonical already mirrors. The LIBRA fields are declared in
-  the same places, so the converter stays a level-preserving copy.
+  `occupationCode` on `personalInformation`. The LIBRA fields are declared in the same places, so the
+  converter stays a level-preserving copy — **with one exception**: the offence vehicle fields
+  (`vehicleCode`, `vehicleMake`, `vehicleRegistrationMark`) are declared **flat** on
+  `migrated-offence.json` (the 0.13.1 payload shape), and the T4 converter re-nests `vehicleCode` into
+  PCFDLRM's `vehicleRelatedOffence` object. No canonical `vehicle-related-offence.json` and no PCFDLRM
+  schema change — this supersedes the earlier "payload nests `vehicleCode`" reading (ADR-003 §2).
   **Consequence for the payload:** `migrated-defendant.json` is `additionalProperties: false`, so
   the LIBRA `case.json` must nest these fields to match. The workbook's flat Defendant section is a
   spreadsheet layout, not the payload contract — see FR19/R5 and the DD-43086 gate schema.
 - **FR7 — Reuse existing definitions rather than re-declaring types.** `nationalInsuranceNumber` in
   particular already has a pattern defined in `pcf-definitions.json` that nothing references.
-- **FR8 — Declare the 19 fields Progression models but PCFDLRM does not (Group B).** Schema only —
-  the converter mapping is FR14. `officerInCase`: `forename`, `forename2`, `surname`,
-  `policeOfficerRank`, `policeWorkerReferenceNumber`, `policeWorkerLocationCode`, `primaryEmail`,
-  `secondaryEmail`, `workTelephoneNumber`, `mobileTelephoneNumber`, `faxNumber`;
-  `officerInCase.address`: `address1`–`address5`, `postcode`;
-  `defendants[*].numPreviousConvictions`; `defendants[*].offences[*].convictionDate`.
-  (`organisationTelephoneNumber` was Group B in earlier drafts; LIBRA 0.13 no longer carries it,
-  resolving the suspected `companyTelephoneNumber` duplicate under FR19.)
-- **FR9 — `officerInCase` is a new container on `migratedCase` and must be declared.**
-  `migratedCase` is `additionalProperties: false`, so an undeclared officer block is a terminal 4xx
-  on every LIBRA submission carrying one. Its declaration is not contingent on the PCFDLRM gap.
-- **FR10 — Declare 5 fields as accepted-but-unmapped (Group C).** `caseDetails.informant`;
-  `defendants[*].prosecutorCosts`; `officerInCase` `dxAddress`, `forename3`,
-  `uniquePropertyReferenceNumber`. Nothing downstream models them, but each sits in a
-  **closed** canonical object that LIBRA populates, so ignoring them is not available. Declared
-  optional, documented as unmapped, and deliberately not propagated.
-  (`writtenChargePostingDate` was Group C in earlier drafts; LIBRA 0.13 no longer carries it.)
+- **FR8 — Declare the Group B field Progression models but PCFDLRM does not.** Schema only — the
+  converter mapping is FR14. **Under LIBRA 0.13.1 this is one field:**
+  `defendants[*].numPreviousConvictions`. (Earlier drafts had 19: the 11 `officerInCase` fields, its
+  6 `address` fields and `offences[*].convictionDate` — all gone from 0.13.1, `officerInCase` and
+  `convictionDate` no longer being sent. `organisationTelephoneNumber` had already dropped in 0.13.)
+- **FR9 — *(void under LIBRA 0.13.1)*.** Was: `officerInCase` is a new container on `migratedCase`
+  and must be declared. 0.13.1 no longer sends `officerInCase`, so no container is declared and
+  `migratedCase` is unchanged. Re-instate only if a later LIBRA version re-introduces the block.
+- **FR10 — Declare 2 fields as accepted-but-unmapped (Group C).** `caseDetails.informant`;
+  `defendants[*].prosecutorCosts`. Nothing downstream models them, but each sits in a **closed**
+  canonical object that LIBRA populates, so ignoring them is not available. Declared optional,
+  documented as unmapped, and deliberately not propagated. (Earlier drafts had 5 — the three
+  `officerInCase` fields `dxAddress`, `forename3`, `uniquePropertyReferenceNumber` are gone from
+  0.13.1; `writtenChargePostingDate` had already dropped in 0.13.)
 - **FR11 — Every added field is optional.** No addition may make an XHIBIT payload invalid.
 
 ### C. Restore enforcement in code, per source system
@@ -345,8 +350,8 @@ on both sides rather than LIBRA-only.)
   the rejection names that constraint in its outcome file.
 - **AC4** — For each of the 5 LIBRA rules: a LIBRA payload violating it is rejected and named; the
   same payload shape submitted as XHIBIT is unaffected.
-- **AC5** — All 35 declared fields (Groups A–C) round-trip through schema validation on a LIBRA
-  payload without a validation error.
+- **AC5** — All 14 declared fields (Groups A–C, LIBRA 0.13.1) round-trip through schema validation
+  on a LIBRA payload without a validation error.
 - **AC6** — Group A's 11 fields appear with correct values and PCFDLRM's names in the outbound
   PCFDLRM payload, asserted as a whole payload.
 - **AC7** — Group C's 5 fields are accepted on input and absent from the outbound PCFDLRM payload.
@@ -357,8 +362,9 @@ on both sides rather than LIBRA-only.)
 - **AC8a** — On that same rejection, `system-id-mapper` is not called and nothing is sent to pcfdlrm.
 - **AC8b** — A payload that is both a duplicate and rule-invalid reports as a duplicate and emits no
   outcome file, unchanged from today.
-- **AC10** — A LIBRA payload carrying `officerInCase`, including the three unmapped officer fields,
-  is accepted rather than rejected as an additional property.
+- **AC10** — *(void under LIBRA 0.13.1 — `officerInCase` is no longer sent.)* Was: a LIBRA payload
+  carrying `officerInCase`, including the three unmapped officer fields, is accepted rather than
+  rejected as an additional property.
 - **AC11** — `mvn clean install` is green with no hand-edits to generated sources.
 - **AC12** — The workbook-corrections document (FR19) and the exclusion register (FR20) exist and
   are linked from the story.

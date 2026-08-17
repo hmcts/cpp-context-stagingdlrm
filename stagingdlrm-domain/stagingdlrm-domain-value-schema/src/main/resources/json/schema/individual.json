@@ -24,6 +24,19 @@
     "bailConditions": {
       "type": "string",
       "maxLength": 2500
+    },
+    "driverNumber": {
+      "type": "string",
+      "maxLength": 16,
+      "description": "A driver's licence number."
+    },
+    "nationalInsuranceNumber": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/pcf-definitions.json#/definitions/nationalInsuranceNumber"
+    },
+    "licenseCode": {
+      "type": "string",
+      "maxLength": 1,
+      "description": "Identifies the type of driving licence. Previously known as Licence Type."
     }
   },
   "required": [

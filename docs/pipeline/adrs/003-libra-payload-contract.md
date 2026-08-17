@@ -69,7 +69,13 @@ PCFDLRM's differing names are a converter concern and do not appear in `case.jso
 | 92 | `nationalInsuranceNumber` | `defendant.individual` |
 | 75 | `occupation` | `defendant.individual.personalInformation` |
 | 76 | `defendantOccupationCode` | `defendant.individual.personalInformation` |
-| 145 | `vehicleCode` | `offence.vehicleRelatedOffence` |
+| 145 | `vehicleCode` | `offence` (flat) — see note below |
+
+> **Superseded for DD-43081 (T3/T4, LIBRA 0.13.1).** Row 145 originally had the payload nest
+> `vehicleCode` under `offence.vehicleRelatedOffence`. The team's later decision keeps `vehicleCode`
+> (with `vehicleMake`, `vehicleRegistrationMark`) **flat** on `offence` — the shape LIBRA 0.13.1
+> sends — and has the T4 converter populate PCFDLRM's nested `vehicleRelatedOffence`. stagingDLRM
+> adds no `vehicle-related-offence.json` and PCFDLRM's schema is unchanged. The other five rows stand.
 
 **3. `officerInCase` is a top-level property of `migratedCase`**, a sibling of `caseDetails`,
 `defendants`, `hearings` and `migrationSourceSystem` — with its address under

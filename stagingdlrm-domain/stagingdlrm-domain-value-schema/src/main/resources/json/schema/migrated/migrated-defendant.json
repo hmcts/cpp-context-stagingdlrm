@@ -83,6 +83,17 @@
     },
     "address": {
       "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/address.json"
+    },
+    "numPreviousConvictions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999,
+      "description": "Number of previous convictions cited by prosecutor."
+    },
+    "prosecutorCosts": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Costs claimed by the prosecutor. Accepted but not propagated downstream (no PCFDLRM or Progression home)."
     }
   },
   "required": [

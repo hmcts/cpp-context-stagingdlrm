@@ -65,6 +65,11 @@
       "description": "This is the organisation unit oucode of XHIBIT case court. E.g C50EX00",
       "maxLength": 7,
       "minLength": 7
+    },
+    "informant": {
+      "type": "string",
+      "maxLength": 92,
+      "description": "Name of the person to be named as the informant in this case. Accepted but not propagated downstream (no PCFDLRM or Progression home)."
     }
   },
   "required": [
