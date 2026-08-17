@@ -309,6 +309,21 @@ class StagingDlrmEventProcessorTest {
     }
 
     @Test
+    void shouldIncrementMigratedCaseSubmissionReceivedCounterWhenValidationRuleFailed() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "Migrated case submission rejected by validation rule(s)");
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+    }
+
+    @Test
     void shouldSendCaseAlreadyProcessedCommandWhenCaseExistsInProgression() {
         final MigratedCaseSubmissionReceived migratedCaseSubmissionReceived = buildMigratedCaseSubmissionReceived(XHIBIT, "C50EX02");
         when(envelope.payload()).thenReturn(migratedCaseSubmissionReceived);
