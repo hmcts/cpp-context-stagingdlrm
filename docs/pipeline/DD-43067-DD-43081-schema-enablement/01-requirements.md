@@ -223,10 +223,12 @@ on both sides rather than LIBRA-only.)
     four presence rules (`dateReceived`, `receiptType`, `receivingCourt`, `retrialIndicator`) and one
     at-least-one-of rule (`dateOfCommittal` / `dateOfSending`). Net behavioural change for XHIBIT must
     be zero. No `initiationCode` rule — the field is unchanged, so nothing was relaxed to re-impose.
-  - **FR12g — LIBRA rules enforce the 5 constraints LIBRA states and the shared schema cannot** —
+  - **FR12g — LIBRA rules enforce the constraints LIBRA states and the shared schema cannot** —
     all presence rules for fields LIBRA requires and canonical leaves optional:
     `hearings[*].dateOfHearing`, `hearings[*].timeOfHearing`, `hearings[*].courtRoomId`,
-    `caseDetails.caseMarkers`, and `defendants[*].address`. No length rules survive — LIBRA 0.13 and
+    and `defendants[*].address`. **Under LIBRA 0.13.1 this is 4 rules, not 5:** `caseDetails.caseMarkers`
+    is no longer mandatory in 0.13.1 (`caseMarkers` is absent from `caseDetails.required` and optional
+    with `default:[]`), so that presence rule is dropped. No length rules survive — LIBRA 0.13 and
     canonical carry identical `maxLength`/`pattern` on every shared field (FR2), so the earlier
     `forename`, `individualAliases[*]` and `migrationSourceSystemCaseIdentifier` rules are gone, as is
     the `initiationCode` allowed-values rule (no widening). **Note:** LIBRA's `parentGuardianInformation`

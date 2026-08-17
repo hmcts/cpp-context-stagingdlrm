@@ -139,6 +139,12 @@ class StagingDlrmEventProcessorTest {
                         "json/event-processor/xhibit/no-contact-details-input.json",
                         "json/event-processor/xhibit/no-contact-details-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
+                                "migratedCaseDetails.defendants[0].offences[0].offenceId")),
+                Arguments.of(
+                        "T5 — a valid LIBRA payload is forwarded whole, initiationCode O unchanged (LIBRA)",
+                        "json/event-processor/libra/received-input.json",
+                        "json/event-processor/libra/received-expected.json",
+                        List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId")));
     }
 

@@ -3,8 +3,10 @@ package uk.gov.moj.cpp.stagingdlrm.aggregate.validation;
 import static java.util.Map.of;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.LIBRA;
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.XHIBIT;
 import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
@@ -12,6 +14,7 @@ import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
 import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
 import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
 
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 
 import java.io.ByteArrayInputStream;
@@ -29,6 +32,8 @@ class MigratedCaseValidationRuleEngineTest {
 
     private static final String MISSING_DATE_RECEIVED = "json/aggregate/xhibit/submission-missing-date-received.json";
 
+    private static final String LIBRA_VALID = "json/aggregate/libra/submission-valid.json";
+
     private static final JsonObjectToObjectConverter CONVERTER =
             new JsonObjectToObjectConverter(new ObjectMapperProducer().objectMapper());
 
@@ -36,24 +41,65 @@ class MigratedCaseValidationRuleEngineTest {
 
     @Test
     void aValidXhibitSubmissionPassesEveryRule() {
-        assertThat(engine.validate(XHIBIT, load(VALID)), is(empty()));
+        assertThat(engine.validate(XHIBIT, load(VALID, XHIBIT)), is(empty()));
     }
 
     @Test
     void anXhibitSubmissionMissingARelaxedFieldIsRejectedByItsRule() {
-        final List<ValidationError> errors = engine.validate(XHIBIT, load(MISSING_DATE_RECEIVED));
+        final List<ValidationError> errors = engine.validate(XHIBIT, load(MISSING_DATE_RECEIVED, XHIBIT));
 
         assertThat(errors, hasSize(1));
         assertThat(errors.get(0).jsonPath(), is("$.migratedCase.caseDetails.dateReceived"));
     }
 
     @Test
-    void libraHasNoRulesRegisteredYetSoTheSameSubmissionPasses() {
-        assertThat(engine.validate(LIBRA, load(MISSING_DATE_RECEIVED)), is(empty()));
+    void aValidLibraSubmissionPassesEveryRule() {
+        assertThat(engine.validate(LIBRA, load(LIBRA_VALID, LIBRA)), is(empty()));
     }
 
-    private static MigratedCaseSubmission load(final String fixtureName) {
-        final String json = fixture(fixtureName, of("SOURCE_SYSTEM", XHIBIT.name()));
+    @Test
+    void aLibraSubmissionMissingCourtRoomIdIsRejectedAndXhibitIsUnaffected() {
+        assertLibraRejectedXhibitUnaffected(
+                "json/aggregate/libra/submission-missing-court-room-id.json",
+                "$.migratedCase.hearings[*].courtRoomId");
+    }
+
+    @Test
+    void aLibraSubmissionMissingDateOfHearingIsRejectedAndXhibitIsUnaffected() {
+        assertLibraRejectedXhibitUnaffected(
+                "json/aggregate/libra/submission-missing-date-of-hearing.json",
+                "$.migratedCase.hearings[*].dateOfHearing");
+    }
+
+    @Test
+    void aLibraSubmissionMissingTimeOfHearingIsRejectedAndXhibitIsUnaffected() {
+        assertLibraRejectedXhibitUnaffected(
+                "json/aggregate/libra/submission-missing-time-of-hearing.json",
+                "$.migratedCase.hearings[*].timeOfHearing");
+    }
+
+    @Test
+    void aLibraSubmissionMissingDefendantAddressIsRejectedAndXhibitIsUnaffected() {
+        assertLibraRejectedXhibitUnaffected(
+                "json/aggregate/libra/submission-missing-defendant-address.json",
+                "$.migratedCase.defendants[*].address");
+    }
+
+    private void assertLibraRejectedXhibitUnaffected(final String fixtureName, final String expectedJsonPath) {
+        final MigratedCaseSubmission submission = load(fixtureName, LIBRA);
+
+        final List<ValidationError> libraErrors = engine.validate(LIBRA, submission);
+        assertThat(libraErrors, hasSize(1));
+        assertThat(libraErrors.get(0).jsonPath(), is(expectedJsonPath));
+
+        final List<String> xhibitPaths = engine.validate(XHIBIT, submission).stream()
+                .map(ValidationError::jsonPath)
+                .toList();
+        assertThat(xhibitPaths, not(hasItem(expectedJsonPath)));
+    }
+
+    private static MigratedCaseSubmission load(final String fixtureName, final MigrationSourceSystemName sourceSystem) {
+        final String json = fixture(fixtureName, of("SOURCE_SYSTEM", sourceSystem.name()));
         final JsonObject jsonObject =
                 Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))).readObject();
         return CONVERTER.convert(jsonObject, MigratedCaseSubmission.class);

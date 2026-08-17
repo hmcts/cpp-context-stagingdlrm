@@ -10,8 +10,9 @@
 > aligns closer to XHIBIT: 5 relaxations (not 10), 5 XHIBIT rules, 5 LIBRA rules (not 9), 35 declared
 > fields (not 38), no `initiationCode` change, and R3 (code→UUID) resolved.
 >
-> **T3 re-revised against `schema-diff.html`** (LIBRA **0.13.1** vs XHIBIT 0.12): 0.13.1 no longer
-> sends `officerInCase` or `offence.convictionDate`, so T3 declares **14** fields, not 35. See T3.
+> **T3 and T5 re-revised against `schema-diff.html`** (LIBRA **0.13.1** vs XHIBIT 0.12): 0.13.1 no
+> longer sends `officerInCase` or `offence.convictionDate`, so T3 declares **14** fields, not 35; and
+> 0.13.1 does not mandate `caseDetails.caseMarkers`, so T5 has **4** LIBRA rules, not 5. See T3, T5.
 
 | | |
 |---|---|
@@ -40,7 +41,7 @@ mergeable, but LIBRA is not ingestible until T2 and T3 have both landed.
              |
              +--> T4  converter: Group A + null-guard    M
              |
-             +--> T5  5 LIBRA rules + LIBRA fixtures     M   also needs T1 + T2
+             +--> T5  4 LIBRA rules + LIBRA fixtures     M   also needs T1 + T2 (0.13.1)
 
  T6  workbook-corrections pack                 S   independent, any time
 ```
@@ -239,17 +240,21 @@ there and LIBRA 0.13.1 does not carry it.
 
 ### Scope
 
-The 5 LIBRA rules (FR12g) registered under `LIBRA` — presence rules for `hearings[*].dateOfHearing`,
-`hearings[*].timeOfHearing`, `hearings[*].courtRoomId`, `caseDetails.caseMarkers` and
-`defendants[*].address`, all `RequiredFieldRule` instances — and LIBRA fixture sets under
-`json/aggregate/libra/` and `json/event-processor/libra/`, driven through the existing
-`FixtureLoader` / `WholePayloadMatcher`.
+> **Re-revised against LIBRA 0.13.1** (`schema-diff.html`): **4** LIBRA rules, not 5. 0.13.1 does not
+> mandate `caseDetails.caseMarkers` (`caseMarkers` is absent from `caseDetails.required` and optional
+> with `default:[]`), so that presence rule is dropped.
+
+The 4 LIBRA rules (FR12g) registered under `LIBRA` — presence rules for `hearings[*].dateOfHearing`,
+`hearings[*].timeOfHearing`, `hearings[*].courtRoomId` and `defendants[*].address`, all
+`RequiredFieldRule` instances (a `presentOnEvery` helper lets one fire per repeating-block element
+without a new rule type) — and LIBRA fixture sets under `json/aggregate/libra/` and
+`json/event-processor/libra/`, driven through the existing `FixtureLoader` / `WholePayloadMatcher`.
 
 ### Acceptance criteria
 
-1. For each of the 5 rules: a LIBRA payload violating it is rejected and named in the outcome; the same payload shape submitted as XHIBIT is unaffected.
-2. `initiationCode` `O` passes as LIBRA and reaches the outbound payload unchanged — LIBRA 0.13 sends `["O"]`, so there is no LIBRA allowed-values rule.
-3. A LIBRA payload built from workbook V0.13 is accepted end to end and produces `migrated-case-submission-received`.
+1. For each of the 4 rules: a LIBRA payload violating it is rejected and named in the outcome; the same payload shape submitted as XHIBIT is unaffected (that rule's constraint does not fire for XHIBIT).
+2. `initiationCode` `O` passes as LIBRA and reaches the outbound payload unchanged — LIBRA 0.13.1 sends `["O"]`, so there is no LIBRA allowed-values rule.
+3. A LIBRA payload built from workbook V0.13.1 is accepted end to end and produces `migrated-case-submission-received`.
 4. Source system is a scenario parameter — no LIBRA-specific test class, no `if` on source system inside a test (DD-43078 FR3).
 5. No XHIBIT fixture is edited.
 6. LIBRA rule content is data: adding or changing one is a map entry plus a rule instance, no structural change (FR12h).

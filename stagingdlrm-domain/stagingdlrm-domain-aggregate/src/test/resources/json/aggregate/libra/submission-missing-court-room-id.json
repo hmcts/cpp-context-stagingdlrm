@@ -1,0 +1,75 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 60,
+        "hearingType": "Trial",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "def-ref-0001",
+            "listedOffences": [
+              "off-ref-0001"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "prosecutorDefendantId": "def-ref-0001",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "address": {
+          "address1": "armagaddon house",
+          "postcode": "M60 1NW"
+        },
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "off-ref-0001",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "case-identifier-0002"
+    }
+  },
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "numberOfMaterials": 0
+  },
+  "submissionId": "22222222-3333-4444-5555-666666666666",
+  "azureLocation": "{{SOURCE_SYSTEM}}/20082025/case-identifier-0002/22222222-3333-4444-5555-666666666666"
+}
