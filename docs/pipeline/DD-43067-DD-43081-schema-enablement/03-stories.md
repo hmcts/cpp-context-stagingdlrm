@@ -278,11 +278,15 @@ without a new rule type) — and LIBRA fixture sets under `json/aggregate/libra/
 duplication, and contract shape. It sits beside the workbook it corrects rather than in this
 directory, because it outlives DD-43081 and DD-43086 and the pcfdlrm pipeline both need it.
 
-**Needs a refresh pass against LIBRA 0.13** (`schema-diff_3`): several items are now resolved —
-`initiationCode` is `["O"]` on both sides (items 6/7), `prosecutorOffenceId` is required on both
-(item 4), and `organisationTelephoneNumber` is gone (item 5). The live remainder is the FR4
-Format-cell conflicts plus the six FR2a strictness confirmations. Remaining work is that refresh and
-circulation, not fresh authorship.
+**Refreshed against LIBRA 0.13.1** (`schema-diff.html`) — **done**. A "Read this second — LIBRA
+0.13.1" layer records the deltas since the 0.13 sheet: `officerInCase` and `offence.convictionDate`
+are no longer sent (so D2 and most of D3 are superseded and the declared count falls from 35 to 14),
+`initiationCode` stays `["O"]` on both sides (items 7–8 closed — no widening, no rule), the vehicle
+fields stay flat in the payload (item 11 drops `vehicleCode`, leaving five defendant fields), and
+`caseMarkers` is optional (T5 ships 4 LIBRA rules, not 5). The **Summary of asks** table carries the
+0.13.1 status. The live remainder is the FR4 Format-cell conflicts (items 3, 4, 12, 13), the six FR2a
+strictness confirmations, item 11 nesting, and the D1/D4/`summonsCode`/`backDuty*` decisions.
+Remaining work is **circulation**, not authorship.
 
 ### Acceptance criteria
 
