@@ -139,6 +139,12 @@ class StagingDlrmEventProcessorTest {
                         "json/event-processor/xhibit/no-contact-details-input.json",
                         "json/event-processor/xhibit/no-contact-details-expected.json",
                         List.of("migratedCaseDetails.defendants[0].id",
+                                "migratedCaseDetails.defendants[0].offences[0].offenceId")),
+                Arguments.of(
+                        "T5 — a valid LIBRA payload is forwarded whole, initiationCode O unchanged (LIBRA)",
+                        "json/event-processor/libra/received-input.json",
+                        "json/event-processor/libra/received-expected.json",
+                        List.of("migratedCaseDetails.defendants[0].id",
                                 "migratedCaseDetails.defendants[0].offences[0].offenceId")));
     }
 
@@ -291,6 +297,21 @@ class StagingDlrmEventProcessorTest {
                 "\"violatedSchema\":\"http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json\"," +
                 "\"violation\":\"#/migratedCase/caseDetails\"}";
         final MigratedCaseSubmissionProcessed processed = buildCaseSubmissionProcessed(false, description);
+        when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleMigratedCaseSubmissionProcessed(migratedCaseSubmissionProcessedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
+    }
+
+    @Test
+    void shouldIncrementMigratedCaseSubmissionReceivedCounterWhenValidationRuleFailed() {
+        final MigratedCaseSubmissionProcessed processed =
+                buildCaseSubmissionProcessed(false, "Migrated case submission rejected by validation rule(s)");
         when(migratedCaseSubmissionProcessedEnvelope.payload()).thenReturn(processed);
         doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
 

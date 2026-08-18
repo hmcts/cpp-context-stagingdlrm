@@ -44,6 +44,28 @@ sheet is proposed for correction.
 Row numbers throughout are from the `Libra Case - Min Data` tab of the **revised** V0.13 and have
 shifted by two or three from the original.
 
+> ## Read this second — LIBRA 0.13.1 moved things again
+>
+> A further revision, **LIBRA 0.13.1** (compared in `schema-diff.html`, LIBRA 0.13.1 vs XHIBIT 0.12),
+> landed after the sheet the section above was refreshed against. **DD-43081 (T2–T5) was implemented
+> against 0.13.1**, so where 0.13.1 and the sections below disagree, 0.13.1 is what shipped. 0.13.1
+> aligns much closer to XHIBIT and drops three whole blocks:
+>
+> | Change in 0.13.1 | Effect on this document |
+> |---|---|
+> | **`officerInCase` is no longer sent** | The whole officer block is **not declared** in canonical — there is no officer container. Section **D2** (3 asks) and the 17 officer rows of **D3** no longer apply to DD-43081; only D3's `numPreviousConvictions` survives. If a later LIBRA version re-introduces the block, D2/D3 return with it |
+> | **`offence.convictionDate` is no longer sent** | Removed from **D3** — not declared |
+> | **`initiationCode` is `enum: ["O"]` on both sides** | No widening happened. **Items 7 and 8 are closed for DD-43081**: the schema keeps `["O"]`, there is no allowed-values rule, and the `H`/`X` questions do not arise for this story (they stay valid platform-enum questions in their own right). The "widened + rule" Dev statuses on 7–8 are superseded — nothing was widened |
+> | **Vehicle fields stay flat in the payload** | Canonical declares `vehicleCode`, `vehicleMake`, `vehicleRegistrationMark` **flat** on `offence`; the converter nests `vehicleCode` and `vehicleRegistrationMark` into PCFDLRM's `vehicleRelatedOffence`. So **item 11 no longer asks the extract to nest `vehicleCode`** — only the five defendant fields nest. D0's two-homes question for `vehicleRegistrationMark` is answered: PCFDLRM reads the nested one, so the converter writes there |
+> | **`caseMarkers` is optional (`default:[]`)** | The LIBRA *presence* rule for `caseDetails.caseMarkers` was dropped — T5 ships **4** LIBRA rules, not 5. Item 10's `markerTypeCode`-within-a-marker is unaffected (still required when a marker is sent) |
+>
+> **Declared-field count:** the 35 this document accounts for becomes **14** under 0.13.1 — Group A's
+> 11, plus `numPreviousConvictions`, `informant` and `prosecutorCosts`. The dropped 21 are the officer
+> block (20) and `convictionDate` (1).
+>
+> The section-by-section detail below is the 0.13-era record and is left intact; the **Summary of
+> asks** table at the foot carries the 0.13.1 status, so the live list is correct.
+
 ## Dev status vocabulary
 
 Every field below carries a **Dev status** saying what DD-43081 actually did with it. Paths are
@@ -155,7 +177,9 @@ difference is more than a label.
 | Ask | The duplication is resolved. **But confirm deleting `companyTelephoneNumber` was intended** — the contract's `defendant.telephoneNumberBusiness` is a live XHIBIT field that LIBRA now supplies nothing for. If LIBRA does hold a business telephone number, one row needs restoring |
 | **Dev status** | **Declared, not mapped** — DD-43081 added `defendants[*].organisationTelephoneNumber` to canonical against the earlier sheet. With the row gone it is a field nothing populates: **remove it, or leave it as an accepted-but-unused optional.** Decide before T3 lands |
 
-### 7 — `initiationCode: "H"` in Function App fixtures
+### 7 — `initiationCode: "H"` in Function App fixtures — ✅ CLOSED for DD-43081 by 0.13.1
+
+*0.13.1: `initiationCode` stays `enum: ["O"]`, so the schema was never widened and `H` is not in play for this story. The platform-enum gap (if `H` is real) remains a standalone reference-data question.*
 
 | | |
 |---|---|
@@ -164,7 +188,9 @@ difference is more than a label.
 | Ask | **Is `H` a real initiation code or dead test data?** If real, the platform enum is missing it and that is a wider reference-data issue |
 | **Dev status** | `caseDetails.initiationCode` enum **widened** to the platform's seven. `H` is not among them and is rejected by the schema for both source systems |
 
-### 8 — Which initiation codes does XHIBIT legitimately send? — ❌ STILL OPEN, and LIBRA's set has grown
+### 8 — Which initiation codes does XHIBIT legitimately send? — ✅ CLOSED for DD-43081 by 0.13.1
+
+*0.13.1: both source systems send `["O"]` only, so there is no widening and no allowed-values rule to pin. The XHIBIT/`X` code-set question is no longer on DD-43081's path; it stays a reference-data question if a later revision reintroduces other codes.*
 
 | | |
 |---|---|
@@ -217,7 +243,10 @@ it stands, and the generated LIBRA schema now requires it too. Nothing further t
 Written up as [ADR-003](../../pipeline/adrs/003-libra-payload-contract.md), which is the binding
 form of this item — this section is the summary.
 
-Six fields are flat rows in the workbook but nested in the contract:
+*0.13.1: `vehicleCode` is **removed from this list** — canonical now carries it flat on `offence` and
+the converter does the nesting, so the extract sends it flat. The five defendant fields still nest.*
+
+Five fields are flat rows in the workbook but nested in the contract:
 
 | Field | Sheet row | Where the contract holds it |
 |---|---|---|
@@ -226,7 +255,7 @@ Six fields are flat rows in the workbook but nested in the contract:
 | `nationalInsuranceNumber` | 89 | `defendant.individual` |
 | `occupation` | 72 | `defendant.individual.personalInformation` |
 | `defendantOccupationCode` | 73 | `defendant.individual.personalInformation` |
-| `vehicleCode` | 140 | `offence.vehicleRelatedOffence` |
+| ~~`vehicleCode`~~ | ~~140~~ | ~~`offence.vehicleRelatedOffence`~~ — **flat in 0.13.1; converter nests** |
 
 **Dev status for all six: Declared + mapped** at the nested paths above. The payload uses the names
 in this table; PCFDLRM's differing names (`driverLicenceCode`, `occupationCode`) are applied by the
@@ -318,7 +347,10 @@ consumer, the `backDuty*` deletion is the one to revisit.**
 schema, because `caseDetails` and `defendant` are closed objects and LIBRA sends the fields — an
 undeclared field there is a terminal 4xx. They are accepted and discarded.
 
-### D2 — Declared, never propagated (3)
+### D2 — Declared, never propagated (3) — ⛔ SUPERSEDED by 0.13.1
+
+*0.13.1 no longer sends `officerInCase`, so these three are **not declared** — there is no officer
+container in canonical. The rows below are the 0.13-era record.*
 
 Officer fields with no counterpart in PCFDLRM or Progression. Declared only so the payload passes.
 
@@ -331,7 +363,12 @@ Officer fields with no counterpart in PCFDLRM or Progression. Declared only so t
 **Ask: confirm this data is genuinely not needed downstream** before we build a schema that
 knowingly swallows it.
 
-### D3 — Declared, converter mapping deferred (19)
+### D3 — Declared, converter mapping deferred (19) — ⛔ MOSTLY SUPERSEDED by 0.13.1
+
+*0.13.1 drops the whole officer block and `convictionDate`, so of the 19 only
+**`numPreviousConvictions`** survives (still declared, not mapped — no PCFDLRM home at
+`v17.104.21`). The 17 officer rows and `convictionDate` are **not declared**. The table below is the
+0.13-era record; if a later LIBRA version re-adds the officer block, its D3 asks return.*
 
 Progression **does** model these — five of them as *mandatory* fields. They are blocked at the middle
 hop: PCFDLRM's `pcf-policeOfficerInCase.json` declares only `{personalInformation, policeOfficerRank}`
@@ -439,6 +476,11 @@ to become LIBRA validation rules. They are listed in the provenance sidecar's `d
 
 ## Completeness — what is and is not covered
 
+*The counts in this section are the **0.13-era** accounting. Under 0.13.1 (see "Read this second"),
+the officer block (20 fields) and `convictionDate` are no longer sent, so **11 reach Progression and
+3 do not** (`informant`, `prosecutorCosts`, `numPreviousConvictions`), for a declared total of 14.
+D4's three code fields remain out of scope. The breakdown below is kept as the 0.13 record.*
+
 LIBRA supplies 38 fields the canonical schema does not have — 39 rows in the matrix, because
 `middleName2` is reachable at two paths — plus 3 modelled as codes where the schema expects
 identifiers. This document accounts for **all 41**, so a field's absence from it is never ambiguous:
@@ -477,14 +519,14 @@ Closed items are struck through, so nothing looks quietly dropped.
 | 13 | **New** — Format cell: parent-guardian `organisationName` | Workbook owner | Low |
 | ~~5~~ | ~~Rename `cjsOffenceCode` → `offenceCode`~~ | — | **Closed** by the revision. The wider naming question (39 labels) stays open at low priority — the provenance sidecar makes it mechanical |
 | 6 | ~~`organisationTelephoneNumber` duplicate~~ — closed by deletion, but **confirm deleting `companyTelephoneNumber` too was intended** | Workbook owner | Before T3 lands |
-| 7–8 | Initiation codes: is `H` real; **is `X` real**; what does XHIBIT send | Reference data | Needed to pin both validation rules; `X` is not in the platform enum |
+| ~~7–8~~ | ~~Initiation codes: is `H`/`X` real; what does XHIBIT send~~ | — | **Closed for DD-43081** by 0.13.1 — `enum: ["O"]` both sides, no widening, no rule. Stays a standalone reference-data question if other codes reappear |
 | ~~9~~ | ~~`prosecutorOffenceId` dangling reference~~ | — | **Closed** by the revision |
 | ~~10~~ | ~~Six fields to match XHIBIT~~ | — | **Closed** — `markerTypeCode` is now mandatory in the sheet |
-| 11 | Payload nesting | **LIBRA extract team + DD-43086** | **Most urgent** — before the extract is written |
+| 11 | Payload nesting — **five defendant fields** (`vehicleCode` removed under 0.13.1: flat, converter nests) | **LIBRA extract team + DD-43086** | **Most urgent** — before the extract is written |
 | D0 | **`summonsCode` was deleted from the sheet and was already flowing end to end — confirm** | Workbook owner | Before the schema is frozen |
 | D1 | 3 of the 5 dropped fields exist in PCFDLRM — is PCFDLRM the intended consumer? **And was deleting the `backDuty*` group intended?** | Technical Architect | Before the schema is frozen |
-| D2 | Confirm 3 officer fields are genuinely unwanted downstream | Technical Architect | Low |
-| D3 | Is the officer-in-case block wanted, and can the PCFDLRM work be prioritised? | Technical Architect + PCFDLRM | Blocks 19 fields from flowing |
+| ~~D2~~ | ~~Confirm 3 officer fields are genuinely unwanted downstream~~ | — | **Moot under 0.13.1** — `officerInCase` is not sent, so nothing is declared or swallowed. Returns if the officer block is re-added |
+| D3 | **Under 0.13.1 only `numPreviousConvictions` remains** (declared, not mapped — no PCFDLRM home at `v17.104.21`). The officer block and `convictionDate` are no longer sent. If the officer block is re-added, the "is it wanted / prioritise PCFDLRM" question returns for its 17 fields | Technical Architect + PCFDLRM | 1 field write-only; officer block dormant |
 | D4 | Where does plea/verdict/allocation code → UUID resolution belong? **And are the `A36` cells telling us they are already UUIDs?** | Technical Architect | Needs its own ticket; affects XHIBIT too |
 | ~~D5~~ | ~~Verify the parent-guardian block by hand~~ | — | **Closed** — the tooling now joins it; two of the sheet's mandatory marks are intersected away and need LIBRA rules |
 

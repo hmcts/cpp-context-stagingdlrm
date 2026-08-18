@@ -32,6 +32,17 @@
     },
     "address": {
       "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/address.json"
+    },
+    "occupation": {
+      "type": "string",
+      "maxLength": 54,
+      "description": "The description of an occupation."
+    },
+    "defendantOccupationCode": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 99999,
+      "description": "An occupation code."
     }
   },
   "required": [

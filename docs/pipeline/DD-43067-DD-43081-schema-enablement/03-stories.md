@@ -9,6 +9,10 @@
 > canonical schema — see the header note in [`01-requirements.md`](./01-requirements.md). LIBRA 0.13
 > aligns closer to XHIBIT: 5 relaxations (not 10), 5 XHIBIT rules, 5 LIBRA rules (not 9), 35 declared
 > fields (not 38), no `initiationCode` change, and R3 (code→UUID) resolved.
+>
+> **T3 and T5 re-revised against `schema-diff.html`** (LIBRA **0.13.1** vs XHIBIT 0.12): 0.13.1 no
+> longer sends `officerInCase` or `offence.convictionDate`, so T3 declares **14** fields, not 35; and
+> 0.13.1 does not mandate `caseDetails.caseMarkers`, so T5 has **4** LIBRA rules, not 5. See T3, T5.
 
 | | |
 |---|---|
@@ -33,11 +37,11 @@ mergeable, but LIBRA is not ingestible until T2 and T3 have both landed.
   |
   +--> T2  5 relaxations + 5 XHIBIT rules      L   atomic
   |
-  +--> T3  35 field additions                  M   declares per ADR-003
+  +--> T3  14 field additions                  S   declares per ADR-003 (0.13.1)
              |
              +--> T4  converter: Group A + null-guard    M
              |
-             +--> T5  5 LIBRA rules + LIBRA fixtures     M   also needs T1 + T2
+             +--> T5  4 LIBRA rules + LIBRA fixtures     M   also needs T1 + T2 (0.13.1)
 
  T6  workbook-corrections pack                 S   independent, any time
 ```
@@ -136,9 +140,9 @@ latent unboxing NPE (F1); it is no longer forced by a relaxation, because `gende
 
 ---
 
-## T3 — The 35 field additions
+## T3 — The 14 field additions
 
-**Size:** M · **Depends on:** T1
+**Size:** S · **Depends on:** T1
 
 > As a **migration engineer submitting a LIBRA case file**,
 > I want **the canonical schema to accept every LIBRA field that has a home downstream, and the
@@ -147,26 +151,42 @@ latent unboxing NPE (F1); it is no longer forced by a relaxation, because `gende
 
 Schema only — converter mapping is T4.
 
+> **Re-revised against LIBRA 0.13.1** (`schema-diff.html`). 0.13.1 no longer sends `officerInCase`
+> or `offence.convictionDate`, so both are dropped: no `officer-in-case.json`, no `migrated-case.json`
+> change. Group B falls from 19 to 1, Group C from 5 to 2; the declared total is **14**, not 35.
+
 ### Scope
 
-Groups A (11), B (19) and C (5) per FR5/FR8/FR10, declared at the nesting
-[ADR-003](../adrs/003-libra-payload-contract.md) fixes, across `case-details.json`, `individual.json`,
+Groups A (11), B (1) and C (2) per FR5/FR8/FR10, across `case-details.json`, `individual.json`,
 `personal-information.json`, `migrated-offence.json`, `migrated-defendant.json`,
-`self-defined-information.json`, plus a new `officer-in-case.json` and the `officerInCase` property
-on `migrated-case.json`.
+`self-defined-information.json`. No new schema file.
+
+> **Vehicle fields stay flat in canonical.** `vehicleCode`, `vehicleMake` and `vehicleRegistrationMark`
+> are declared flat on `migrated-offence.json` — the shape LIBRA 0.13.1 actually sends. stagingDLRM
+> does **not** add a `vehicle-related-offence.json`, and **PCFDLRM's schema is not changed**; the
+> **T4 converter** reads the flat fields and populates PCFDLRM's nested `vehicleRelatedOffence` object.
+> This supersedes [ADR-003](../adrs/003-libra-payload-contract.md) §2 row 145 (which had the payload
+> nest `vehicleCode`) — the re-nesting moves to the converter instead.
+
+- **Group A (11)** — `driverNumber`, `nationalInsuranceNumber`, `licenseCode` (→ `individual`);
+  `occupation`, `defendantOccupationCode` (→ `personalInformation`); `statementOfFacts`,
+  `statementOfFactsWelsh`, `vehicleCode`, `vehicleMake`, `vehicleRegistrationMark` (all flat on
+  `offence`); `additionalNationality`.
+- **Group B (1)** — `defendants[*].numPreviousConvictions`.
+- **Group C (2)** — `caseDetails.informant`, `defendants[*].prosecutorCosts`.
 
 ### Acceptance criteria
 
-1. All 35 fields round-trip through schema validation on a LIBRA payload with no validation error.
+1. All 14 fields round-trip through schema validation on a LIBRA payload with no validation error.
 2. Every added field is optional; an existing XHIBIT payload remains valid.
-3. A LIBRA payload carrying `officerInCase`, including `dxAddress`, `forename3` and `uniquePropertyReferenceNumber`, is accepted rather than rejected as an additional property.
-4. Group C's 5 fields carry a `description` marking them accepted but not propagated.
+3. `vehicleCode`, `vehicleMake` and `vehicleRegistrationMark` are accepted **flat** on `offence` (no canonical `vehicle-related-offence.json`, PCFDLRM schema unchanged); nesting into PCFDLRM's `vehicleRelatedOffence` object is a **T4** converter concern.
+4. Group C's 2 fields carry a `description` marking them accepted but not propagated.
 5. `nationalInsuranceNumber` `$ref`s the existing `pcf-definitions.json` pattern rather than redeclaring it (FR7).
-6. `officerInCase.address` `$ref`s the existing `address.json`; that file is unmodified.
-7. The 3 Group D fields (`prosecutorOfferAOCP`, `prosecutorCompensation`, `middleName2`) are **absent** from the schema, and a LIBRA payload carrying them still validates — their containers are open.
+6. The 3 Group D fields (`prosecutorOfferAOCP`, `prosecutorCompensation`, `middleName2`) are **absent** from the schema, and a LIBRA payload carrying them still validates — their containers are open.
+7. `officerInCase` and `offence.convictionDate` are **not** declared — LIBRA 0.13.1 does not send them.
 8. `mvn clean install` green; generated POJOs include the new fields.
 
-**Traceability:** FR5–FR11 · AC5, AC10 · design F3, F4
+**Traceability:** FR5–FR11 · AC5 · design F3, F4
 
 ---
 
@@ -180,25 +200,29 @@ on `migrated-case.json`.
 
 ### Scope
 
-`MigratedCaseConvertor` — `buildIndividual` (3), `buildPersonalInformation` (2, renamed to
-`occupationCode` / `driverLicenceCode`), `buildOffences` (5), `buildSelfDefinedInformation` (1).
-No `buildCaseDetails` change — `summonsCode` was the only Group A field there, and LIBRA 0.13 no
-longer carries it.
+`MigratedCaseConvertor` — `buildIndividual` (3: `driverNumber`, `nationalInsuranceNumber`,
+`licenseCode`→`driverLicenceCode`), `buildPersonalInformation` (2: `occupation`,
+`defendantOccupationCode`→`occupationCode`), `buildOffences` (5), `buildSelfDefinedInformation`
+(1: `additionalNationality`). No `buildCaseDetails` change — `summonsCode` was the only Group A field
+there and LIBRA 0.13.1 does not carry it.
 
-Not all five offence fields map flat: `vehicleMake` and `vehicleRegistrationMark` are flat on
-PCFDLRM's `migrated-offence.json`, but `vehicleCode` sits on a nested `vehicleRelatedOffence`
-object — the shape `buildAlcoholRelatedOffence` already handles (design F4).
+> **Vehicle nesting is a converter concern (per the T3 decision).** stagingDLRM canonical carries
+> `vehicleCode`, `vehicleMake`, `vehicleRegistrationMark` **flat** (no canonical
+> `vehicle-related-offence.json`). The converter re-nests: `vehicleMake` → flat on PCFDLRM's
+> `migrated-offence`; `vehicleCode` **and** `vehicleRegistrationMark` → PCFDLRM's nested
+> `vehicleRelatedOffence` object (built like `buildAlcoholRelatedOffence`). PCFDLRM's schema is
+> unchanged.
 
 ### Acceptance criteria
 
-1. All 11 Group A fields appear with correct values and PCFDLRM's names in the outbound payload, asserted as a **whole payload**.
-2. Group C's 5 fields are accepted on input and **absent** from the outbound payload.
-3. Group B's 19 fields are not mapped, recorded in code as deliberate rather than omitted silently.
+1. All 11 Group A fields appear with correct values and PCFDLRM's names in the outbound payload.
+2. Group C's 2 fields (`informant`, `prosecutorCosts`) are accepted on input and **absent** from the outbound payload.
+3. Group B's 1 field (`numPreviousConvictions`) is not mapped, recorded in code as deliberate rather than omitted silently.
 4. `initiationCode` (`["O"]`) reaches PCFDLRM unchanged; `.getInitiationCode().name()` is untouched (FR15).
 5. No source-system branching anywhere in the converter (FR16).
 6. Every DD-43078 XHIBIT outbound fixture passes byte-identically.
 7. `vehicleCode` is written to the nested `vehicleRelatedOffence` object, built the way `buildAlcoholRelatedOffence` builds its counterpart.
-8. `vehicleRegistrationMark` is written to whichever of its **two** PCFDLRM homes reaches Progression's `offenceFacts.vehicleRegistration` — confirm with the PCFDLRM team before mapping.
+8. `vehicleRegistrationMark` is written to the nested `vehicleRelatedOffence` object — **resolved** (AC8 was "confirm with PCFDLRM"): PCFDLRM's `ProsecutionCaseFileMigratedOffenceToCourtsOffenceConverter` reads only `vehicleRelatedOffence.getVehicleRegistrationMark()`/`.getVehicleCode()` into `offenceFacts`, so the nested home is the one that reaches Progression.
 
 **Traceability:** FR14, FR15, FR16 · AC6, AC7 · design F4
 
@@ -216,17 +240,21 @@ object — the shape `buildAlcoholRelatedOffence` already handles (design F4).
 
 ### Scope
 
-The 5 LIBRA rules (FR12g) registered under `LIBRA` — presence rules for `hearings[*].dateOfHearing`,
-`hearings[*].timeOfHearing`, `hearings[*].courtRoomId`, `caseDetails.caseMarkers` and
-`defendants[*].address`, all `RequiredFieldRule` instances — and LIBRA fixture sets under
-`json/aggregate/libra/` and `json/event-processor/libra/`, driven through the existing
-`FixtureLoader` / `WholePayloadMatcher`.
+> **Re-revised against LIBRA 0.13.1** (`schema-diff.html`): **4** LIBRA rules, not 5. 0.13.1 does not
+> mandate `caseDetails.caseMarkers` (`caseMarkers` is absent from `caseDetails.required` and optional
+> with `default:[]`), so that presence rule is dropped.
+
+The 4 LIBRA rules (FR12g) registered under `LIBRA` — presence rules for `hearings[*].dateOfHearing`,
+`hearings[*].timeOfHearing`, `hearings[*].courtRoomId` and `defendants[*].address`, all
+`RequiredFieldRule` instances (a `presentOnEvery` helper lets one fire per repeating-block element
+without a new rule type) — and LIBRA fixture sets under `json/aggregate/libra/` and
+`json/event-processor/libra/`, driven through the existing `FixtureLoader` / `WholePayloadMatcher`.
 
 ### Acceptance criteria
 
-1. For each of the 5 rules: a LIBRA payload violating it is rejected and named in the outcome; the same payload shape submitted as XHIBIT is unaffected.
-2. `initiationCode` `O` passes as LIBRA and reaches the outbound payload unchanged — LIBRA 0.13 sends `["O"]`, so there is no LIBRA allowed-values rule.
-3. A LIBRA payload built from workbook V0.13 is accepted end to end and produces `migrated-case-submission-received`.
+1. For each of the 4 rules: a LIBRA payload violating it is rejected and named in the outcome; the same payload shape submitted as XHIBIT is unaffected (that rule's constraint does not fire for XHIBIT).
+2. `initiationCode` `O` passes as LIBRA and reaches the outbound payload unchanged — LIBRA 0.13.1 sends `["O"]`, so there is no LIBRA allowed-values rule.
+3. A LIBRA payload built from workbook V0.13.1 is accepted end to end and produces `migrated-case-submission-received`.
 4. Source system is a scenario parameter — no LIBRA-specific test class, no `if` on source system inside a test (DD-43078 FR3).
 5. No XHIBIT fixture is edited.
 6. LIBRA rule content is data: adding or changing one is a map entry plus a rule instance, no structural change (FR12h).
@@ -250,11 +278,15 @@ The 5 LIBRA rules (FR12g) registered under `LIBRA` — presence rules for `heari
 duplication, and contract shape. It sits beside the workbook it corrects rather than in this
 directory, because it outlives DD-43081 and DD-43086 and the pcfdlrm pipeline both need it.
 
-**Needs a refresh pass against LIBRA 0.13** (`schema-diff_3`): several items are now resolved —
-`initiationCode` is `["O"]` on both sides (items 6/7), `prosecutorOffenceId` is required on both
-(item 4), and `organisationTelephoneNumber` is gone (item 5). The live remainder is the FR4
-Format-cell conflicts plus the six FR2a strictness confirmations. Remaining work is that refresh and
-circulation, not fresh authorship.
+**Refreshed against LIBRA 0.13.1** (`schema-diff.html`) — **done**. A "Read this second — LIBRA
+0.13.1" layer records the deltas since the 0.13 sheet: `officerInCase` and `offence.convictionDate`
+are no longer sent (so D2 and most of D3 are superseded and the declared count falls from 35 to 14),
+`initiationCode` stays `["O"]` on both sides (items 7–8 closed — no widening, no rule), the vehicle
+fields stay flat in the payload (item 11 drops `vehicleCode`, leaving five defendant fields), and
+`caseMarkers` is optional (T5 ships 4 LIBRA rules, not 5). The **Summary of asks** table carries the
+0.13.1 status. The live remainder is the FR4 Format-cell conflicts (items 3, 4, 12, 13), the six FR2a
+strictness confirmations, item 11 nesting, and the D1/D4/`summonsCode`/`backDuty*` decisions.
+Remaining work is **circulation**, not authorship.
 
 ### Acceptance criteria
 

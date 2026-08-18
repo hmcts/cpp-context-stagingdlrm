@@ -2,17 +2,22 @@ package uk.gov.moj.cpp.stagingdlrm.aggregate.validation;
 
 import static java.util.Map.of;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static uk.gov.moj.cpp.stagingdlrm.aggregate.MigratedCaseSubmissionAggregate.VALIDATION_FAILED;
+import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.LIBRA;
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.XHIBIT;
 import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
-import static uk.gov.moj.cpp.stagingdlrm.test.WholePayloadMatcher.matchesWholePayload;
 
 import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
 import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
 
 import uk.gov.moj.cpp.stagingdlrm.aggregate.MigratedCaseSubmissionAggregate;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigratedCaseValidationError;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionProcessed;
 import uk.gov.moj.stagingdlrm.domain.event.MigratedCaseSubmissionReceived;
@@ -25,67 +30,88 @@ import java.util.List;
 import javax.json.Json;
 import javax.json.JsonObject;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class MigratedCaseSubmissionRejectionTest {
 
-    private static final String SUBMISSION = "json/aggregate/xhibit/submission-without-materials.json";
+    private static final String VALID = "json/aggregate/xhibit/submission-without-materials.json";
 
-    private static final String EXPECTED_REJECTED = "json/aggregate/xhibit/expected-rejected.json";
-
-    private static final String EXPECTED_PROCESSED_REJECTED = "json/aggregate/xhibit/expected-processed-rejected.json";
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapperProducer().objectMapper();
+    private static final String MISSING_DATE_RECEIVED = "json/aggregate/xhibit/submission-missing-date-received.json";
 
     private static final JsonObjectToObjectConverter CONVERTER =
             new JsonObjectToObjectConverter(new ObjectMapperProducer().objectMapper());
 
-    @BeforeEach
-    void registerAlwaysFailingRule() {
-        final ValidationError error = new ValidationError("$", "test-only always-failing rule");
-        MigratedCaseValidationRuleEngine.registerRuleForTest(XHIBIT, input -> List.of(error));
-    }
-
-    @AfterEach
-    void resetRules() {
-        MigratedCaseValidationRuleEngine.resetTestRules();
-    }
-
     @Test
-    void aFailedRuleAppendsRejectedAndProcessedFailureButNeverReceived() {
+    void anXhibitRuleViolationAppendsRejectedAndProcessedFailureButNeverReceived() {
         final List<Object> events =
-                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(loadSubmission()).toList();
+                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(load(MISSING_DATE_RECEIVED)).toList();
 
-        assertThat(events.size(), is(2));
+        assertThat(events, hasSize(2));
         assertThat(events.get(0), instanceOf(MigratedCaseSubmissionRejected.class));
         assertThat(events.get(1), instanceOf(MigratedCaseSubmissionProcessed.class));
 
-        assertThat(serialise(events.get(0)),
-                matchesWholePayload(fixture(EXPECTED_REJECTED, of("SOURCE_SYSTEM", XHIBIT.name())), List.of()));
-        assertThat(serialise(events.get(1)),
-                matchesWholePayload(fixture(EXPECTED_PROCESSED_REJECTED, of("SOURCE_SYSTEM", XHIBIT.name())), List.of()));
+        final MigratedCaseSubmissionRejected rejected = (MigratedCaseSubmissionRejected) events.get(0);
+        assertThat(rejected.getValidationErrors(), hasSize(1));
+        final MigratedCaseValidationError error = rejected.getValidationErrors().get(0);
+        assertThat(error.getJsonPath(), is("$.migratedCase.caseDetails.dateReceived"));
+
+        final MigratedCaseSubmissionProcessed processed = (MigratedCaseSubmissionProcessed) events.get(1);
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getProcessingIsSuccessful(), is(false));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getDescription(), is(VALIDATION_FAILED));
 
         for (final Object event : events) {
             assertThat(event, is(not(instanceOf(MigratedCaseSubmissionReceived.class))));
         }
     }
 
-    private static MigratedCaseSubmission loadSubmission() {
-        final String json = fixture(SUBMISSION, of("SOURCE_SYSTEM", XHIBIT.name()));
+    @Test
+    void aValidXhibitSubmissionIsReceivedNotRejected() {
+        final List<Object> events =
+                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(load(VALID)).toList();
+
+        assertThat(events, contains(instanceOf(MigratedCaseSubmissionReceived.class)));
+    }
+
+    @Test
+    void aValidLibraSubmissionIsReceivedNotRejected() {
+        final List<Object> events =
+                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(
+                        load("json/aggregate/libra/submission-valid.json", LIBRA)).toList();
+
+        assertThat(events, contains(instanceOf(MigratedCaseSubmissionReceived.class)));
+    }
+
+    @Test
+    void aLibraRuleViolationAppendsRejectedAndProcessedFailureButNeverReceived() {
+        final List<Object> events =
+                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(
+                        load("json/aggregate/libra/submission-missing-court-room-id.json", LIBRA)).toList();
+
+        assertThat(events, hasSize(2));
+        assertThat(events.get(0), instanceOf(MigratedCaseSubmissionRejected.class));
+        assertThat(events.get(1), instanceOf(MigratedCaseSubmissionProcessed.class));
+
+        final MigratedCaseSubmissionRejected rejected = (MigratedCaseSubmissionRejected) events.get(0);
+        assertThat(rejected.getValidationErrors(), hasSize(1));
+        assertThat(rejected.getValidationErrors().get(0).getJsonPath(), is("$.migratedCase.hearings[*].courtRoomId"));
+
+        final MigratedCaseSubmissionProcessed processed = (MigratedCaseSubmissionProcessed) events.get(1);
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getProcessingIsSuccessful(), is(false));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getDescription(), is(VALIDATION_FAILED));
+
+        for (final Object event : events) {
+            assertThat(event, is(not(instanceOf(MigratedCaseSubmissionReceived.class))));
+        }
+    }
+
+    private static MigratedCaseSubmission load(final String fixtureName) {
+        return load(fixtureName, XHIBIT);
+    }
+
+    private static MigratedCaseSubmission load(final String fixtureName, final MigrationSourceSystemName sourceSystem) {
+        final String json = fixture(fixtureName, of("SOURCE_SYSTEM", sourceSystem.name()));
         final JsonObject jsonObject =
                 Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))).readObject();
         return CONVERTER.convert(jsonObject, MigratedCaseSubmission.class);
-    }
-
-    private static String serialise(final Object event) {
-        try {
-            return OBJECT_MAPPER.writeValueAsString(event);
-        } catch (final JsonProcessingException e) {
-            throw new AssertionError("Failed to serialise " + event, e);
-        }
     }
 }

@@ -51,6 +51,15 @@ per-parent copies, no new generated POJO types appear, and
 
 ### Schema changes, file by file
 
+> **Superseded for T3 by LIBRA 0.13.1** (`schema-diff.html`) — see [`03-stories.md`](./03-stories.md)
+> T3. 0.13.1 drops `officerInCase` and `offence.convictionDate`, so the `officer-in-case.json` and
+> `migrated-case.json` rows and the `convictionDate` addition below do **not** apply. The vehicle
+> fields (`vehicleCode`, `vehicleMake`, `vehicleRegistrationMark`) are declared **flat** on
+> `migrated-offence.json`: stagingDLRM adds **no** `vehicle-related-offence.json`, PCFDLRM's schema is
+> **unchanged**, and the T4 converter populates PCFDLRM's nested `vehicleRelatedOffence` (supersedes
+> ADR-003 §2 row 145). The `case-details.json` relaxations/`initiationCode` row is the older 0.13
+> draft; the authoritative relaxation list is FR1.
+
 `stagingdlrm-domain-value-schema/src/main/resources/json/schema/`
 
 | File | Relaxations (FR1) | Additions |
