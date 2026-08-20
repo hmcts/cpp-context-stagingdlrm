@@ -3,7 +3,7 @@
   "migratedCaseDetails" : {
     "caseDetails" : {
       "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
-      "initiationCode" : "O",
+      "initiationCode" : "C",
       "originatingOrganisation" : "G94DV00",
       "prosecutor" : {
         "prosecutingAuthority" : "GAEAA01"

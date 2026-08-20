@@ -104,6 +104,29 @@ class MigratedCaseSubmissionRejectionTest {
         }
     }
 
+    @Test
+    void aLibraSubmissionWithADisallowedInitiationCodeIsRejectedNotReceived() {
+        final List<Object> events =
+                new MigratedCaseSubmissionAggregate().receiveMigratedCaseSubmission(
+                        load("json/aggregate/libra/submission-invalid-initiation-code.json", LIBRA)).toList();
+
+        assertThat(events, hasSize(2));
+        assertThat(events.get(0), instanceOf(MigratedCaseSubmissionRejected.class));
+        assertThat(events.get(1), instanceOf(MigratedCaseSubmissionProcessed.class));
+
+        final MigratedCaseSubmissionRejected rejected = (MigratedCaseSubmissionRejected) events.get(0);
+        assertThat(rejected.getValidationErrors(), hasSize(1));
+        assertThat(rejected.getValidationErrors().get(0).getJsonPath(), is("$.migratedCase.caseDetails.initiationCode"));
+
+        final MigratedCaseSubmissionProcessed processed = (MigratedCaseSubmissionProcessed) events.get(1);
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getProcessingIsSuccessful(), is(false));
+        assertThat(processed.getMigratedCaseSubmissionProcessed().getDescription(), is(VALIDATION_FAILED));
+
+        for (final Object event : events) {
+            assertThat(event, is(not(instanceOf(MigratedCaseSubmissionReceived.class))));
+        }
+    }
+
     private static MigratedCaseSubmission load(final String fixtureName) {
         return load(fixtureName, XHIBIT);
     }

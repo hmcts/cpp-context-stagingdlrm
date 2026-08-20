@@ -4,9 +4,16 @@
       "originatingOrganisation": "G94DV00",
       "initiationCode": "C",
       "prosecutorCaseReference": "TVL55117DFXXV",
+      "dateReceived": "2024-01-15",
       "prosecutor": {
         "prosecutingAuthority": "GAEAA01"
-      }
+      },
+      "sendingCourt": "C50EX00",
+      "receivingCourt": "B01LY00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Either way case",
+      "retrialIndicator": false
     },
     "hearings": [
       {
@@ -32,15 +39,15 @@
         "prosecutorDefendantId": "def-ref-0001",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
-        "address": {
-          "address1": "armagaddon house",
-          "postcode": "M60 1NW"
-        },
         "individual": {
           "personalInformation": {
             "title": "Baron",
             "forename": "John",
             "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
             "contactDetails": {}
           },
           "selfDefinedInformation": {

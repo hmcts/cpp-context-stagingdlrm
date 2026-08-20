@@ -54,7 +54,10 @@
         "initiationCode": {
           "type": "string",
           "enum": [
-            "O"
+            "C",
+            "Q",
+            "J",
+            "R"
           ]
         },
         "cpsOrganisation": {

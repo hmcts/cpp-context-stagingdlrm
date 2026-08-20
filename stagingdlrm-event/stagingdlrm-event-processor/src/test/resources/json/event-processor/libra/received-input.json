@@ -2,7 +2,7 @@
   "azureLocation" : "LIBRA/20082025/case-identifier-0002/11111111-2222-3333-4444-555555555555",
   "migratedCase" : {
     "caseDetails" : {
-      "initiationCode" : "O",
+      "initiationCode" : "C",
       "originatingOrganisation" : "G94DV00",
       "prosecutor" : {
         "prosecutingAuthority" : "GAEAA01"
