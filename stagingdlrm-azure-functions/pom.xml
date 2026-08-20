@@ -4,7 +4,7 @@
     <parent>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
         <artifactId>stagingdlrm-parent</artifactId>
-        <version>17.104.30-DLRM8-SNAPSHOT</version>
+        <version>17.104.31-DLRM9-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-azure-functions</artifactId>
