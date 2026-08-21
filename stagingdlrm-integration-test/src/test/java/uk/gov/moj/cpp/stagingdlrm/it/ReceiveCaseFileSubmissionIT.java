@@ -608,6 +608,25 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
     }
 
+    @Test
+    void shouldForwardToPcfdlrmWhenCaseHasNoRecordInProgression() {
+        final UUID existingCaseId = UUID.fromString("d4e5f6a7-b8c9-0123-defa-234567890123");
+        SystemIdMapperStub.stubGetCaseIdByURN("C50EX04", existingCaseId);
+        ProgressionStub.stubProgressionProsecutionCaseNotFound(existingCaseId);
+
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-not-in-progression.json")
+                .replace("SUBMISSION_ID", submissionId);
+
+        makePostCall(
+                getWriteUrl("/receive-migrated-case-submission"),
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                payload);
+
+        assertTrue(retrieveMessageBody(consumerClient).isPresent());
+        verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+    }
+
     private List<Defendant> getDefendantList(final JsonArray jsonValues) {
         return range(0, jsonValues.size())
                 .mapToObj(i -> jsonObjectToObjectConverter.convert(jsonValues.getJsonObject(i), Defendant.class))
