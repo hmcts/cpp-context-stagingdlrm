@@ -93,3 +93,36 @@
    ("no need business already addresses it", see input brief §3) — **flagged here for
    visibility, not for action in this piece of work.** A one-line code comment marking
    this is also in place at `SystemMapperService.java:56`.
+
+2. **Accepted risk, not actioned — the EJECTED-remap path can silently orphan the
+   original mapping, or leave it duplicated, on partial failure.** Found while reviewing
+   `SystemMapperService.getCaseIdForPtiURN`'s EJECTED branch
+   (`SystemMapperService.java:59-62`), confirmed by decompiling
+   `DefaultSystemIdMapperClient` (`id-mapper-client-17.103.5.jar`):
+   - `systemIdMapperClient.remap(...)`'s return value (`Optional<SystemIdMapping>`) is
+     never checked at the call site — it's discarded outright. `remap` returns
+     `Optional.empty()` on a `404` from system-id-mapper **without throwing** (only a
+     non-200/non-404 status throws `IllegalStateException`). So a `404` on `remap`
+     (e.g. a stale `mappingId`) is silently swallowed, and the code proceeds into
+     `createNewMapping(ptiUrn)` as if the rename had succeeded — leaving the *original*
+     mapping un-renamed and still live under the same `ptiUrn`, while a second, new
+     mapping may now also exist for that same `ptiUrn` (outcome depends on whether
+     system-id-mapper enforces `sourceId` uniqueness on `add`, which is outside this
+     codebase).
+   - Separately, if `remap()` succeeds but the subsequent `add()` (inside
+     `createNewMapping` → `attemptAddMapping`) fails, the two calls are independent,
+     non-transactional HTTP requests with no compensation — `remap()`'s rename is not
+     undone. The resulting `IllegalStateException` (`SystemMapperService.java:108`,
+     `UNABLE_TO_CREATE_MAPPING`) is uncaught by
+     `StagingDlrmEventProcessor.handleMigratedCaseSubmissionReceived`, which runs in a
+     container-managed JMS transaction with no override, so it rolls back and the event
+     redelivers. On redelivery, `findBy(ptiUrn, ...)` now finds nothing (the mapping was
+     already renamed to `ptiUrn + "_Ejected"`), so the retry takes the "no existing
+     mapping" branch and calls `createNewMapping` again with a **fresh random UUID** each
+     attempt — `remap()` is never retried. If `add()` never succeeds within the JMS
+     redelivery limit (Artemis default: 10 attempts, per finding #1's DLQ note), the event
+     dead-letters and the case's `ptiUrn` is left with **no live system-id-mapper entry at
+     all**.
+   Both are pre-existing behaviours in the EJECTED path, orthogonal to the Progression-lag
+   risk in #1 and not introduced or touched by this fix. — Owner: business/system-id-mapper
+   team — Due: TBD. **Flagged here for visibility, not for action in this piece of work.**
