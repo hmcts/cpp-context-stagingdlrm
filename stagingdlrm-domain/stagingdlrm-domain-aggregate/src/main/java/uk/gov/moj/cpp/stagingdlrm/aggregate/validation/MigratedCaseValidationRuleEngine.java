@@ -28,7 +28,9 @@ public class MigratedCaseValidationRuleEngine {
                     AtLeastOneOfRule.of("$.migratedCase.caseDetails",
                             List.of("dateOfCommittal", "dateOfSending"),
                             List.of(submission -> caseDetails(submission).getDateOfCommittal(),
-                                    submission -> caseDetails(submission).getDateOfSending()))),
+                                    submission -> caseDetails(submission).getDateOfSending())),
+                    InitiationCodeValidationRule.withAllowedValues(
+                            MigratedCaseValidationRuleEngine::initiationCode, "O")),
             LIBRA, List.of(
                     RequiredFieldRule.of("$.migratedCase.hearings[*].courtRoomId",
                             submission -> presentOnEvery(hearings(submission), Hearing::getCourtRoomId)),
@@ -37,7 +39,9 @@ public class MigratedCaseValidationRuleEngine {
                     RequiredFieldRule.of("$.migratedCase.hearings[*].timeOfHearing",
                             submission -> presentOnEvery(hearings(submission), Hearing::getTimeOfHearing)),
                     RequiredFieldRule.of("$.migratedCase.defendants[*].address",
-                            submission -> presentOnEvery(defendants(submission), Defendant::getAddress))));
+                            submission -> presentOnEvery(defendants(submission), Defendant::getAddress)),
+                    InitiationCodeValidationRule.withAllowedValues(
+                            MigratedCaseValidationRuleEngine::initiationCode, "C", "Q", "J", "R")));
 
     public List<ValidationError> validate(final MigrationSourceSystemName sourceSystem,
                                           final MigratedCaseSubmission submission) {
@@ -49,6 +53,14 @@ public class MigratedCaseValidationRuleEngine {
 
     private static CaseDetails caseDetails(final MigratedCaseSubmission submission) {
         return submission.getMigratedCase().getCaseDetails();
+    }
+
+    private static String initiationCode(final MigratedCaseSubmission submission) {
+        final CaseDetails caseDetails = caseDetails(submission);
+        if (caseDetails == null || caseDetails.getInitiationCode() == null) {
+            return null;
+        }
+        return caseDetails.getInitiationCode().name();
     }
 
     private static List<Hearing> hearings(final MigratedCaseSubmission submission) {

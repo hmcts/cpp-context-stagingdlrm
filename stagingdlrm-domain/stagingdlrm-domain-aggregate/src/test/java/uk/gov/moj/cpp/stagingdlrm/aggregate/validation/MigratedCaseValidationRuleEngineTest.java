@@ -85,6 +85,37 @@ class MigratedCaseValidationRuleEngineTest {
                 "$.migratedCase.defendants[*].address");
     }
 
+    @Test
+    void aLibraSubmissionWithADisallowedInitiationCodeIsRejected() {
+        final List<ValidationError> errors =
+                engine.validate(LIBRA, load("json/aggregate/libra/submission-invalid-initiation-code.json", LIBRA));
+
+        assertThat(errors, hasSize(1));
+        assertThat(errors.get(0).jsonPath(), is("$.migratedCase.caseDetails.initiationCode"));
+    }
+
+    @Test
+    void anXhibitSubmissionWithADisallowedInitiationCodeIsRejected() {
+        final List<ValidationError> errors =
+                engine.validate(XHIBIT, load("json/aggregate/xhibit/submission-invalid-initiation-code.json", XHIBIT));
+
+        assertThat(errors, hasSize(1));
+        assertThat(errors.get(0).jsonPath(), is("$.migratedCase.caseDetails.initiationCode"));
+    }
+
+    @Test
+    void aLibraInitiationCodeIsNotPermittedForXhibit() {
+        final MigratedCaseSubmission libraCoded =
+                load("json/aggregate/libra/submission-valid.json", XHIBIT);
+        assertThat(engine.validate(XHIBIT, libraCoded).stream().map(ValidationError::jsonPath).toList(),
+                hasItem("$.migratedCase.caseDetails.initiationCode"));
+
+        final MigratedCaseSubmission xhibitCoded =
+                load("json/aggregate/xhibit/submission-without-materials.json", LIBRA);
+        assertThat(engine.validate(LIBRA, xhibitCoded).stream().map(ValidationError::jsonPath).toList(),
+                hasItem("$.migratedCase.caseDetails.initiationCode"));
+    }
+
     private void assertLibraRejectedXhibitUnaffected(final String fixtureName, final String expectedJsonPath) {
         final MigratedCaseSubmission submission = load(fixtureName, LIBRA);
 

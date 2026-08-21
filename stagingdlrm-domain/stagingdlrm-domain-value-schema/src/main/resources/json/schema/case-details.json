@@ -20,6 +20,10 @@
     "initiationCode": {
       "type": "string",
       "enum": [
+        "C",
+        "Q",
+        "J",
+        "R",
         "O"
       ]
     },
