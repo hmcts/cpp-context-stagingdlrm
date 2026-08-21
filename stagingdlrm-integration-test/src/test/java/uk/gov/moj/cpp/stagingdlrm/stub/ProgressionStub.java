@@ -39,4 +39,15 @@ public class ProgressionStub {
                 .willReturn(aResponse()
                         .withStatus(SC_NOT_FOUND)));
     }
+
+    public static void stubProgressionProsecutionCaseEmpty(final UUID caseId) {
+        InternalEndpointMockUtils.stubPingFor("progression-service");
+
+        stubFor(get(urlPathEqualTo(PROGRESSION_PROSECUTION_CASE + caseId))
+                .willReturn(aResponse()
+                        .withStatus(SC_OK)
+                        .withHeader(ID, randomUUID().toString())
+                        .withHeader(CONTENT_TYPE, "application/vnd." + PROSECUTION_CASE_ACTION + "+json")
+                        .withBody("{}")));
+    }
 }

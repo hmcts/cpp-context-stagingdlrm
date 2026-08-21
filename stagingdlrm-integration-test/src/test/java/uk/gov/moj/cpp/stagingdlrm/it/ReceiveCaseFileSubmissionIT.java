@@ -4,6 +4,7 @@ import static java.util.stream.IntStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,6 +15,7 @@ import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelpe
 import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelper.verifyPrivateEvents;
 import static uk.gov.moj.cpp.stagingdlrm.helper.QueueUtil.retrieveMessageBody;
 import static uk.gov.moj.cpp.stagingdlrm.helper.WiremockTestHelper.createCommonMockEndpoints;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.captureReceiveCaseFileRequestedCaseId;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileNotRequestedFor;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequested;
 
@@ -606,6 +608,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        assertNotEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
     }
 
     @Test
@@ -616,6 +619,25 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         final String submissionId = UUID.randomUUID().toString();
         final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-not-in-progression.json")
+                .replace("SUBMISSION_ID", submissionId);
+
+        makePostCall(
+                getWriteUrl("/receive-migrated-case-submission"),
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                payload);
+
+        assertTrue(retrieveMessageBody(consumerClient).isPresent());
+        verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+    }
+
+    @Test
+    void shouldForwardToPcfdlrmWhenProgressionReturnsEmptyResponse() {
+        final UUID existingCaseId = UUID.fromString("e5f6a7b8-c9d0-1234-efab-345678901234");
+        SystemIdMapperStub.stubGetCaseIdByURN("C50EX05", existingCaseId);
+        ProgressionStub.stubProgressionProsecutionCaseEmpty(existingCaseId);
+
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-empty-progression-response.json")
                 .replace("SUBMISSION_ID", submissionId);
 
         makePostCall(

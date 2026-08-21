@@ -53,6 +53,7 @@ public class SystemMapperService {
                     () -> LOGGER.info("Case {} not found in progression despite existing system-id-mapper entry", ptiUrn));
 
             if (status.isEmpty()) {
+                // Also true for a case still in flight (pcfdlrm has it, Progression hasn't caught up yet) — relies on pcfdlrm's idempotency to absorb the resulting duplicate resubmission.
                 return new CaseIdLookupResult(caseId, false);
             }
 

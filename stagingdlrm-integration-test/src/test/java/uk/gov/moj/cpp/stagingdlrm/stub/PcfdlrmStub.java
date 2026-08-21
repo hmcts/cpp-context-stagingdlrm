@@ -13,11 +13,13 @@ import static org.apache.http.HttpStatus.SC_ACCEPTED;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.justice.service.wiremock.testutil.InternalEndpointMockUtils.stubPingFor;
+import static uk.gov.moj.cpp.stagingdlrm.helper.FileUtil.readJson;
 import static uk.gov.moj.cpp.stagingdlrm.helper.StubUtil.setupUsersGroupQueryStub;
 
 import java.util.List;
 
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 
 public class PcfdlrmStub {
     public static String RECEIVE_MIGRATE_CASE_FILE = "/pcfdlrm-service/command/api/rest/pcfdlrm/receive-migrated-case-file";
@@ -47,6 +49,20 @@ public class PcfdlrmStub {
                 findAll(postRequestedFor(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
                         .withRequestBody(containing(submissionId))).isEmpty(),
                 "PCFDLRM receive-migrated-case-file should NOT have been called for submissionId: " + submissionId);
+    }
+
+    public static String captureReceiveCaseFileRequestedCaseId(final String submissionId) {
+        await().atMost(10, SECONDS).pollInterval(2, SECONDS).until(() ->
+                !findAll(postRequestedFor(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
+                        .withRequestBody(containing(submissionId))).isEmpty());
+
+        final LoggedRequest request = findAll(postRequestedFor(urlPathEqualTo(RECEIVE_MIGRATE_CASE_FILE))
+                .withRequestBody(containing(submissionId))).get(0);
+
+        return readJson(request.getBodyAsString())
+                .getJsonObject("migratedCaseDetails")
+                .getJsonObject("caseDetails")
+                .getString("caseId");
     }
 
 }

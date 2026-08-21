@@ -5,6 +5,7 @@ import static java.util.UUID.randomUUID;
 import static javax.json.Json.createObjectBuilder;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -105,6 +106,7 @@ class SystemMapperServiceTest {
         verify(systemIdMapperClient).remap(eq(MOCK_URN + "_Ejected"), eq(existingMappingId), eq(systemUserId));
         verify(systemIdMapperClient).add(argumentCaptor.capture(), any());
         assertThat(result.getCaseId(), is(argumentCaptor.getValue().getTargetId()));
+        assertNotEquals(existingCaseId, result.getCaseId());
     }
 
     @Test
