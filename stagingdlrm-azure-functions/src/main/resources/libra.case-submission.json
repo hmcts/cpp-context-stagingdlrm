@@ -23,9 +23,6 @@
             "$ref": "#/definitions/defendant"
           },
           "minItems": 1
-        },
-        "officerInCase": {
-          "$ref": "#/definitions/officerInCase"
         }
       },
       "required": [
@@ -53,7 +50,13 @@
         },
         "initiationCode": {
           "type": "string",
-          "maxLength": 1
+          "maxLength": 1,
+          "enum": [
+            "C",
+            "Q",
+            "J",
+            "R"
+          ]
         },
         "cpsOrganisation": {
           "type": "string",
@@ -67,16 +70,9 @@
           },
           "minItems": 1
         },
-        "summonsCode": {
-          "type": "string",
-          "maxLength": 1
-        },
         "informant": {
           "type": "string",
           "maxLength": 92
-        },
-        "writtenChargePostingDate": {
-          "type": "string"
         }
       },
       "required": [
@@ -134,11 +130,11 @@
           "type": "string",
           "maxLength": 255
         },
-        "telephoneNumberBusiness": {
-          "$ref": "#/definitions/phone"
+        "emailAddress1": {
+          "$ref": "#/definitions/email"
         },
-        "organisationTelephoneNumber": {
-          "$ref": "#/definitions/phone"
+        "emailAddress2": {
+          "$ref": "#/definitions/email"
         },
         "occupation": {
           "type": "string",
@@ -226,6 +222,10 @@
     "offence": {
       "type": "object",
       "properties": {
+        "prosecutorOffenceId": {
+          "type": "string",
+          "maxLength": 36
+        },
         "offenceCode": {
           "type": "string",
           "maxLength": 8
@@ -276,16 +276,6 @@
           "type": "number",
           "minimum": 0
         },
-        "backDuty": {
-          "type": "number",
-          "minimum": 0
-        },
-        "backDutyDateFrom": {
-          "$ref": "#/definitions/date"
-        },
-        "backDutyDateTo": {
-          "$ref": "#/definitions/date"
-        },
         "vehicleCode": {
           "type": "string",
           "maxLength": 1
@@ -301,8 +291,11 @@
         "prosecutorOfferAOCP": {
           "type": "boolean"
         },
-        "convictionDate": {
-          "$ref": "#/definitions/date"
+        "convictingCourtCode": {
+          "type": "string",
+          "description": "This is the organisation unit oucode. E.g B01BH00",
+          "maxLength": 7,
+          "minLength": 7
         },
         "alcoholRelatedOffence": {
           "$ref": "#/definitions/alcoholRelatedOffence"
@@ -322,7 +315,8 @@
         "offenceCommittedDate",
         "offenceDateCode",
         "offenceSequenceNumber",
-        "offenceWording"
+        "offenceWording",
+        "prosecutorOffenceId"
       ]
     },
     "alcoholRelatedOffence": {
@@ -379,6 +373,9 @@
     "individualAlias": {
       "type": "object",
       "properties": {
+        "title": {
+          "type": "string"
+        },
         "firstName": {
           "type": "string",
           "maxLength": 35
@@ -559,6 +556,9 @@
         },
         "contactDetails": {
           "$ref": "#/definitions/contactDetails"
+        },
+        "address": {
+          "$ref": "#/definitions/address"
         }
       },
       "required": [
@@ -632,11 +632,18 @@
           "maxLength": 7,
           "minLength": 7
         },
+        "courtRoomId": {
+          "type": "integer"
+        },
         "dateOfHearing": {
           "$ref": "#/definitions/date"
         },
         "timeOfHearing": {
           "$ref": "#/definitions/timeOfHearing"
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "maximum": 99999
         },
         "hearingType": {
           "type": "string"
@@ -651,7 +658,9 @@
       },
       "required": [
         "courtHearingLocation",
+        "courtRoomId",
         "dateOfHearing",
+        "durationMinutes",
         "hearingType",
         "listedDefendants",
         "timeOfHearing"
@@ -683,74 +692,6 @@
       "minLength": 8,
       "maxLength": 8,
       "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$"
-    },
-    "officerInCase": {
-      "type": "object",
-      "properties": {
-        "forename": {
-          "type": "string",
-          "maxLength": 35
-        },
-        "forename2": {
-          "type": "string",
-          "maxLength": 35
-        },
-        "forename3": {
-          "type": "string",
-          "maxLength": 35
-        },
-        "surname": {
-          "type": "string",
-          "maxLength": 35
-        },
-        "policeOfficerRank": {
-          "type": "string",
-          "maxLength": 35
-        },
-        "policeWorkerReferenceNumber": {
-          "type": "string",
-          "maxLength": 15
-        },
-        "policeWorkerLocationCode": {
-          "type": "string",
-          "maxLength": 10
-        },
-        "uniquePropertyReferenceNumber": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 999999999999
-        },
-        "workTelephoneNumber": {
-          "$ref": "#/definitions/phone"
-        },
-        "mobileTelephoneNumber": {
-          "$ref": "#/definitions/phone"
-        },
-        "primaryEmail": {
-          "$ref": "#/definitions/email"
-        },
-        "secondaryEmail": {
-          "$ref": "#/definitions/email"
-        },
-        "faxNumber": {
-          "$ref": "#/definitions/phone"
-        },
-        "dxAddress": {
-          "type": "string",
-          "maxLength": 80
-        },
-        "address": {
-          "$ref": "#/definitions/address"
-        }
-      },
-      "required": [
-        "address",
-        "policeOfficerRank",
-        "policeWorkerLocationCode",
-        "policeWorkerReferenceNumber",
-        "surname"
-      ],
-      "additionalProperties": false
     },
     "date": {
       "type": "string",

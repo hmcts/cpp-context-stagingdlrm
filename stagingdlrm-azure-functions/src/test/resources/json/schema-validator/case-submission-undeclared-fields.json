@@ -3,7 +3,7 @@
     "caseDetails": {
       "prosecutorCaseReference": "TVL55117DFXXV",
       "originatingOrganisation": "G94DV00",
-      "initiationCode": "NOT-IN-THE-CANONICAL-ENUM",
+      "initiationCode": "O",
       "prosecutor": {
         "prosecutingAuthority": "GAEAA01"
       },

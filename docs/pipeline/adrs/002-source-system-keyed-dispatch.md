@@ -84,6 +84,13 @@ provably the value the gate admitted.
 **structural** — shape, types, presence. Business rules stay in stagingDLRM. Both layers being
 source-system-aware is accepted; both layers expressing the *same* rule is not.
 
+> **Amended by [ADR-004](./004-funcapp-gate-mirrors-business-rules.md) (2026-08-21, DD-43180).** The
+> gate now deliberately mirrors the domain's per-source-system rules where they are expressible
+> structurally (presence, type, allowed-values enums), to fail fast before enqueue. The *structural*
+> half of this rule still holds — the gate expresses no non-structural logic; the domain engine remains
+> the authority. Read this rule as "the gate expresses only structural constraints", not "the gate never
+> repeats a domain rule".
+
 ## Options considered
 
 | Option | Why not |

@@ -153,37 +153,50 @@ class JsonSchemaValidatorTest {
      */
     @Test
     @DisplayName("LIBRA02/AC4 the same LIBRA payload fails the XHIBIT schema — the four XHIBIT-required "
-            + "fields it omits are each reported (XHIBIT)")
+            + "fields it omits are each reported, plus the DD-43180 initiationCode enum (XHIBIT)")
     void shouldRejectLibraCaseAgainstXhibitSchema() {
         final Set<ValidationMessage> messages = validateCase(libra(LIBRA_VALID_CASE));
 
         final Set<String> reported =
                 messages.stream().map(ValidationMessage::getMessage).collect(java.util.stream.Collectors.toSet());
 
-        assertEquals(4, messages.size(),
-                () -> "expected the four XHIBIT-required-but-LIBRA-omitted fields, got " + reported);
         assertTrue(reported.stream().anyMatch(m -> m.contains("dateReceived")), () -> reported.toString());
         assertTrue(reported.stream().anyMatch(m -> m.contains("retrialIndicator")), () -> reported.toString());
         assertTrue(reported.stream().anyMatch(m -> m.contains("receiptType")), () -> reported.toString());
         assertTrue(reported.stream().anyMatch(m -> m.contains("receivingCourt")), () -> reported.toString());
+        assertTrue(reported.stream().anyMatch(m -> m.contains("initiationCode")),
+                () -> "DD-43180: the LIBRA initiationCode 'C' is outside the XHIBIT enum [O]: " + reported);
     }
 
-    /**
-     * DD-43086 LIBRA02 — {@code caseDetails} was extended, during implementation, to carry the
-     * LIBRA workbook's {@code maxLength}/{@code minLength} constraints on every property
-     * (`prosecutorCaseReference: 36`, `originatingOrganisation`/`cpsOrganisation`/
-     * `prosecutor.prosecutingAuthority: 7`, `initiationCode`/`summonsCode: 1`, `informant: 92`,
-     * `caseMarkers[].markerTypeCode: 3`) — a reversal, for this one branch, of FR3a's original
-     * "no constraints beyond bare type" decision for {@code caseDetails} specifically (already
-     * reversed for {@code defendant}/{@code hearing}/{@code officerInCase}).
-     */
+    @Test
+    void shouldRejectXhibitCaseSubmissionWithInitiationCodeOutsideEnum() throws Exception {
+        final Set<ValidationMessage> messages = validateCase(validPayloadWith(
+                migratedCase -> caseDetails(migratedCase).put("initiationCode", "C")));
+
+        assertEquals(1, messages.size(), messages::toString);
+        assertTrue(messages.iterator().next().getMessage().contains("initiationCode"),
+                messages::toString);
+    }
+
+    @Test
+    void shouldRejectLibraCaseSubmissionWithInitiationCodeOutsideEnum() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        ((ObjectNode) payload.get("migratedCase").get("caseDetails")).put("initiationCode", "O");
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), messages::toString);
+        assertTrue(messages.iterator().next().getMessage().contains("initiationCode"),
+                messages::toString);
+    }
+
     @Test
     @DisplayName("LIBRA02 the gate enforces the LIBRA workbook's constraints at caseDetails depth — "
-            + "summonsCode maxLength:1 (LIBRA)")
+            + "informant maxLength:92 (LIBRA)")
     void shouldRejectLibraCaseSubmissionWithACaseDetailsPropertyViolatingADeclaredConstraint() throws Exception {
         final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
         final ObjectNode caseDetails = (ObjectNode) payload.get("migratedCase").get("caseDetails");
-        caseDetails.put("summonsCode", "AB");
+        caseDetails.put("informant", "X".repeat(93));
 
         final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
 
@@ -296,34 +309,18 @@ class JsonSchemaValidatorTest {
         assertEquals(1, messages.size(), () -> messages.toString());
     }
 
-    /**
-     * DD-43086 LIBRA02 — {@code hearings} and {@code officerInCase} are declared (so the closed
-     * {@code migratedCase} doesn't reject them) but not required, matching the LIBRA workbook
-     * schema's own {@code migratedCase} definition. Each row supplies a value satisfying that
-     * property's own required fields — an empty {@code {}} would no longer pass once
-     * {@code officerInCase} was expanded to the workbook's full definition, and an empty
-     * {@code []} would no longer pass once {@code hearings} gained {@code minItems: 1} — the row
-     * is about {@code migratedCase} not requiring the property, not about the property's own
-     * shape.
-     */
-    @ParameterizedTest(name = "LIBRA02 migratedCase.{0} is declared but optional in the LIBRA gate (LIBRA)")
-    @ValueSource(strings = {"hearings", "officerInCase"})
-    void shouldAcceptLibraCaseSubmissionCarryingADeclaredOptionalMigratedCaseProperty(final String property)
-            throws Exception {
-
+    @Test
+    @DisplayName("LIBRA02 migratedCase.hearings is declared but optional in the LIBRA gate (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionCarryingADeclaredOptionalMigratedCaseProperty() throws Exception {
         final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
         final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
-        assertFalse(migratedCase.has(property),
-                "fixture already carries " + property + " — the row proves nothing");
-        if (property.equals("hearings")) {
-            migratedCase.putArray(property).add(validHearing());
-        } else {
-            migratedCase.set(property, validOfficerInCase());
-        }
+        assertFalse(migratedCase.has("hearings"),
+                "fixture already carries hearings — the row proves nothing");
+        migratedCase.putArray("hearings").add(validHearing());
 
         final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
 
-        assertEquals(Set.of(), messages, () -> property + " should be accepted (declared): " + messages);
+        assertEquals(Set.of(), messages, () -> "hearings should be accepted (declared): " + messages);
     }
 
     /**
@@ -347,6 +344,7 @@ class JsonSchemaValidatorTest {
         defendant.put("hearingLanguage", "E");
         defendant.putObject("address").put("address1", "1 Test Street");
         final ObjectNode offence = MAPPER.createObjectNode();
+        offence.put("prosecutorOffenceId", "OFF-0001");
         offence.put("offenceCode", "CODE0001");
         offence.put("offenceSequenceNumber", 1);
         offence.put("offenceCommittedDate", "2024-01-01");
@@ -431,6 +429,42 @@ class JsonSchemaValidatorTest {
         migratedCase.putArray("defendants").add(defendant);
 
         assertRejectedByMinItems(validateLibraCase(MAPPER.writeValueAsString(payload)));
+    }
+
+    @ParameterizedTest(name = "LIBRA02 offence.{0} is required, matching the LIBRA workbook's offence "
+            + "definition (LIBRA)")
+    @ValueSource(strings = {"offenceCode", "offenceCommittedDate", "offenceDateCode", "offenceSequenceNumber",
+            "offenceWording", "prosecutorOffenceId"})
+    void shouldRejectLibraCaseSubmissionWithAnOffenceMissingARequiredProperty(final String property)
+            throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode offence = (ObjectNode) defendant.get("offences").get(0);
+        assertTrue(offence.has(property),
+                "offence fixture no longer carries " + property + " — the row proves nothing");
+        offence.remove(property);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> "expected exactly one message, got " + messages);
+        assertTrue(messages.iterator().next().getMessage().contains(property), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 the LIBRA gate accepts a defendant carrying emailAddress1/emailAddress2 (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithADefendantCarryingEmailAddresses() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.put("emailAddress1", "a@example.com");
+        defendant.put("emailAddress2", "b@example.com");
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
     }
 
     /**
@@ -521,8 +555,10 @@ class JsonSchemaValidatorTest {
     private static ObjectNode validHearing() {
         final ObjectNode hearing = MAPPER.createObjectNode();
         hearing.put("courtHearingLocation", "AAAAA01");
+        hearing.put("courtRoomId", 1);
         hearing.put("dateOfHearing", "2024-01-01");
         hearing.put("timeOfHearing", "09:30:00");
+        hearing.put("durationMinutes", 60);
         hearing.put("hearingType", "FHG");
         final ObjectNode listedDefendant = MAPPER.createObjectNode();
         listedDefendant.put("prosecutorDefendantId", "D1");
@@ -545,8 +581,8 @@ class JsonSchemaValidatorTest {
 
     @ParameterizedTest(name = "LIBRA02 hearing.{0} is required, matching the LIBRA workbook's hearing "
             + "definition (LIBRA)")
-    @ValueSource(strings = {"courtHearingLocation", "dateOfHearing", "hearingType", "listedDefendants",
-            "timeOfHearing"})
+    @ValueSource(strings = {"courtHearingLocation", "courtRoomId", "dateOfHearing", "durationMinutes",
+            "hearingType", "listedDefendants", "timeOfHearing"})
     void shouldRejectLibraCaseSubmissionWithAHearingMissingARequiredProperty(final String property)
             throws Exception {
         final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
@@ -595,81 +631,6 @@ class JsonSchemaValidatorTest {
     }
 
     /**
-     * DD-43086 LIBRA02 — {@code officerInCase} was extended, during implementation, from a bare
-     * {@code type: object} to the same full-recursive, full-constraint treatment given to
-     * {@code defendants} and {@code hearings} above, then factored into its own root-level
-     * {@code #/definitions/officerInCase} entry within {@code libra.case-submission.json}, with
-     * {@code migratedCase.officerInCase} now just {@code {"$ref": "#/definitions/officerInCase"}}
-     * (no separate {@code libra-officer-in-case.json}/{@code libra-officer-in-case-address.json}
-     * files remain; {@code workTelephoneNumber} / {@code mobileTelephoneNumber} /
-     * {@code faxNumber} / {@code primaryEmail} / {@code secondaryEmail} reference the sibling
-     * {@code #/definitions/phone} / {@code #/definitions/email} entries). This is the last of the
-     * four {@code migratedCase} branches — none remain bare/undescended.
-     * {@code libra.case-submission.json} — root and everything below it, all inlined into one
-     * file with {@code caseDetails}/{@code defendant}/{@code hearing}/{@code officerInCase}/
-     * {@code date}/{@code phone}/{@code email} each factored out as a root-level {@code #/definitions/...}
-     * entry — is now the only LIBRA-specific schema file in this chain.
-     */
-    private static ObjectNode validOfficerInCase() {
-        final ObjectNode officerInCase = MAPPER.createObjectNode();
-        officerInCase.put("surname", "Smith");
-        officerInCase.put("policeOfficerRank", "PC");
-        officerInCase.put("policeWorkerReferenceNumber", "REF1");
-        officerInCase.put("policeWorkerLocationCode", "LOC1");
-        officerInCase.putObject("address").put("address1", "1 Station Road");
-        return officerInCase;
-    }
-
-    @Test
-    @DisplayName("LIBRA02 an officerInCase matching the LIBRA workbook's officerInCase definition is "
-            + "accepted (LIBRA)")
-    void shouldAcceptLibraCaseSubmissionWithAFullyPopulatedOfficerInCase() throws Exception {
-        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
-        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
-        migratedCase.set("officerInCase", validOfficerInCase());
-
-        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
-
-        assertEquals(Set.of(), messages, () -> messages.toString());
-    }
-
-    @ParameterizedTest(name = "LIBRA02 officerInCase.{0} is required, matching the LIBRA workbook's "
-            + "officerInCase definition (LIBRA)")
-    @ValueSource(strings = {"surname", "policeOfficerRank", "policeWorkerReferenceNumber",
-            "policeWorkerLocationCode", "address"})
-    void shouldRejectLibraCaseSubmissionWithAnOfficerInCaseMissingARequiredProperty(final String property)
-            throws Exception {
-        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
-        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
-        final ObjectNode officerInCase = validOfficerInCase();
-        assertTrue(officerInCase.has(property),
-                "officerInCase fixture no longer carries " + property + " — the row proves nothing");
-        officerInCase.remove(property);
-        migratedCase.set("officerInCase", officerInCase);
-
-        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
-
-        assertEquals(1, messages.size(), () -> "expected exactly one message, got " + messages);
-        assertTrue(messages.iterator().next().getMessage().contains(property), () -> messages.toString());
-    }
-
-    @Test
-    @DisplayName("LIBRA02 the gate enforces nested workbook constraints two $refs deep — "
-            + "officerInCase.address.postcode pattern (LIBRA)")
-    void shouldRejectLibraCaseSubmissionWithAnOfficerInCaseAddressViolatingThePostcodePattern()
-            throws Exception {
-        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
-        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
-        final ObjectNode officerInCase = validOfficerInCase();
-        ((ObjectNode) officerInCase.get("address")).put("postcode", "ABC123");
-        migratedCase.set("officerInCase", officerInCase);
-
-        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
-
-        assertEquals(1, messages.size(), () -> messages.toString());
-    }
-
-    /**
      * Each row breaks exactly one constraint the gate does not declare, so a gate that starts
      * enforcing one fails the row naming it. Contrast {@link #shouldEnforceADeclaredType()}.
      */
@@ -684,9 +645,6 @@ class JsonSchemaValidatorTest {
 
     static Stream<Arguments> unenforcedConstraints() {
         return Stream.of(
-                arguments("an initiationCode enum — the canonical schema's enum is absent here",
-                        (Consumer<ObjectNode>) migratedCase ->
-                                caseDetails(migratedCase).put("initiationCode", "NOT-IN-THE-CANONICAL-ENUM")),
                 arguments("a dateReceived format — declared as a bare string, no date format",
                         (Consumer<ObjectNode>) migratedCase ->
                                 caseDetails(migratedCase).put("dateReceived", "not-even-a-date")),

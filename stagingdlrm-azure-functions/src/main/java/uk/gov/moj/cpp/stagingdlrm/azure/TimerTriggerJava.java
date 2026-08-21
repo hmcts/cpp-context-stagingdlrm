@@ -46,6 +46,8 @@ public class TimerTriggerJava {
 
     private static final String DESCRIPTION = "description";
 
+    private static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
+
     private static final int DEFAULT_RETRY = 3;
 
     private Boolean caseProcessingEnabled;
@@ -176,10 +178,12 @@ public class TimerTriggerJava {
 
             loggerHelper.logInfo(context, submissionId, "Manifest validation messages: {0}", manifestValidationMessages.size());
 
+            final String caseUrn = extractCaseUrn(caseJsonContent);
+
             if (!caseValidationMessages.isEmpty()) {
-                processClientError(message, caseValidationMessages, baseUriArray, caseJsonContent, submissionId);
+                processClientError(message, caseValidationMessages, baseUriArray, caseJsonContent, submissionId, caseUrn);
             } else {
-                processClientError(message, manifestValidationMessages, baseUriArray, manifestJsonContent, submissionId);
+                processClientError(message, manifestValidationMessages, baseUriArray, manifestJsonContent, submissionId, caseUrn);
             }
         }
     }
@@ -230,14 +234,25 @@ public class TimerTriggerJava {
         }
     }
 
-    private void processClientError(final QueueMessage message, final Set<ValidationMessage> validationMessages, final List<String> baseUriArray, final String jsonContent, final String submissionId) {
+    private void processClientError(final QueueMessage message, final Set<ValidationMessage> validationMessages, final List<String> baseUriArray, final String jsonContent, final String submissionId, final String caseUrn) {
         final Set<String> manifestValidationMessage = validationMessages.stream().map(ValidationMessage::getMessage).collect(Collectors.toSet());
 
-        final String errorMessage = String.join(", ", manifestValidationMessage);
+        final String errorMessage = JSON_SCHEMA_VALIDATION_FAILED + ": " + String.join(", ", manifestValidationMessage);
 
         loggerHelper.logInfo(context, submissionId, "Validation error messages: "+ errorMessage);
 
-        processClientError(message, baseUriArray, errorMessage, jsonContent, submissionId);
+        processClientError(message, baseUriArray, errorMessage, jsonContent, submissionId, caseUrn);
+    }
+
+    private String extractCaseUrn(final String caseJsonContent) {
+        try {
+            return getJsonObject(caseJsonContent)
+                    .getJsonObject("migratedCase")
+                    .getJsonObject("caseDetails")
+                    .getString("prosecutorCaseReference");
+        } catch (final RuntimeException e) {
+            return "";
+        }
     }
 
     private String getJsonContent(final String submissionId, final String queueMessage) {
@@ -250,10 +265,8 @@ public class TimerTriggerJava {
         }
     }
 
-    private void processClientError(final QueueMessage message, final List<String> baseUriArray, final String errorMessage, final String jsonContent, final String submissionId) {
+    private void processClientError(final QueueMessage message, final List<String> baseUriArray, final String errorMessage, final String jsonContent, final String submissionId, final String caseUrn) {
         baseUriArray.forEach(baseUri -> {
-
-            final String caseUrn = "";
 
             loggerHelper.logInfo(context, submissionId, "Recording message as error in the event log with stream id : "+ submissionId);
 

@@ -7,9 +7,7 @@
       "prosecutor": {
         "prosecutingAuthority": "GAEAA01"
       },
-      "summonsCode": "A",
       "informant": "PC 1234 {{SOURCE_SYSTEM}}",
-      "writtenChargePostingDate": "2024-01-15",
       "cpsOrganisation": "CPS0007",
       "caseMarkers": [
         {
@@ -27,6 +25,7 @@
         },
         "offences": [
           {
+            "prosecutorOffenceId": "OFF-0001",
             "offenceCode": "CODE0001",
             "offenceSequenceNumber": 1,
             "offenceCommittedDate": "2024-01-01",

@@ -193,6 +193,21 @@ class StagingDlrmEventProcessorTest {
         assertThat(serialise(outcomeEventArgumentCaptor.getValue()),
                 matchesWholePayload(fixture("json/event-processor/xhibit/outcome-error.json"), List.of()));
         verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+    }
+
+    @Test
+    void shouldIncrementReceivedCounterWhenFunctionAppGateSchemaRejectionReachesErrorPath() {
+        final String gateDescription = "JSON schema validation has failed: "
+                + "$.migratedCase.caseDetails.initiationCode: does not have a value in the enumeration [O]";
+        when(errorMigratedCaseSubmissionReceivedEnvelope.payload()).thenReturn(errorReceived(gateDescription));
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleErrorMigratedCaseSubmissionReceived(errorMigratedCaseSubmissionReceivedEnvelope);
+
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
     }
 
     @Test
@@ -365,12 +380,16 @@ class StagingDlrmEventProcessorTest {
     }
 
     private static ErrorMigratedCaseSubmissionReceived errorReceived() {
+        return errorReceived("JSON schema validation has failed");
+    }
+
+    private static ErrorMigratedCaseSubmissionReceived errorReceived(final String errorMessage) {
         return ErrorMigratedCaseSubmissionReceived.errorMigratedCaseSubmissionReceived()
                 .withErrorMigratedCaseSubmission(ErrorMigratedCaseSubmission
                         .errorMigratedCaseSubmission()
                         .withPayload("{}")
                         .withSubmissionId(FIXED_SUBMISSION_ID)
-                        .withErrorMessage("JSON schema validation has failed")
+                        .withErrorMessage(errorMessage)
                         .withCaseUrn(FIXED_CASE_URN)
                         .withAzureLocation(AZURE_LOCATION)
                         .build())

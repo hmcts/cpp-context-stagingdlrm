@@ -134,18 +134,11 @@ class EventGridMonitorHelperTest {
         assertEquals("URN:12345", json.getString("caseUrn"));
     }
 
-    /**
-     * DD-43086 LIBRA03/AC7 (FR8 confirm) — for a Function-App-level rejection the case is never
-     * parsed, so {@code caseUrn} arrives as an explicit empty string. The written outcome file is
-     * asserted <b>whole</b>: {@code caseUrn: ""} (an empty string, not null and not a missing key),
-     * {@code success: false}, the populated {@code description}, and nothing else — and it is written
-     * under the submission-derived LIBRA path, not a configured constant.
-     */
     @Test
-    void shouldWriteWholeOutcomeWithEmptyCaseUrnForFunctionAppLevelRejection() throws Exception {
+    void shouldWriteWholeOutcomeWithCaseUrnForFunctionAppLevelRejection() throws Exception {
         final String libraLocation = "LIBRA/batch1/CASEREF-0001/submission1";
         final Map<String, Object> event = Map.of(
-                "caseUrn", "",
+                "caseUrn", "CASEREF-0001",
                 "success", "false",
                 "description", "LIBRA case failed schema validation at the Function App gate"
         );
@@ -160,8 +153,8 @@ class EventGridMonitorHelperTest {
         final String uploadedContent = new String(inputStreamCaptor.getValue().readAllBytes(), UTF_8);
         final JsonObject json = Json.createReader(new StringReader(uploadedContent)).readObject();
         assertEquals(3, json.size(), () -> "outcome should carry exactly caseUrn, success, description: " + json);
-        assertEquals("", json.getString("caseUrn"),
-                () -> "caseUrn must be an explicit empty string, not null or missing: " + json);
+        assertEquals("CASEREF-0001", json.getString("caseUrn"),
+                () -> "caseUrn must be the extracted prosecutorCaseReference: " + json);
         assertFalse(json.getBoolean("success"));
         assertEquals("LIBRA case failed schema validation at the Function App gate", json.getString("description"));
     }
