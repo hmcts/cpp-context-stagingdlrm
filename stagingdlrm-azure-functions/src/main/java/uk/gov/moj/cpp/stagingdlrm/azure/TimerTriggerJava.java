@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.json.JsonException;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.ws.rs.core.Response;
@@ -178,7 +179,7 @@ public class TimerTriggerJava {
 
             loggerHelper.logInfo(context, submissionId, "Manifest validation messages: {0}", manifestValidationMessages.size());
 
-            final String caseUrn = extractCaseUrn(caseJsonContent);
+            final String caseUrn = extractCaseUrn(submissionId, caseJsonContent);
 
             if (!caseValidationMessages.isEmpty()) {
                 processClientError(message, caseValidationMessages, baseUriArray, caseJsonContent, submissionId, caseUrn);
@@ -244,13 +245,14 @@ public class TimerTriggerJava {
         processClientError(message, baseUriArray, errorMessage, jsonContent, submissionId, caseUrn);
     }
 
-    private String extractCaseUrn(final String caseJsonContent) {
+    private String extractCaseUrn(final String submissionId, final String caseJsonContent) {
         try {
-            return getJsonObject(caseJsonContent)
-                    .getJsonObject("migratedCase")
-                    .getJsonObject("caseDetails")
-                    .getString("prosecutorCaseReference");
-        } catch (final RuntimeException e) {
+            return JsonObjects.getString(getJsonObject(caseJsonContent),
+                            "migratedCase", "caseDetails", "prosecutorCaseReference")
+                    .orElse("");
+        } catch (final JsonException | ClassCastException e) {
+            loggerHelper.logSevere(context, submissionId,
+                    "Could not read case URN from case.json: {0}", e.getMessage());
             return "";
         }
     }

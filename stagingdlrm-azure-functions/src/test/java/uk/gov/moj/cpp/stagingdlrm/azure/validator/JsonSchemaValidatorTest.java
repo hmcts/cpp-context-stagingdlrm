@@ -452,6 +452,237 @@ class JsonSchemaValidatorTest {
         assertTrue(messages.iterator().next().getMessage().contains(property), () -> messages.toString());
     }
 
+    @ParameterizedTest(name = "DD-43180 offence.offenceDateCode {0} is outside the 1-6 range and rejected (LIBRA)")
+    @ValueSource(ints = {0, 7})
+    void shouldRejectLibraCaseSubmissionWithAnOffenceDateCodeOutsideRange(final int offenceDateCode)
+            throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        ((ObjectNode) defendant.get("offences").get(0)).put("offenceDateCode", offenceDateCode);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("offenceDateCode"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 offence.arrestDate is validated against the date pattern — a non-date is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnOffenceArrestDateThatIsNotADate() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        ((ObjectNode) defendant.get("offences").get(0)).put("arrestDate", "not-a-date");
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("arrestDate"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 an offence carrying plea/verdict/allocationDecision with UUID identifiers is accepted (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithOffencePleaVerdictAllocationDecision() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode offence = (ObjectNode) defendant.get("offences").get(0);
+        offence.putObject("plea").put("id", UUID.randomUUID().toString());
+        offence.putObject("verdict").put("id", UUID.randomUUID().toString());
+        offence.putObject("allocationDecision").put("motReasonId", UUID.randomUUID().toString());
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @ParameterizedTest(name = "DD-43180 offence.{0} requires its UUID identifier ''{1}'' (LIBRA)")
+    @MethodSource("uuidBearingOffenceObjects")
+    void shouldRejectLibraCaseSubmissionWithAUuidBearingOffenceObjectMissingItsId(
+            final String objectName, final String idField) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        ((ObjectNode) defendant.get("offences").get(0)).putObject(objectName);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains(idField), () -> messages.toString());
+    }
+
+    static Stream<Arguments> uuidBearingOffenceObjects() {
+        return Stream.of(
+                arguments("plea", "id"),
+                arguments("verdict", "id"),
+                arguments("allocationDecision", "motReasonId"));
+    }
+
+    @Test
+    @DisplayName("DD-43180 offence.plea.id must be a UUID — a non-UUID value is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithOffencePleaIdThatIsNotAUuid() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        ((ObjectNode) defendant.get("offences").get(0)).putObject("plea").put("id", "not-a-uuid");
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("id"), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 a defendant carrying a valid individual (surname + gender) is accepted (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithAValidIndividual() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.set("individual", validIndividual());
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual.personalInformation.observedEthnicity must be an integer — a string is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithObservedEthnicityAsString() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        ((ObjectNode) individual.get("personalInformation")).put("observedEthnicity", "WHITE");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("observedEthnicity"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual.personalInformation requires surname (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithPersonalInformationMissingSurname() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        final ObjectNode personalInformation = (ObjectNode) individual.get("personalInformation");
+        personalInformation.remove("surname");
+        personalInformation.put("forename", "John");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("surname"), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual.selfDefinedInformation requires gender (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithSelfDefinedInformationMissingGender() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        ((ObjectNode) individual.get("selfDefinedInformation")).remove("gender");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("gender"), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 hearing.hearingType over maxLength:10 is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithHearingTypeOverMaxLength() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode hearing = validHearing();
+        hearing.put("hearingType", "H".repeat(11));
+        migratedCase.putArray("hearings").add(hearing);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("hearingType"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 caseDetails.caseMarkers[] requires markerTypeCode (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithACaseMarkerMissingMarkerTypeCode() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode caseMarker = (ObjectNode) payload.get("migratedCase").get("caseDetails")
+                .get("caseMarkers").get(0);
+        assertTrue(caseMarker.has("markerTypeCode"),
+                "fixture no longer carries markerTypeCode — the row proves nothing");
+        caseMarker.remove("markerTypeCode");
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("markerTypeCode"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individualAlias.firstName has no length cap — a long value is accepted (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithALongIndividualAliasFirstName() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode alias = MAPPER.createObjectNode();
+        alias.put("firstName", "F".repeat(200));
+        alias.put("lastName", "L".repeat(200));
+        defendant.putArray("individualAliases").add(alias);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individualAlias.title over maxLength:35 is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnIndividualAliasTitleOverMaxLength() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode alias = MAPPER.createObjectNode();
+        alias.put("title", "T".repeat(36));
+        alias.put("firstName", "John");
+        defendant.putArray("individualAliases").add(alias);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("title"), () -> messages.toString());
+    }
+
+    private static ObjectNode validIndividual() {
+        final ObjectNode individual = MAPPER.createObjectNode();
+        individual.putObject("personalInformation").put("surname", "Brown");
+        individual.putObject("selfDefinedInformation").put("gender", 0);
+        return individual;
+    }
+
     @Test
     @DisplayName("DD-43180 the LIBRA gate accepts a defendant carrying emailAddress1/emailAddress2 (LIBRA)")
     void shouldAcceptLibraCaseSubmissionWithADefendantCarryingEmailAddresses() throws Exception {
