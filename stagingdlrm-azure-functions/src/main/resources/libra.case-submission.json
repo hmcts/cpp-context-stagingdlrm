@@ -139,23 +139,6 @@
         "emailAddress2": {
           "$ref": "#/definitions/email"
         },
-        "occupation": {
-          "type": "string",
-          "maxLength": 54
-        },
-        "defendantOccupationCode": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 99999
-        },
-        "driverNumber": {
-          "type": "string",
-          "maxLength": 16
-        },
-        "licenseCode": {
-          "type": "string",
-          "maxLength": 1
-        },
         "documentationLanguage": {
           "type": "string",
           "maxLength": 1
@@ -176,10 +159,6 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 999
-        },
-        "nationalInsuranceNumber": {
-          "type": "string",
-          "maxLength": 9
         },
         "prosecutorCosts": {
           "type": "number",
@@ -424,10 +403,22 @@
         },
         "parentGuardianInformation": {
           "$ref": "#/definitions/parentGuardianInformation"
+        },
+        "driverNumber": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "licenseCode": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "nationalInsuranceNumber": {
+          "$ref": "#/definitions/nationalInsuranceNumber"
         }
       },
       "required": [
-        "personalInformation"
+        "personalInformation",
+        "selfDefinedInformation"
       ]
     },
     "selfDefinedInformation": {
@@ -535,6 +526,15 @@
         },
         "address": {
           "$ref": "#/definitions/address"
+        },
+        "occupation": {
+          "type": "string",
+          "maxLength": 54
+        },
+        "defendantOccupationCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999
         }
       },
       "required": [
@@ -685,6 +685,10 @@
     "email": {
       "type": "string",
       "pattern": "^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+    },
+    "nationalInsuranceNumber": {
+      "type": "string",
+      "pattern": "^(?!BG)(?!GB)(?!NK)(?!KN)(?!TN)(?!NT)(?!ZZ)[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z][0-9][0-9][0-9][0-9][0-9][0-9][A-D]$"
     }
   },
   "required": [

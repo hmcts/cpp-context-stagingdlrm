@@ -676,6 +676,108 @@ class JsonSchemaValidatorTest {
         assertTrue(messages.iterator().next().getMessage().contains("title"), () -> messages.toString());
     }
 
+    @ParameterizedTest(name = "DD-43180 defendant.{0} is no longer declared — the relocated field is rejected on defendant (LIBRA)")
+    @ValueSource(strings = {"occupation", "defendantOccupationCode", "driverNumber", "licenseCode", "nationalInsuranceNumber"})
+    void shouldRejectLibraCaseSubmissionWithARelocatedFieldStillDeclaredOnDefendant(final String property)
+            throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.put(property, "x");
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains(property), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual accepts driverNumber and licenseCode relocated from defendant (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithIndividualDriverNumberAndLicenseCode() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        individual.put("driverNumber", "DVLA1234567890AB");
+        individual.put("licenseCode", "A");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual.nationalInsuranceNumber enforces the CJS pattern — a malformed value is rejected (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithMalformedNationalInsuranceNumber() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        individual.put("nationalInsuranceNumber", "not-a-valid-value");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("nationalInsuranceNumber"),
+                () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 personalInformation accepts occupation and defendantOccupationCode relocated from defendant (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithPersonalInformationOccupationFields() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        ((ObjectNode) individual.get("personalInformation")).put("occupation", "Baker").put("defendantOccupationCode", 42);
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 personalInformation.occupation enforces maxLength:54 (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithPersonalInformationOccupationOverMaxLength() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        ((ObjectNode) individual.get("personalInformation")).put("occupation", "O".repeat(55));
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("occupation"), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43180 individual requires selfDefinedInformation (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithIndividualMissingSelfDefinedInformation() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = MAPPER.createObjectNode();
+        individual.putObject("personalInformation").put("surname", "Brown");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("selfDefinedInformation"),
+                () -> messages.toString());
+    }
+
     private static ObjectNode validIndividual() {
         final ObjectNode individual = MAPPER.createObjectNode();
         individual.putObject("personalInformation").put("surname", "Brown");

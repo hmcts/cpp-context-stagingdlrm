@@ -203,37 +203,11 @@
         "address": {
           "$ref": "#/definitions/address"
         },
-        "occupation": {
-          "type": "string",
-          "maxLength": 54,
-          "description": "The description of an occupation."
-        },
-        "defendantOccupationCode": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 99999,
-          "description": "An occupation code."
-        },
-        "driverNumber": {
-          "type": "string",
-          "maxLength": 16,
-          "description": "A driver’s licence number."
-        },
-        "licenseCode": {
-          "type": "string",
-          "maxLength": 1,
-          "description": "Identifies the type of driving licence. Previously known as Licence Type."
-        },
         "numPreviousConvictions": {
           "type": "integer",
           "minimum": 0,
           "maximum": 999,
           "description": "Number of previous convictions cited by prosecutor."
-        },
-        "nationalInsuranceNumber": {
-          "type": "string",
-          "maxLength": 9,
-          "description": "National Insurance Number."
         },
         "prosecutorCosts": {
           "type": "number",
@@ -477,6 +451,10 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
     },
+    "nationalInsuranceNumber": {
+      "type": "string",
+      "pattern": "^(?!BG)(?!GB)(?!NK)(?!KN)(?!TN)(?!NT)(?!ZZ)[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z][0-9][0-9][0-9][0-9][0-9][0-9][A-D]$"
+    },
     "contactDetails": {
       "type": "object",
       "description": "Contact Details",
@@ -563,6 +541,17 @@
           "type": "string",
           "maxLength": 255,
           "description": "The third given name of a person, e.g., Barry."
+        },
+        "occupation": {
+          "type": "string",
+          "maxLength": 54,
+          "description": "The description of an occupation."
+        },
+        "defendantOccupationCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999,
+          "description": "An occupation code."
         }
       },
       "required": [
@@ -641,10 +630,24 @@
         "bailConditions": {
           "type": "string",
           "maxLength": 2500
+        },
+        "driverNumber": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "A driver’s licence number."
+        },
+        "licenseCode": {
+          "type": "string",
+          "maxLength": 1,
+          "description": "Identifies the type of driving licence. Previously known as Licence Type."
+        },
+        "nationalInsuranceNumber": {
+          "$ref": "#/definitions/nationalInsuranceNumber"
         }
       },
       "required": [
-        "personalInformation"
+        "personalInformation",
+        "selfDefinedInformation"
       ]
     },
     "plea": {
@@ -732,5 +735,6 @@
   "required": [
     "migratedCase"
   ],
+
   "additionalProperties": false
 }
