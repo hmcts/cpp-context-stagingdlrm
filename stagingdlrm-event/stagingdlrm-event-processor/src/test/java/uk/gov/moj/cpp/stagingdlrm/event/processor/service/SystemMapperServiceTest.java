@@ -5,6 +5,7 @@ import static java.util.UUID.randomUUID;
 import static javax.json.Json.createObjectBuilder;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,11 +21,15 @@ import uk.gov.moj.cpp.systemidmapper.client.SystemIdMapping;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import javax.json.JsonObject;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
@@ -57,94 +62,51 @@ class SystemMapperServiceTest {
     @Captor
     private ArgumentCaptor<SystemIdMap> argumentCaptor;
 
-    @Test
-    void shouldReturnCorrectCaseIdWhenMappingExists() {
-        final UUID expectedCaseId = randomUUID();
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("standardLookupScenarios")
+    void shouldResolveCaseExistenceForStandardLookup(
+            final String scenario,
+            final JsonObject progressionCaseDetails,
+            final boolean expectedExists) {
+
+        final UUID existingCaseId = randomUUID();
 
         when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(randomUUID()));
         when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
-        when(systemIdMapping.getTargetId()).thenReturn(expectedCaseId);
-        when(progressionService.getProsecutionCaseDetails(expectedCaseId)).thenReturn(Optional.empty());
+        when(systemIdMapping.getTargetId()).thenReturn(existingCaseId);
+        when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.ofNullable(progressionCaseDetails));
 
         final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
 
-        assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
+        verify(progressionService).getProsecutionCaseDetails(existingCaseId);
+        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(expectedExists));
+        assertThat(result.getCaseId(), is(existingCaseId));
         verify(systemIdMapperClient, never()).remap(any(), any(), any());
+        verify(systemIdMapperClient, never()).add(any(), any());
     }
 
     @Test
-    void shouldRemapAndCreateNewCaseIdWhenCaseIsEjected() {
+    void shouldRemapAndCreateNewMappingWhenCaseEjected() {
         final UUID existingCaseId = randomUUID();
         final UUID existingMappingId = randomUUID();
         final UUID systemUserId = randomUUID();
-        final JsonObject caseDetailsResponse = createObjectBuilder()
-                .add("prosecutionCase", createObjectBuilder().add("caseStatus", "EJECTED").build())
-                .build();
 
         when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(systemUserId));
         when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
         when(systemIdMapping.getTargetId()).thenReturn(existingCaseId);
         when(systemIdMapping.getMappingId()).thenReturn(existingMappingId);
-        when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.of(caseDetailsResponse));
+        when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.of(caseDetailsWithStatus("EJECTED")));
         when(systemIdMapperClient.add(any(), any())).thenReturn(additionResponse);
         when(additionResponse.isSuccess()).thenReturn(true);
 
         final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
 
+        verify(progressionService).getProsecutionCaseDetails(existingCaseId);
+        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
         verify(systemIdMapperClient).remap(eq(MOCK_URN + "_Ejected"), eq(existingMappingId), eq(systemUserId));
         verify(systemIdMapperClient).add(argumentCaptor.capture(), any());
         assertThat(result.getCaseId(), is(argumentCaptor.getValue().getTargetId()));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
-    }
-
-    @Test
-    void shouldReturnCaseIdAndLogStatusWhenProgressionCaseFound() {
-        final UUID expectedCaseId = randomUUID();
-        final JsonObject caseDetailsResponse = createObjectBuilder()
-                .add("prosecutionCase", createObjectBuilder().add("caseStatus", "ACTIVE").build())
-                .build();
-
-        when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(randomUUID()));
-        when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
-        when(systemIdMapping.getTargetId()).thenReturn(expectedCaseId);
-        when(progressionService.getProsecutionCaseDetails(expectedCaseId)).thenReturn(Optional.of(caseDetailsResponse));
-
-        final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
-
-        assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
-        verify(progressionService).getProsecutionCaseDetails(expectedCaseId);
-    }
-
-    @Test
-    void shouldReturnCaseIdWhenProgressionResponseMissingProsecutionCaseField() {
-        final UUID expectedCaseId = randomUUID();
-
-        when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(randomUUID()));
-        when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
-        when(systemIdMapping.getTargetId()).thenReturn(expectedCaseId);
-        when(progressionService.getProsecutionCaseDetails(expectedCaseId)).thenReturn(Optional.of(createObjectBuilder().build()));
-
-        final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
-
-        assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
-    }
-
-    @Test
-    void shouldReturnCaseIdWhenProgressionReturnsNoCase() {
-        final UUID expectedCaseId = randomUUID();
-
-        when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(randomUUID()));
-        when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
-        when(systemIdMapping.getTargetId()).thenReturn(expectedCaseId);
-        when(progressionService.getProsecutionCaseDetails(expectedCaseId)).thenReturn(Optional.empty());
-
-        final SystemMapperService.CaseIdLookupResult result = systemMapperService.getCaseIdForPtiURN(MOCK_URN);
-
-        assertThat(result.getCaseId(), is(expectedCaseId));
-        assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(true));
+        assertNotEquals(existingCaseId, result.getCaseId());
     }
 
     @Test
@@ -183,5 +145,24 @@ class SystemMapperServiceTest {
         final Exception e = assertThrows(Exception.class,
                 () -> systemMapperService.getCaseIdForPtiURN(MOCK_URN));
         assertThat(e.getMessage(), is(SystemMapperService.CONTEXT_SYSTEM_USER_ID_IS_NOT_PRESENT));
+    }
+
+    private static Stream<Arguments> standardLookupScenarios() {
+        return Stream.of(
+                Arguments.of("progression has no record of the case at all", null, false),
+                Arguments.of("progression response is missing the prosecutionCase field", createObjectBuilder().build(), false),
+                Arguments.of("progression case present but caseStatus field missing", caseDetailsWithNoStatus(), true),
+                Arguments.of("progression case found with an active status", caseDetailsWithStatus("ACTIVE"), true)
+        );
+    }
+
+    private static JsonObject caseDetailsWithStatus(final String caseStatus) {
+        return createObjectBuilder()
+                .add("prosecutionCase", createObjectBuilder().add("caseStatus", caseStatus).build())
+                .build();
+    }
+
+    private static JsonObject caseDetailsWithNoStatus() {
+        return createObjectBuilder().add("prosecutionCase", createObjectBuilder().build()).build();
     }
 }
