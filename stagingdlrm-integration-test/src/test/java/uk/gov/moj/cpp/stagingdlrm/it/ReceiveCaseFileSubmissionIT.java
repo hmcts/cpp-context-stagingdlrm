@@ -628,6 +628,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        assertEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
     }
 
     @Test
@@ -647,6 +648,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        assertEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
     }
 
     private List<Defendant> getDefendantList(final JsonArray jsonValues) {
