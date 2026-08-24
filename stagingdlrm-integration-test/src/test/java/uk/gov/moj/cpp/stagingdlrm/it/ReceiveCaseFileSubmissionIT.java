@@ -4,7 +4,6 @@ import static java.util.stream.IntStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,9 +14,10 @@ import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelpe
 import static uk.gov.moj.cpp.stagingdlrm.helper.MigratedCaseSubmissionEventHelper.verifyPrivateEvents;
 import static uk.gov.moj.cpp.stagingdlrm.helper.QueueUtil.retrieveMessageBody;
 import static uk.gov.moj.cpp.stagingdlrm.helper.WiremockTestHelper.createCommonMockEndpoints;
-import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.captureReceiveCaseFileRequestedCaseId;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileNotRequestedFor;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequested;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequestedWithCaseId;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequestedWithCaseIdOtherThan;
 
 import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
 import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
@@ -608,7 +608,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
-        assertNotEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
+        verifyReceiveCaseFileRequestedWithCaseIdOtherThan(submissionId, existingCaseId.toString());
     }
 
     @Test
@@ -628,7 +628,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
-        assertEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
+        verifyReceiveCaseFileRequestedWithCaseId(submissionId, existingCaseId.toString());
     }
 
     @Test
@@ -648,7 +648,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
-        assertEquals(existingCaseId.toString(), captureReceiveCaseFileRequestedCaseId(submissionId));
+        verifyReceiveCaseFileRequestedWithCaseId(submissionId, existingCaseId.toString());
     }
 
     private List<Defendant> getDefendantList(final JsonArray jsonValues) {
