@@ -22,7 +22,7 @@ public class SystemMapperService {
 
     public static final String CONTEXT_SYSTEM_USER_ID_IS_NOT_PRESENT = "Context System User Id is not present";
     private static final String UNABLE_TO_CREATE_MAPPING = "Unable to creating mapping for input String %s to a uuid";
-    private static final String UNABLE_TO_REMAP = "Unable to remap input String %s to a uuid";
+    private static final String UNABLE_TO_REMAP = "Unable to remap existing system-id-mapper entry for input String %s";
     private static final String SOURCE_TYPE = "OU_URN";
     private static final String TARGET_TYPE = "CASE_FILE_ID";
     private static final String EJECTED = "EJECTED";

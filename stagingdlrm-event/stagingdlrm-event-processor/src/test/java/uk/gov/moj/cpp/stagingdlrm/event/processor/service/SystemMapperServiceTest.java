@@ -142,7 +142,7 @@ class SystemMapperServiceTest {
 
         final Exception e = assertThrows(Exception.class,
                 () -> systemMapperService.getCaseIdForPtiURN(MOCK_URN));
-        assertThat(e.getMessage(), is(format("Unable to remap input String %s to a uuid", MOCK_URN)));
+        assertThat(e.getMessage(), is(format("Unable to remap existing system-id-mapper entry for input String %s", MOCK_URN)));
         verify(systemIdMapperClient, never()).add(any(), any());
     }
 
