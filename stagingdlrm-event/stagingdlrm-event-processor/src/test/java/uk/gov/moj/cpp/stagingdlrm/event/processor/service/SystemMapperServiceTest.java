@@ -96,6 +96,7 @@ class SystemMapperServiceTest {
         when(systemIdMapping.getTargetId()).thenReturn(existingCaseId);
         when(systemIdMapping.getMappingId()).thenReturn(existingMappingId);
         when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.of(caseDetailsWithStatus("EJECTED")));
+        when(systemIdMapperClient.remap(any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
         when(systemIdMapperClient.add(any(), any())).thenReturn(additionResponse);
         when(additionResponse.isSuccess()).thenReturn(true);
 
@@ -124,6 +125,25 @@ class SystemMapperServiceTest {
         assertThat(systemIdMap.getSourceId(), is(MOCK_URN));
         assertThat(result.getCaseId(), is(systemIdMap.getTargetId()));
         assertThat(result.isCaseAlreadyProcessedAndExistsInProgression(), is(false));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRemapFails() {
+        final UUID existingCaseId = randomUUID();
+        final UUID existingMappingId = randomUUID();
+        final UUID systemUserId = randomUUID();
+
+        when(systemUserProvider.getContextSystemUserId()).thenReturn(Optional.of(systemUserId));
+        when(systemIdMapperClient.findBy(eq(MOCK_URN), any(), any(), any())).thenReturn(Optional.of(systemIdMapping));
+        when(systemIdMapping.getTargetId()).thenReturn(existingCaseId);
+        when(systemIdMapping.getMappingId()).thenReturn(existingMappingId);
+        when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.of(caseDetailsWithStatus("EJECTED")));
+        when(systemIdMapperClient.remap(any(), any(), any())).thenReturn(Optional.empty());
+
+        final Exception e = assertThrows(Exception.class,
+                () -> systemMapperService.getCaseIdForPtiURN(MOCK_URN));
+        assertThat(e.getMessage(), is(format("Unable to remap input String %s to a uuid", MOCK_URN)));
+        verify(systemIdMapperClient, never()).add(any(), any());
     }
 
     @Test
