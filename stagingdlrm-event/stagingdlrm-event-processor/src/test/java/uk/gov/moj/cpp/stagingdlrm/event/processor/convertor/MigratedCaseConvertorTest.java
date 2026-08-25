@@ -156,6 +156,28 @@ class MigratedCaseConvertorTest {
     }
 
     @Test
+    void shouldMapMiddleNameToGivenName2AndMiddleName2ToGivenName3ForPcfdlrm() {
+        final UUID caseId = UUID.randomUUID();
+        final MigratedCase migratedCase = MigratedCase.migratedCase()
+                .withDefendants(List.of(Defendant.defendant()
+                        .withIndividual(Individual.individual()
+                                .withPersonalInformation(PersonalInformation.personalInformation()
+                                        .withSurname("Brown")
+                                        .withMiddleName("Walter")
+                                        .withMiddleName2("John")
+                                        .build())
+                                .build())
+                        .build()))
+                .build();
+
+        final var personalInformation = migratedCaseConvertor.buildMigratedCasedetails(migratedCase, caseId)
+                .getDefendants().get(0).getIndividual().getPersonalInformation();
+
+        assertEquals("Walter", personalInformation.getGivenName2());
+        assertEquals("John", personalInformation.getGivenName3());
+    }
+
+    @Test
     void shouldConvertMigratedCaseWhenSendingCourtIsMissing() {
 
         final UUID caseId = UUID.randomUUID();

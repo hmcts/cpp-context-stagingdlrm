@@ -128,10 +128,6 @@ class TimerTriggerJavaTest {
         setField(timerTrigger, "stagingDlrmBaseUri", "http://localhost:8080");
         setField(timerTrigger, "eventGridMonitorHelper", eventGridMonitorHelper);
 
-        // DD-43086 LIBRA03/FR4/FR5 — the source-system-keyed validator map, built explicitly because
-        // Mockito cannot autowire mocks into a Map field. The 'xhibit' entry reuses the two existing
-        // DD-43078 mocks (so every XHIBIT scenario is unchanged), the 'libra' entry adds the LIBRA case
-        // validator, and both entries reference the ONE shared manifest validator (FR5).
         setField(timerTrigger, "validatorsBySourceSystem", Map.of(
                 "xhibit", new SourceSystemValidators(caseJsonSchemaValidator, manifestJsonSchemaValidator),
                 "libra", new SourceSystemValidators(libraCaseJsonSchemaValidator, manifestJsonSchemaValidator)));
@@ -140,9 +136,6 @@ class TimerTriggerJavaTest {
     @Test
     void shouldTestTimerTriggerSuccessfully() {
         final String timerInfo = "timerInfo";
-        // DD-43086 LIBRA03 — corrected from the synthetic single-token "CASEREF-0001" to a realistic
-        // four-token folder/batch/case/submission path, so source-system resolution finds the
-        // configured 'xhibit' entry instead of hitting the new AC6 "unconfigured source system" branch.
         final String queueMessage = "XHIBIT/batch1/CASEREF-0001/submission1";
         final String caseJsonPayload = casePayload(CASE_REFERENCE);
 

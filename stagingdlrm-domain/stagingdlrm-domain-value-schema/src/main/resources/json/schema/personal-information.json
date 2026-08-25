@@ -24,6 +24,11 @@
       "description": "Middle name, e.g. Walter.",
       "maxLength": 255
     },
+    "middleName2": {
+      "type": "string",
+      "description": "Second middle name. Combined with middleName when forwarded to pcfdlrm.",
+      "maxLength": 255
+    },
     "observedEthnicity" : {
       "type": "integer"
     },

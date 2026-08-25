@@ -299,6 +299,7 @@ public class MigratedCaseConvertor implements Serializable {
                 .withFirstName(personalInformation.getForename())
                 .withLastName(personalInformation.getSurname())
                 .withGivenName2(personalInformation.getMiddleName())
+                .withGivenName3(personalInformation.getMiddleName2())
                 .withObservedEthnicity(personalInformation.getObservedEthnicity())
                 .withContactDetails(buildContactDetails(personalInformation.getContactDetails()))
                 .withAddress(buildAddress(personalInformation.getAddress()))
