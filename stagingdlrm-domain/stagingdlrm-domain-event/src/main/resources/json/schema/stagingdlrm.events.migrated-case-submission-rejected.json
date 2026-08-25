@@ -3,12 +3,19 @@
   "id": "http://moj.gov.uk/stagingdlrm/domain/event/migrated-case-submission-rejected.json",
   "type": "object",
   "properties": {
-    "caseDetails": {
-      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/case-details.json"
+    "migratedCaseSubmission": {
+      "$ref": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/migrated-case-submission.json"
     },
-    "createdBy": {
-      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    "validationErrors": {
+      "type": "array",
+      "items": {
+        "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/migrated-case-validation-error.json"
+      }
     }
   },
+  "required": [
+    "migratedCaseSubmission",
+    "validationErrors"
+  ],
   "additionalProperties": false
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/migrated-case-validation-error.json",
+  "description": "A single business-rule validation failure against a migrated case submission",
+  "type": "object",
+  "properties": {
+    "jsonPath": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "jsonPath",
+    "message"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,83 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "C",
+      "prosecutorCaseReference": "TVL55117DFXXV",
+      "dateReceived": "2024-01-15",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      },
+      "sendingCourt": "C50EX00",
+      "receivingCourt": "B01LY00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Either way case",
+      "retrialIndicator": false
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "B01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 60,
+        "courtRoomId": 60,
+        "hearingType": "Trial",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "def-ref-0001",
+            "listedOffences": [
+              "off-ref-0001"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "prosecutorDefendantId": "def-ref-0001",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "off-ref-0001",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+      "migrationSourceSystemCaseIdentifier": "case-identifier-0002"
+    }
+  },
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "numberOfMaterials": 0
+  },
+  "submissionId": "22222222-3333-4444-5555-666666666666",
+  "azureLocation": "{{SOURCE_SYSTEM}}/20082025/case-identifier-0002/22222222-3333-4444-5555-666666666666"
+}

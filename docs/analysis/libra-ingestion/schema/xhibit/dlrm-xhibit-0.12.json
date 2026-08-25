@@ -1,0 +1,722 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://moj.gov.uk/cps/stagingdlrm/command/api/receive-migrated-case-submission-combined.json",
+  "type": "object",
+  "description": "Migrated Case File Submission - Combined Schema",
+  "properties": {
+    "migratedCase": {
+      "type": "object",
+      "properties": {
+        "caseDetails": {
+          "$ref": "#/definitions/caseDetails"
+        },
+        "hearings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/hearing"
+          }
+        },
+        "defendants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/defendant"
+          }
+        },
+        "migrationSourceSystem": {
+          "$ref": "#/definitions/migrationSourceSystem"
+        }
+      },
+      "required": [
+        "migrationSourceSystem",
+        "defendants",
+        "caseDetails"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "caseDetails": {
+      "type": "object",
+      "description": "Prosecution Case File Details",
+      "properties": {
+        "prosecutorCaseReference": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "originatingOrganisation": {
+          "type": "string",
+          "description": "This is the  oucode",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "prosecutor": {
+          "$ref": "#/definitions/prosecutor"
+        },
+        "initiationCode": {
+          "type": "string",
+          "enum": [
+            "O"
+          ]
+        },
+        "cpsOrganisation": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "caseMarkers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/caseMarkers"
+          },
+          "default": []
+        },
+        "dateReceived": {
+          "$ref": "#/definitions/date"
+        },
+        "dateOfSending": {
+          "$ref": "#/definitions/date"
+        },
+        "dateOfCommittal": {
+          "$ref": "#/definitions/date"
+        },
+        "receiptType": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "retrialIndicator": {
+          "type": "boolean"
+        },
+        "sendingCourt": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "receivingCourt": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        }
+      },
+      "required": [
+        "prosecutorCaseReference",
+        "originatingOrganisation",
+        "initiationCode",
+        "prosecutor",
+        "dateReceived",
+        "retrialIndicator",
+        "receiptType",
+        "receivingCourt"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "dateOfCommittal"
+          ]
+        },
+        {
+          "required": [
+            "dateOfSending"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "hearing": {
+      "type": "object",
+      "properties": {
+        "courtHearingLocation": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "courtRoomId": {
+          "type": "integer"
+        },
+        "dateOfHearing": {
+          "$ref": "#/definitions/date"
+        },
+        "timeOfHearing": {
+          "type": "string",
+          "maxLength": 8,
+          "minLength": 8,
+          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$"
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "maximum": 99999
+        },
+        "weekCommencingDate": {
+          "$ref": "#/definitions/weekCommencingDate"
+        },
+        "hearingType": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "listedDefendants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/listedDefendant"
+          }
+        }
+      },
+      "required": [
+        "courtHearingLocation",
+        "hearingType",
+        "listedDefendants",
+        "durationMinutes"
+      ]
+    },
+    "defendant": {
+      "type": "object",
+      "description": "Defendant Details",
+      "properties": {
+        "prosecutorDefendantId": {
+          "type": "string",
+          "description": "The unique identifier that comes legacy systems",
+          "maxLength": 36
+        },
+        "asn": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "documentationLanguage": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "hearingLanguage": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "languageRequirement": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "specificRequirements": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "individual": {
+          "$ref": "#/definitions/individual"
+        },
+        "offences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/offence"
+          }
+        },
+        "emailAddress1": {
+          "$ref": "#/definitions/email"
+        },
+        "emailAddress2": {
+          "$ref": "#/definitions/email"
+        },
+        "organisationName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "pncIdentifier": {
+          "type": "string",
+          "maxLength": 13
+        },
+        "telephoneNumberBusiness": {
+          "$ref": "#/definitions/phone"
+        },
+        "croNumber": {
+          "type": "string",
+          "maxLength": 12
+        },
+        "individualAliases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/individualAlias"
+          }
+        },
+        "aliasForCorporate": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "address": {
+          "$ref": "#/definitions/address"
+        }
+      },
+      "required": [
+        "offences",
+        "prosecutorDefendantId",
+        "documentationLanguage",
+        "hearingLanguage"
+      ],
+      "additionalProperties": false
+    },
+    "migrationSourceSystem": {
+      "type": "object",
+      "description": "Migration Source System",
+      "properties": {
+        "migrationSourceSystemName": {
+          "$ref": "#/definitions/migrationSourceSystemName"
+        },
+        "migrationSourceSystemCaseIdentifier": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "migrationSourceSystemName",
+        "migrationSourceSystemCaseIdentifier"
+      ]
+    },
+    "offence": {
+      "type": "object",
+      "description": "Offences Details",
+      "properties": {
+        "prosecutorOffenceId": {
+          "type": "string",
+          "description": "it is unique identifier for the offence and comes from legacy systems",
+          "maxLength": 36
+        },
+        "offenceCode": {
+          "type": "string",
+          "maxLength": 8
+        },
+        "offenceSequenceNumber": {
+          "type": "integer",
+          "maximum": 999
+        },
+        "arrestDate": {
+          "$ref": "#/definitions/date",
+          "description": ""
+        },
+        "chargeDate": {
+          "$ref": "#/definitions/date",
+          "description": ""
+        },
+        "offenceDateCode": {
+          "description": "The code for the offence date to be used within the offence wording, 1 = on or in, 2 = before, 3 = after, 4 = between, 5 = on or about and 6 = on or before",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "offenceCommittedDate": {
+          "$ref": "#/definitions/date"
+        },
+        "offenceCommittedEndDate": {
+          "$ref": "#/definitions/date"
+        },
+        "offenceLocation": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "offenceWording": {
+          "type": "string",
+          "maxLength": 2500
+        },
+        "offenceWordingWelsh": {
+          "type": "string",
+          "maxLength": 2500
+        },
+        "alcoholRelatedOffence": {
+          "$ref": "#/definitions/alcoholRelatedOffence"
+        },
+        "plea": {
+          "$ref": "#/definitions/plea"
+        },
+        "verdict": {
+          "$ref": "#/definitions/verdict"
+        },
+        "allocationDecision": {
+          "$ref": "#/definitions/allocationDecision"
+        },
+        "convictingCourtCode": {
+          "type": "string",
+          "description": "This is the organisation unit oucode. E.g B01BH00",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "prosecutorOffenceId",
+        "offenceCode",
+        "offenceSequenceNumber",
+        "offenceDateCode",
+        "offenceCommittedDate",
+        "offenceWording"
+      ]
+    },
+    "prosecutor": {
+      "type": "object",
+      "description": "Prosecutor Details",
+      "properties": {
+        "prosecutingAuthority": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        }
+      },
+      "required": [
+        "prosecutingAuthority"
+      ],
+      "additionalProperties": false
+    },
+    "alcoholRelatedOffence": {
+      "type": "object",
+      "properties": {
+        "alcoholOrDrugLevelMethod": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "alcoholOrDrugLevelAmount": {
+          "type": "integer",
+          "maximum": 999
+        }
+      },
+      "additionalProperties": false
+    },
+    "address": {
+      "type": "object",
+      "description": "Address of the defendant",
+      "properties": {
+        "address1": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "address2": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "address3": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "address4": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "address5": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "postcode": {
+          "type": "string",
+          "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
+          "maxLength": 8
+        }
+      },
+      "required": [
+        "address1"
+      ],
+      "additionalProperties": false
+    },
+    "weekCommencingDate": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "$ref": "#/definitions/datePattern"
+        },
+        "duration": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "startDate"
+      ],
+      "additionalProperties": false
+    },
+    "listedDefendant": {
+      "type": "object",
+      "properties": {
+        "prosecutorDefendantId": {
+          "type": "string",
+          "maxLength": 36
+        },
+        "listedOffences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "maxLength": 36
+          }
+        }
+      },
+      "required": [
+        "prosecutorDefendantId",
+        "listedOffences"
+      ]
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    },
+    "datePattern": {
+      "type": "string",
+      "pattern": "^((([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13578]|1[02])\\-(0[1-9]|[12]\\d|3[01]))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13456789]|1[012])\\-(0[1-9]|[12]\\d|30))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-02\\-(0[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))\\-02\\-29))$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^((([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13578]|1[02])\\-(0[1-9]|[12]\\d|3[01]))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13456789]|1[012])\\-(0[1-9]|[12]\\d|30))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-02\\-(0[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))\\-02\\-29))$"
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 35,
+      "pattern": "^[\\+]?[0-9()\\-\\.\\s]+$"
+    },
+    "email": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
+    },
+    "contactDetails": {
+      "type": "object",
+      "description": "Contact Details",
+      "properties": {
+        "work": {
+          "$ref": "#/definitions/phone"
+        },
+        "home": {
+          "$ref": "#/definitions/phone"
+        },
+        "mobile": {
+          "$ref": "#/definitions/phone"
+        },
+        "primaryEmail": {
+          "$ref": "#/definitions/email"
+        },
+        "secondaryEmail": {
+          "$ref": "#/definitions/email"
+        }
+      },
+      "additionalProperties": false
+    },
+    "selfDefinedInformation": {
+      "type": "object",
+      "description": "Self defined information",
+      "properties": {
+        "nationality": {
+          "type": "string",
+          "maxLength": 3
+        },
+        "ethnicity": {
+          "type": "string",
+          "maxLength": 2
+        },
+        "dateOfBirth": {
+          "$ref": "#/definitions/date"
+        },
+        "gender": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "gender"
+      ]
+    },
+    "personalInformation": {
+      "type": "object",
+      "description": "Personal Information",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "forename": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "surname": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "middleName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "observedEthnicity": {
+          "type": "integer"
+        },
+        "contactDetails": {
+          "$ref": "#/definitions/contactDetails"
+        },
+        "address": {
+          "$ref": "#/definitions/address"
+        }
+      },
+      "required": [
+        "surname"
+      ]
+    },
+    "parentGuardianInformation": {
+      "type": "object",
+      "description": "Parent Guardian Information",
+      "oneOf": [
+        {
+          "properties": {
+            "dateOfBirth": {
+              "$ref": "#/definitions/date"
+            },
+            "gender": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "personalInformation": {
+              "$ref": "#/definitions/personalInformation"
+            },
+            "selfDefinedEthnicity": {
+              "type": "string",
+              "maxLength": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "organisationName": {
+              "type": "string",
+              "description": "Name of an organisation, e.g., Marks and Spencer.",
+              "maxLength": 255
+            },
+            "companyTelephoneNumber": {
+              "$ref": "#/definitions/phone"
+            },
+            "address": {
+              "$ref": "#/definitions/address"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "migrationSourceSystemName": {
+      "type": "string",
+      "enum": [
+        "LIBRA",
+        "XHIBIT"
+      ]
+    },
+    "individual": {
+      "type": "object",
+      "description": "Individual Details",
+      "properties": {
+        "selfDefinedInformation": {
+          "$ref": "#/definitions/selfDefinedInformation"
+        },
+        "personalInformation": {
+          "$ref": "#/definitions/personalInformation"
+        },
+        "parentGuardianInformation": {
+          "$ref": "#/definitions/parentGuardianInformation"
+        },
+        "custodyStatus": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "custodyTimeLimit": {
+          "$ref": "#/definitions/date"
+        },
+        "bailConditions": {
+          "type": "string",
+          "maxLength": 2500
+        }
+      },
+      "required": [
+        "personalInformation",
+        "selfDefinedInformation"
+      ]
+    },
+    "plea": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/uuid"
+        },
+        "pleaDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/uuid"
+        },
+        "verdictDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "allocationDecision": {
+      "type": "object",
+      "properties": {
+        "motReasonId": {
+          "$ref": "#/definitions/uuid"
+        },
+        "allocationDecisionDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "required": [
+        "motReasonId"
+      ],
+      "additionalProperties": false
+    },
+    "caseMarkers": {
+      "type": "object",
+      "properties": {
+        "markerTypeCode": {
+          "description": "The Code for the marker type",
+          "type": "string",
+          "maxLength": 3
+        }
+      },
+      "required": [
+        "markerTypeCode"
+      ],
+      "additionalProperties": false
+    },
+    "individualAlias": {
+      "type": "object",
+      "description": "Individual alias",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "givenName2": {
+          "type": "string"
+        },
+        "givenName3": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "migratedCase"
+  ],
+  "additionalProperties": false
+}

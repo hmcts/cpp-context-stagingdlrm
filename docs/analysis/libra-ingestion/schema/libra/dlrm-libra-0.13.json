@@ -2,16 +2,13 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "id": "http://moj.gov.uk/cps/stagingdlrm/command/api/receive-migrated-case-submission-libra.json",
   "type": "object",
-  "description": "Migrated Case File Submission (LIBRA) — generated from 'Libra Case - Min Data' in DLRM - CP Migration Data Schema V0.13.xlsx by tools/schema-gen/generate-dlrm-schema.py. Do not hand-edit; regenerate from the workbook. `required` is the intersection of the sheet's SJP Referral, Summons, Charge, Postal Requisition columns — per-case-type mandatoriness is in each field's description and must be enforced by the source-system validation rules, not here.",
+  "description": "Migrated Case File Submission (LIBRA) - Combined Schema",
   "properties": {
     "migratedCase": {
       "type": "object",
       "properties": {
         "caseDetails": {
           "$ref": "#/definitions/caseDetails"
-        },
-        "migrationSourceSystem": {
-          "$ref": "#/definitions/migrationSourceSystem"
         },
         "hearings": {
           "type": "array",
@@ -24,6 +21,9 @@
           "items": {
             "$ref": "#/definitions/defendant"
           }
+        },
+        "migrationSourceSystem": {
+          "$ref": "#/definitions/migrationSourceSystem"
         },
         "officerInCase": {
           "$ref": "#/definitions/officerInCase"
@@ -40,103 +40,50 @@
   "definitions": {
     "caseDetails": {
       "type": "object",
+      "description": "Prosecution Case File Details",
       "properties": {
+        "prosecutorCaseReference": {
+          "type": "string",
+          "maxLength": 36
+        },
         "originatingOrganisation": {
           "type": "string",
           "maxLength": 7,
-          "minLength": 7,
-          "description": "The organisation that brought forward the case to the courts, typically the Police Force. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Valid CJS OU Code. Comment: CJS OU Code. Sheet row 4."
+          "minLength": 7
+        },
+        "prosecutor": {
+          "$ref": "#/definitions/prosecutor"
         },
         "initiationCode": {
           "type": "string",
-          "maxLength": 1,
-          "description": "Identifies the type of case initiation. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Comment: Current values are C = Charge S = Summons Q = Postal charge J = SJPN. Documented values: C, J, Q, S (not enforced as an enum here). Sheet row 5."
-        },
-        "prosecutorCaseReference": {
-          "type": "string",
-          "maxLength": 36,
-          "description": "Prosecutors reference for the case. e.g PTI-URN for Police. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: A case reference unique to the prosecuting authority. Comment: Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“]. Sheet row 7."
+          "enum": [
+            "O"
+          ]
         },
         "cpsOrganisation": {
           "type": "string",
           "maxLength": 7,
-          "minLength": 7,
-          "description": "Identifies the CPS office responsible for prosecuting the case. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 10."
-        },
-        "writtenChargePostingDate": {
-          "$ref": "#/definitions/date",
-          "description": "Date on which notice was posted to the defendant. Optional: SJP Referral; Not applicable: Summons, Charge; Mandatory: Postal Requisition. Comment: ISO Date CCYY-MM-DD. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 11."
-        },
-        "informant": {
-          "type": "string",
-          "maxLength": 92,
-          "description": "Name of the person to be named as the informant in this case. Optional: SJP Referral, Charge, Postal Requisition; Mandatory: Summons. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 12."
-        },
-        "summonsCode": {
-          "type": "string",
-          "maxLength": 1,
-          "description": "Confirmed by Simon, not required as expectation is that any notices will be generated prior to a case becoming live in Libra therefore no need for a summons code as this is used to determine which notice to generate. Not applicable: SJP Referral, Charge, Postal Requisition; Mandatory: Summons. Business rules: Valid values are A, E, M or W (A = New Summons / Application / Complaint, E = Either Way or serious offences, M=MCA case, W = Witness Statement). Comment: Mandatory if Initiation Code is S. Documented values: A, E, M, W (not enforced as an enum here). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 13."
-        },
-        "prosecutor": {
-          "$ref": "#/definitions/prosecutor"
+          "minLength": 7
         },
         "caseMarkers": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/caseMarkers"
-          }
+          },
+          "minItems": 1
+        },
+        "informant": {
+          "type": "string",
+          "maxLength": 92,
+          "description": "Name of the person to be named as the informant in this case."
         }
       },
       "required": [
+        "caseMarkers",
         "initiationCode",
         "originatingOrganisation",
         "prosecutor",
         "prosecutorCaseReference"
-      ],
-      "additionalProperties": false
-    },
-    "prosecutor": {
-      "type": "object",
-      "properties": {
-        "prosecutingAuthority": {
-          "type": "string",
-          "maxLength": 7,
-          "minLength": 7,
-          "description": "Identifies the Prosecuting Organisation responsible for prosecuting the case in the Magistrate court. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Valid CJS OU Code. CPS prosecutors to use OU code from cpsOrg tab (i.e. A codes). Comment: Prosecutors that do not have a CJS OU Code should ask to be assigned one. Sheet row 3."
-        }
-      },
-      "required": [
-        "prosecutingAuthority"
-      ],
-      "additionalProperties": false
-    },
-    "caseMarkers": {
-      "type": "object",
-      "properties": {
-        "markerTypeCode": {
-          "type": "string",
-          "maxLength": 3,
-          "description": "To be populated if a CJS agreed Case Marker applies. Multiple values to be separated by a space. To allow where markers not recognised, report to be produced by DLRM to allow manual update on Cp. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: CASE MARKER DESCRIPTIVE* [3] To be populated if a CJS agreed Case Marker applies i.e. DV for Domestic Violence cases. Multiple values to be separated by a space. Comment: DLRM to advise on maximum case markers that could be received. Only one can be set on Xhibit but may need to look at other fields e.g. VULNERABLE_VICTIM_INDICATOR. Sheet row 15."
-        }
-      },
-      "additionalProperties": false
-    },
-    "migrationSourceSystem": {
-      "type": "object",
-      "properties": {
-        "migrationSourceSystemCaseIdentifier": {
-          "type": "string",
-          "maxLength": 100,
-          "description": "The unique case identifier used in the Heritage system. Either a Libra case reference number or Xhibit case identifier. TBC : (discussion with SB) Libra reuses Libra case number across case areas. So will likely need the case area, or a unique case area prefix added to the libra case number. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must be unique across all migrated cases sent across to CP. Sheet row 8."
-        },
-        "migrationSourceSystemName": {
-          "$ref": "#/definitions/migrationSourceSystemName",
-          "description": "Identifies the source case management system from which the case is being migrated. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: LIBRA' or 'XHIBIT'. Sheet row 9."
-        }
-      },
-      "required": [
-        "migrationSourceSystemCaseIdentifier",
-        "migrationSourceSystemName"
       ],
       "additionalProperties": false
     },
@@ -146,23 +93,27 @@
         "courtHearingLocation": {
           "type": "string",
           "maxLength": 7,
-          "minLength": 7,
-          "description": "The OU code of the court house. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 18."
+          "minLength": 7
+        },
+        "courtRoomId": {
+          "type": "integer"
         },
         "dateOfHearing": {
-          "$ref": "#/definitions/date",
-          "description": "Date of the Court Hearing. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 19."
+          "$ref": "#/definitions/date"
         },
         "timeOfHearing": {
           "type": "string",
-          "minLength": 8,
           "maxLength": 8,
-          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$",
-          "description": "The actual start time of the Court Hearing. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 20."
+          "minLength": 8,
+          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d$"
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "maximum": 99999
         },
         "hearingType": {
           "type": "string",
-          "description": "This is the hearing type code / description TBC. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Format TBC in source sheet — length/type unconfirmed. Sheet row 21."
+          "maxLength": 10
         },
         "listedDefendants": {
           "type": "array",
@@ -174,147 +125,44 @@
       },
       "required": [
         "courtHearingLocation",
+        "courtRoomId",
         "dateOfHearing",
+        "durationMinutes",
         "hearingType",
         "listedDefendants",
         "timeOfHearing"
       ]
     },
-    "listedDefendant": {
-      "type": "object",
-      "properties": {
-        "prosecutorDefendantId": {
-          "type": "string",
-          "maxLength": 36,
-          "description": "Defendant Id for defendant listed for a particular hearing. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: see prosecutorDefendantId within the Defendant element. Ref data source: M. Sheet row 46."
-        },
-        "listedOffences": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "maxLength": 36
-          },
-          "description": "A unique reference to an offence associated to a specific defendant and hearing within a prosecution. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“]. Ref data source: M. Sheet row 48."
-        }
-      },
-      "required": [
-        "listedOffences",
-        "prosecutorDefendantId"
-      ]
-    },
     "defendant": {
       "type": "object",
+      "description": "Defendant Details",
       "properties": {
         "prosecutorDefendantId": {
           "type": "string",
-          "maxLength": 36,
-          "description": "A unique reference to a defendant within a prosecution. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Limited to the alphanumeric (letters, numbers) and hyphens [“A”-“Z”, “a”-“z”, “0”-“9”, “-“]. Default to 1. Sheet row 52."
+          "maxLength": 36
         },
         "asn": {
           "type": "string",
-          "maxLength": 20,
-          "description": "Arrest Summons Number. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: To be provided where an ASN has been generated and received. Sheet row 53."
-        },
-        "pncIdentifier": {
-          "type": "string",
-          "maxLength": 13,
-          "description": "Person/organisation PNC identifier. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.107 for details. Sheet row 54."
-        },
-        "croNumber": {
-          "type": "string",
-          "maxLength": 12,
-          "description": "National Identification Service (formerly Criminal Records Office) Number. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Used for previous offenders See CJS Data Standard [2] section 3.24 for details. Sheet row 55."
-        },
-        "organisationName": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "Name of an organisation, e.g. Marks and Spencer. To be p. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: To be provided where the defendant is an organisation, person defendant name not to be provided. Sheet row 61."
-        },
-        "telephoneNumberBusiness": {
-          "$ref": "#/definitions/phone",
-          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Not applicable: SJP Referral; Optional: Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 62."
-        },
-        "organisationTelephoneNumber": {
-          "$ref": "#/definitions/phone",
-          "description": "Organisation Telephone number where the defendant is an organisation. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 63."
-        },
-        "occupation": {
-          "type": "string",
-          "maxLength": 54,
-          "description": "The description of an occupation. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.77. Comment: Description related to value in the occupation code field. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 75."
-        },
-        "defendantOccupationCode": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 99999,
-          "description": "An occupation code. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.77. Comment: Value in the occupation code field. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 76."
-        },
-        "driverNumber": {
-          "type": "string",
-          "maxLength": 16,
-          "description": "A driver’s licence number. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: DRIVER NUMBER [4] To be provided when offences are endorseable and defendant is a UK licence record holder. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 77."
-        },
-        "licenseCode": {
-          "type": "string",
-          "maxLength": 1,
-          "description": "Identifies the type of driving licence. Previously known as Licence Type. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: F = Full P = Provisional NB: This field not to be populated on advice from DVLA. Documented values: F, P (not enforced as an enum here). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 78."
+          "maxLength": 20
         },
         "documentationLanguage": {
           "type": "string",
-          "maxLength": 1,
-          "description": "Identifies the language to be used in documents. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standard [2] section 3.5.1 - default E. Comment: Values E = English W =Welsh. Documented values: E, W (not enforced as an enum here). Sheet row 79."
+          "maxLength": 1
         },
         "hearingLanguage": {
           "type": "string",
-          "maxLength": 1,
-          "description": "Identifies the language to be used during hearings. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standard [2] section 3.5.1 - default E. Comment: Values E = English W =Welsh. Documented values: E, W (not enforced as an enum here). Sheet row 80."
+          "maxLength": 1
         },
         "languageRequirement": {
           "type": "string",
-          "maxLength": 150,
-          "description": "Notes about the defendant’s language needs, e.g. interpreter details. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 81."
+          "maxLength": 150
         },
         "specificRequirements": {
           "type": "string",
-          "maxLength": 150,
-          "description": "Notes about any help that the defendant may need when attending court – e.g. wheelchair access. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 82."
-        },
-        "numPreviousConvictions": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 999,
-          "description": "Number of previous convictions cited by prosecutor. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: Numeric only field used by Common Platform. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 91."
-        },
-        "nationalInsuranceNumber": {
-          "type": "string",
-          "maxLength": 9,
-          "description": "National Insurance Number. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 92."
-        },
-        "prosecutorCosts": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Costs claimed by the prosecutor. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: Following CJS Standards for money format and complies with e-GIF “Amount Sterling” hence the inclusion of the + or – sign e.g. +0.01 to +999999999999.99. CJS money format (+)N16.2 (16 digits, 2 dp). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 93."
-        },
-        "aliasForCorporate": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Aliases for organisation defendants. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Alias names for organisation defendants. Ref data source: O. Sheet row 95."
-        },
-        "address": {
-          "$ref": "#/definitions/address"
+          "maxLength": 150
         },
         "individual": {
           "$ref": "#/definitions/individual"
-        },
-        "individualAliases": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/individualAlias"
-          },
-          "description": "Aliases for individual person defendants. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Alias names for individual defendants. Comment: individualAlias type. Ref data source: O. Sheet row 94."
         },
         "offences": {
           "type": "array",
@@ -322,6 +170,76 @@
             "$ref": "#/definitions/offence"
           },
           "minItems": 1
+        },
+        "emailAddress1": {
+          "$ref": "#/definitions/email"
+        },
+        "emailAddress2": {
+          "$ref": "#/definitions/email"
+        },
+        "organisationName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "pncIdentifier": {
+          "type": "string",
+          "maxLength": 13
+        },
+        "croNumber": {
+          "type": "string",
+          "maxLength": 12
+        },
+        "individualAliases": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/individualAlias"
+          }
+        },
+        "aliasForCorporate": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "address": {
+          "$ref": "#/definitions/address"
+        },
+        "occupation": {
+          "type": "string",
+          "maxLength": 54,
+          "description": "The description of an occupation."
+        },
+        "defendantOccupationCode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999,
+          "description": "An occupation code."
+        },
+        "driverNumber": {
+          "type": "string",
+          "maxLength": 16,
+          "description": "A driver’s licence number."
+        },
+        "licenseCode": {
+          "type": "string",
+          "maxLength": 1,
+          "description": "Identifies the type of driving licence. Previously known as Licence Type."
+        },
+        "numPreviousConvictions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999,
+          "description": "Number of previous convictions cited by prosecutor."
+        },
+        "nationalInsuranceNumber": {
+          "type": "string",
+          "maxLength": 9,
+          "description": "National Insurance Number."
+        },
+        "prosecutorCosts": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Costs claimed by the prosecutor."
         }
       },
       "required": [
@@ -333,310 +251,67 @@
       ],
       "additionalProperties": false
     },
-    "address": {
+    "migrationSourceSystem": {
       "type": "object",
+      "description": "Migration Source System",
       "properties": {
-        "address1": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 1 for the defendant. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: If the defendant's address is not known by the prosecutor populate this field with the standard 3 character code for no fixed address. Comment: Also used where the defendant is a company. Sheet row 85."
+        "migrationSourceSystemName": {
+          "$ref": "#/definitions/migrationSourceSystemName"
         },
-        "address2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 2 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 86."
-        },
-        "address3": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 3 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 87."
-        },
-        "address4": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 4 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 88."
-        },
-        "address5": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 5 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 89."
-        },
-        "postcode": {
-          "type": "string",
-          "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
-          "maxLength": 8,
-          "description": "Post code for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 90."
+        "migrationSourceSystemCaseIdentifier": {
+          "type": "string"
         }
       },
       "required": [
-        "address1"
-      ],
-      "additionalProperties": false
-    },
-    "individual": {
-      "type": "object",
-      "properties": {
-        "custodyStatus": {
-          "type": "string",
-          "maxLength": 1,
-          "description": "Identifies if the defendant has been granted bail by the police or held in custody pending hearing at court. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: B = Conditional Bail U = Unconditional Bail C = Custody R = Re-arrested after release on bail Mandatory if Initiation Code is Charge Null if initiation type is summons, SJPN or postal charge. Documented values: B, C, R, U (not enforced as an enum here). Sheet row 83."
-        },
-        "bailConditions": {
-          "type": "string",
-          "maxLength": 2500,
-          "description": "Defines the conditions that have been imposed by the police. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Free text field. Mandatory if custody status has been recorded as B (Conditional Bail) Otherwise field must be null. Comment: Need to check with BPO. Sheet row 84."
-        },
-        "personalInformation": {
-          "$ref": "#/definitions/personalInformation"
-        },
-        "selfDefinedInformation": {
-          "$ref": "#/definitions/selfDefinedInformation"
-        },
-        "parentGuardianInformation": {
-          "description": "Parent Guardian Information — an individual or an organisation.",
-          "oneOf": [
-            {
-              "$ref": "#/definitions/parentGuardianPerson"
-            },
-            {
-              "$ref": "#/definitions/parentGuardianOrganisation"
-            }
-          ]
-        }
-      },
-      "required": [
-        "personalInformation"
-      ]
-    },
-    "personalInformation": {
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Title by which a person is addressed. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.104 for details. Comment: Alphanumeric The full available range of generally recognised titles is permitted. Guidance based on CJS standards is below: • Mr • Mrs • Ms • Dr • Rev • Sir • Lady • Lord • Dame. Sheet row 56."
-        },
-        "forename": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "The first given name of a person, e.g., John. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 57."
-        },
-        "middleName": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "The second given name of a person, e.g., Ian. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. Sheet row 58."
-        },
-        "middleName2": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "The third given name of a person, e.g., Barry. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 59."
-        },
-        "surname": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "Surname or Family name, e.g., Brown. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.39. Comment: Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 60."
-        },
-        "observedEthnicity": {
-          "type": "string",
-          "description": "The values used in various Police applications to describe a person’s ethnic appearance to a third party. Optional: SJP Referral, Summons, Charge, Postal Requisition. Format (blank) in source sheet — length/type unconfirmed. Sheet row 73."
-        },
-        "contactDetails": {
-          "$ref": "#/definitions/contactDetails"
-        }
-      },
-      "required": [
-        "forename",
-        "surname"
-      ]
-    },
-    "contactDetails": {
-      "type": "object",
-      "properties": {
-        "work": {
-          "$ref": "#/definitions/phone",
-          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 66."
-        },
-        "home": {
-          "$ref": "#/definitions/phone",
-          "description": "A home telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 67."
-        },
-        "mobile": {
-          "$ref": "#/definitions/phone",
-          "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 68."
-        },
-        "primaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the first e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. Sheet row 69."
-        },
-        "secondaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the second e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. Sheet row 70."
-        }
-      },
-      "additionalProperties": false
-    },
-    "selfDefinedInformation": {
-      "type": "object",
-      "properties": {
-        "nationality": {
-          "type": "string",
-          "maxLength": 3,
-          "description": "Country of origin as stated by the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.103. Comment: Needs to conform to ISO 3166-1 alpha-3. Example value GBR. Sheet row 64."
-        },
-        "additionalNationality": {
-          "type": "string",
-          "maxLength": 3,
-          "description": "Additional country of origin as stated by the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.103. Comment: Needs to conform to ISO 3166-1 alpha-3. Example value GBR. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 65."
-        },
-        "dateOfBirth": {
-          "$ref": "#/definitions/date",
-          "description": "The date when a person was born. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Date must not be in the future. Sheet row 71."
-        },
-        "gender": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9,
-          "description": "Identifies the gender of a person. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.45 Mandatory if defendant is a person. Otherwise field must be null, e.g., organisation. Comment: 0=Not Known 1=Male 2=Female 9=Not specified. Sheet row 72."
-        },
-        "ethnicity": {
-          "type": "string",
-          "maxLength": 2,
-          "description": "Person’s ethnic self-assessment. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: The constrained list of values for this field is the “16+1” list as first used in the 2001 census. See CJS Data Standards [2] section 3.37. Sheet row 74."
-        }
-      },
-      "additionalProperties": false
-    },
-    "individualAlias": {
-      "type": "object",
-      "properties": {
-        "firstName": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The first given name of a person, e.g., John. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 98."
-        },
-        "givenName2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The second given name of a person, e.g., Ian. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. Sheet row 99."
-        },
-        "givenName3": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The third given name of a person, e.g., Barry. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. Sheet row 100."
-        },
-        "lastName": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Surname or Family name, e.g., Brown. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.39. Comment: Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 101."
-        }
-      },
-      "required": [
-        "firstName",
-        "lastName"
+        "migrationSourceSystemCaseIdentifier",
+        "migrationSourceSystemName"
       ],
       "additionalProperties": false
     },
     "offence": {
       "type": "object",
+      "description": "Offences Details",
       "properties": {
+        "prosecutorOffenceId": {
+          "type": "string",
+          "maxLength": 36
+        },
         "offenceCode": {
           "type": "string",
-          "maxLength": 8,
-          "description": "Identifies the CJS code applicable to offence. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standard [2] section 3.11. Comment: Need to verify of CP offence codes can be mapped to DLRM offence codes. Sheet row 127."
+          "maxLength": 8
         },
         "offenceSequenceNumber": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 999,
-          "description": "Allows for multiple offences. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Number starting at 1. Comment: Allows for multiple offences. Sheet row 128."
+          "maximum": 999
+        },
+        "arrestDate": {
+          "$ref": "#/definitions/date"
         },
         "chargeDate": {
-          "$ref": "#/definitions/date",
-          "description": "The date the defendant was charged. Mandatory: SJP Referral, Charge, Postal Requisition; Not applicable: Summons. Business rules: See CJS Standard [2] section 3.46 for date format. Date must not be in the future. Comment: CCYY-MM-DD. Sheet row 129."
+          "$ref": "#/definitions/date"
         },
         "offenceDateCode": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 9,
-          "description": "The code for the offence date to be used within the offence wording, e.g., \"1\" is used where the date does not specify a particular day or a particular day and month, e.g., \"In July 2000\", \"In the year 1997\". Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standard [2] section 3.80 Values: 1 = on or in 2 = before 3 = after 4 = between 5 = on or about 6 = on or before. Sheet row 130."
+          "minimum": 1,
+          "maximum": 6
         },
         "offenceCommittedDate": {
-          "$ref": "#/definitions/date",
-          "description": "Date offence committed, Or start date for period in which offence committed. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standard [2] section 3.46 for date format Date must not be in the future. Comment: CCYY-MM-DD. Sheet row 131."
+          "$ref": "#/definitions/date"
         },
         "offenceCommittedEndDate": {
-          "$ref": "#/definitions/date",
-          "description": "End date for period in which offence committed. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See standard [2] section 3.46 for date format Mandatory if Offence Date Code = 4. Otherwise field must be blank. Day Number or both Day and Month Number in the date may be zero. Date must be after the Offence Start Date and must not be in the future. Sheet row 132."
-        },
-        "arrestDate": {
-          "type": "string",
-          "description": "Date arrested. Not applicable: SJP Referral, Summons, Postal Requisition; Mandatory: Charge. Business rules: See CJS Standard [2] section 3.46 for date format Date must not be in the future. Comment: CCYY-MM-DD. Format (blank) in source sheet — length/type unconfirmed. Sheet row 133."
+          "$ref": "#/definitions/date"
         },
         "offenceLocation": {
           "type": "string",
-          "maxLength": 80,
-          "description": "Free text description of the location where the offence was committed. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must be included where the CJS Offence Code full offence wording includes a location element. Sheet row 136."
+          "maxLength": 80
         },
         "offenceWording": {
           "type": "string",
-          "maxLength": 2500,
-          "description": "Details of Information or Charge to be laid before the court. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standards [2] section 3.134. Does not include the legislative element of the offence. Sheet row 137."
+          "maxLength": 2500
         },
         "offenceWordingWelsh": {
           "type": "string",
-          "maxLength": 2500,
-          "description": "Details of Information or Charge to be laid before the court in Welsh. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standards [2] section 3.134. Does not include the legislative element of the offence. If the document language is Welsh then the correct format is English wording and Welsh wording (optional). Sheet row 138."
-        },
-        "statementOfFacts": {
-          "type": "string",
-          "maxLength": 4000,
-          "description": "Statement of facts. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 139."
-        },
-        "statementOfFactsWelsh": {
-          "type": "string",
-          "maxLength": 4000,
-          "description": "Statement of facts in Welsh. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Where a Statement of Facts is supplied, and the documentation language is W Welsh, then a Welsh statement of facts should be supplied. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 140."
-        },
-        "prosecutorCompensation": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Compensation claimed by the prosecutor. Optional: SJP Referral, Summons, Charge, Postal Requisition. CJS money format (+)N16.2 (16 digits, 2 dp). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 141."
-        },
-        "backDuty": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Conditionally mandatory: SJP Referral; Optional: Summons, Charge, Postal Requisition. Business rules: List of offences that are ‘Back Duty’ offences. When submitting a prosecution of any of these offences, must submit a value in the Back Duty field. If not applying for back duty to be imposed, must submit a value of 0 (zero) in the format 0.00 VE94088 Use / keep a motor vehicle - fail to comply with off-road notification VE94014 Use a vehicle without a valid vehicle licence VE94015 Keep a vehicle without a valid vehicle licence VE94155 Fail to pay vehicle / trade licence arrears demanded following failed payment – this offence will have an amount but no dates VE94006 Use trade licence on other than permitted motor vehicle VE94007 Holder of a trade licence use more than permitted vehicles VE94008 Use a vehicle displaying a trade licence for a purpose not permitted by that licence VE94060 Underpaying vehicle excise duty VE94014B Aid / abet use of a vehicle without a vehicle licence VE94015B Aid / abet keeping a vehicle without a vehicle licence. CJS money format (+)N16.2 (16 digits, 2 dp). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 142."
-        },
-        "backDutyDateFrom": {
-          "$ref": "#/definitions/date",
-          "description": "Start date of the period of unpaid back duty. Conditionally mandatory: SJP Referral; Optional: Summons, Charge, Postal Requisition. Business rules: If Back duty amount is 0 - backDutyDateFrom does not need to be sent VE94155 – will have amount but not dates. Comment: CCYY-MM-DD. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 143."
-        },
-        "backDutyDateTo": {
-          "$ref": "#/definitions/date",
-          "description": "Start date of the period of unpaid back duty. Conditionally mandatory: SJP Referral; Optional: Summons, Charge, Postal Requisition. Business rules: If Back duty amount is 0 - backDutyDateTo does not need to be sent VE94155 – will have amount but not dates. Comment: CCYY-MM-DD. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 144."
-        },
-        "vehicleCode": {
-          "type": "string",
-          "maxLength": 1,
-          "description": "Identifies offences involving an LGV or PCV that are of interest to the DfT. Previously known as Vehicle Type. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: L = Large Goods Vehicle or Passenger Carrying Vehicle, O = Other. Documented values: L, O (not enforced as an enum here). NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 145."
-        },
-        "vehicleMake": {
-          "type": "string",
-          "maxLength": 60,
-          "description": "For traffic related prosecutions. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 146."
-        },
-        "vehicleRegistrationMark": {
-          "type": "string",
-          "maxLength": 11,
-          "description": "For traffic related prosecutions. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 147."
-        },
-        "prosecutorOfferAOCP": {
-          "type": "boolean",
-          "description": "Optional: SJP Referral; Not applicable: Summons, Charge, Postal Requisition. Comment: true/false based on whether prosecutor wants to offence AOCP on a particular offence. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 148."
-        },
-        "convictionDate": {
-          "$ref": "#/definitions/date",
-          "description": "The conviction date. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Provided where there has been a conviction. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 153."
+          "maxLength": 2500
         },
         "alcoholRelatedOffence": {
           "$ref": "#/definitions/alcoholRelatedOffence"
@@ -649,6 +324,43 @@
         },
         "allocationDecision": {
           "$ref": "#/definitions/allocationDecision"
+        },
+        "statementOfFacts": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Statement of facts."
+        },
+        "statementOfFactsWelsh": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "Statement of facts in Welsh."
+        },
+        "prosecutorCompensation": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Compensation claimed by the prosecutor."
+        },
+        "vehicleCode": {
+          "type": "string",
+          "maxLength": 1,
+          "description": "Identifies offences involving an LGV or PCV that are of interest to the DfT. Previously known as Vehicle Type."
+        },
+        "vehicleMake": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "For traffic related prosecutions."
+        },
+        "vehicleRegistrationMark": {
+          "type": "string",
+          "maxLength": 11,
+          "description": "For traffic related prosecutions."
+        },
+        "prosecutorOfferAOCP": {
+          "type": "boolean"
+        },
+        "convictionDate": {
+          "$ref": "#/definitions/date",
+          "description": "The conviction date."
         }
       },
       "required": [
@@ -656,353 +368,104 @@
         "offenceCommittedDate",
         "offenceDateCode",
         "offenceSequenceNumber",
-        "offenceWording"
+        "offenceWording",
+        "prosecutorOffenceId"
       ]
+    },
+    "prosecutor": {
+      "type": "object",
+      "description": "Prosecutor Details",
+      "properties": {
+        "prosecutingAuthority": {
+          "type": "string",
+          "maxLength": 7,
+          "minLength": 7
+        }
+      },
+      "required": [
+        "prosecutingAuthority"
+      ],
+      "additionalProperties": false
     },
     "alcoholRelatedOffence": {
       "type": "object",
       "properties": {
         "alcoholOrDrugLevelMethod": {
           "type": "string",
-          "maxLength": 1,
-          "description": "Method by which alcohol or drugs level measured. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: ALCOHOL LEVEL METHOD* [3] This is to be provided for drink driving or drug driving offences. Sheet row 134."
+          "maxLength": 1
         },
         "alcoholOrDrugLevelAmount": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 999,
-          "description": "The amount of alcohol or drugs present in the blood, urine or breath of the defendant. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: ALCOHOL LEVEL AMOUNT [3] Mandatory if Alcohol Level Method field populated. Otherwise null. Sheet row 135."
+          "maximum": 999
         }
       },
       "additionalProperties": false
     },
-    "plea": {
+    "address": {
       "type": "object",
+      "description": "Address of the defendant",
       "properties": {
-        "pleaCode": {
+        "address1": {
           "type": "string",
-          "description": "The latest plea for this offence. Values tbc ('Guilty' etc.). Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Please see \"Plea Types\" tab for values. Format Axx in source sheet — length/type unconfirmed. Sheet row 149."
+          "maxLength": 35
         },
-        "pleaDate": {
-          "$ref": "#/definitions/date",
-          "description": "The date the plea has been submitted. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: To be provided where a Plea has been provided. Sheet row 150."
-        }
-      },
-      "additionalProperties": false
-    },
-    "verdict": {
-      "type": "object",
-      "properties": {
-        "verdictCode": {
+        "address2": {
           "type": "string",
-          "description": "The verdict given by the courts for this offence. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Please see \"Verdict Types\" tab for values. Format Axx in source sheet — length/type unconfirmed. Sheet row 151."
+          "maxLength": 35
         },
-        "verdictDate": {
-          "$ref": "#/definitions/date",
-          "description": "The verdict date. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: To be provided where a Verdict is present. Sheet row 152."
-        }
-      },
-      "additionalProperties": false
-    },
-    "allocationDecision": {
-      "type": "object",
-      "properties": {
-        "allocationDecisionCode": {
+        "address3": {
           "type": "string",
-          "description": "The allocation decision made regarding the jurisdiction required or elected for dealing with the offence in question and based on the indicated plea. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: tbc with Product Owners. Format Axx in source sheet — length/type unconfirmed. Sheet row 154."
+          "maxLength": 35
         },
-        "allocationDecisionDate": {
-          "$ref": "#/definitions/date",
-          "description": "The date on which the decision the allocation was made. Conditionally mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: tbc with Product Owners. Sheet row 155."
-        }
-      },
-      "additionalProperties": false
-    },
-    "parentGuardianPerson": {
-      "type": "object",
-      "properties": {
-        "dateOfBirth": {
-          "$ref": "#/definitions/date",
-          "description": "The date when a person was born. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Date must not be in the future. Sheet row 115."
-        },
-        "gender": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9,
-          "description": "Identifies the gender of a person. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.45 Mandatory if defendant is a person. Otherwise field must be null, e.g., organisation. Comment: 0=Not Known 1=Male 2=Female 9=Not specified. Sheet row 116."
-        },
-        "selfDefinedEthnicity": {
+        "address4": {
           "type": "string",
-          "maxLength": 2,
-          "description": "Person’s ethnic self-assessment. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: The constrained list of values for this field is the “16+1” list as first used in the 2001 census. See CJS Data Standards [2] section 3.37. Sheet row 118."
+          "maxLength": 35
         },
-        "personalInformation": {
-          "$ref": "#/definitions/parentGuardianPersonalInformation"
+        "address5": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "postcode": {
+          "type": "string",
+          "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
+          "maxLength": 8
         }
       },
       "required": [
-        "gender",
-        "personalInformation"
+        "address1"
       ],
       "additionalProperties": false
     },
-    "parentGuardianPersonalInformation": {
+    "listedDefendant": {
       "type": "object",
       "properties": {
-        "forename": {
+        "prosecutorDefendantId": {
           "type": "string",
-          "maxLength": 35,
-          "description": "The first given name of a person, e.g., John. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Mandatory if the defendant is a person. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 106."
+          "maxLength": 36
         },
-        "middleName": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The second given name of a person, e.g., Ian. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. Sheet row 107."
-        },
-        "middleName2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The third given name of a person, e.g., Barry. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 108."
-        },
-        "surname": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Surname or Family name, e.g., Brown. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.39. Comment: Mandatory if defendant is a person otherwise field must be null. Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. Sheet row 109."
-        },
-        "observedEthnicity": {
-          "type": "string",
-          "description": "Ethnicity Self Defined Code. Optional: SJP Referral, Summons, Charge, Postal Requisition. Format (blank) in source sheet — length/type unconfirmed. Sheet row 117."
-        },
-        "contactDetails": {
-          "$ref": "#/definitions/parentGuardianContactDetails"
-        },
-        "address": {
-          "$ref": "#/definitions/parentGuardianAddress"
+        "listedOffences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "maxLength": 36
+          }
         }
       },
       "required": [
-        "address",
-        "surname"
+        "listedOffences",
+        "prosecutorDefendantId"
       ]
-    },
-    "parentGuardianContactDetails": {
-      "type": "object",
-      "properties": {
-        "work": {
-          "$ref": "#/definitions/phone",
-          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 110."
-        },
-        "home": {
-          "$ref": "#/definitions/phone",
-          "description": "A home telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 111."
-        },
-        "mobile": {
-          "$ref": "#/definitions/phone",
-          "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 112."
-        },
-        "primaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the first e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. Sheet row 113."
-        },
-        "secondaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the second e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. Sheet row 114."
-        }
-      },
-      "additionalProperties": false
-    },
-    "parentGuardianAddress": {
-      "type": "object",
-      "properties": {
-        "address1": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 1 for the defendant. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: If the defendant's address is not known by the prosecutor populate this field with the standard 3 character code for no fixed address. Comment: Also used where the defendant is a company. Sheet row 119."
-        },
-        "address2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 2 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 120."
-        },
-        "address3": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 3 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 121."
-        },
-        "address4": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 4 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 122."
-        },
-        "address5": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 5 for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 123."
-        },
-        "postcode": {
-          "type": "string",
-          "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
-          "maxLength": 8,
-          "description": "Post code for the defendant. Optional: SJP Referral, Summons, Charge, Postal Requisition. Sheet row 124."
-        }
-      },
-      "required": [
-        "address1"
-      ],
-      "additionalProperties": false
-    },
-    "parentGuardianOrganisation": {
-      "type": "object",
-      "properties": {
-        "organisationName": {
-          "type": "string",
-          "description": "Name of an organisation, e.g. Marks and Spencer. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Format (blank) in source sheet — length/type unconfirmed. Sheet row 104."
-        },
-        "companyTelephoneNumber": {
-          "$ref": "#/definitions/phone",
-          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. Sheet row 105."
-        }
-      },
-      "required": [
-        "organisationName"
-      ],
-      "additionalProperties": false
-    },
-    "officerInCase": {
-      "type": "object",
-      "properties": {
-        "forename": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The first given name of a person, e.g., John. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 24."
-        },
-        "forename2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The second given name of a person, e.g., Ian. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 25."
-        },
-        "forename3": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "The third given name of a person, e.g., Barry. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Data Standard [2] section 3.50 for details. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds field size, only the first 35 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 26."
-        },
-        "surname": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Surname or Family name, e.g., Brown. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Business rules: See CJS Standards [2] section 3.39. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If name exceeds the field size, only the first 35 characters are to be used from the source. The name defined in this field will be used for the case. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 27."
-        },
-        "policeOfficerRank": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Indicates the rank of a police officer within a particular police force. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If it exceeds the field size, only the first 35 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 28."
-        },
-        "policeWorkerReferenceNumber": {
-          "type": "string",
-          "maxLength": 15,
-          "description": "The unique number allocated to a police worker within a police force. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. Comment: Alphanumeric no consecutive spaces (i.e. a space cannot appear adjacent to another space). If it exceeds the field size, only the first 15 characters are to be used from the source. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 29."
-        },
-        "policeWorkerLocationCode": {
-          "type": "string",
-          "maxLength": 10,
-          "description": "The identification of the location where the officer in the case is based. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 30."
-        },
-        "uniquePropertyReferenceNumber": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 999999999999,
-          "description": "Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: Value = positive integer min 1 digit max 12 digits. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 31."
-        },
-        "workTelephoneNumber": {
-          "$ref": "#/definitions/phone",
-          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 38."
-        },
-        "mobileTelephoneNumber": {
-          "$ref": "#/definitions/phone",
-          "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means. Optional: SJP Referral, Summons, Charge, Postal Requisition. Business rules: Must match Regex /^[0-9+\\ \\-]{10,}$/ 10 or more characters, where each character must be either numerical, a plus character, a minus character, or a space character. Comment: Replaced E-GIF standard and CJS standard with Common Platform standard. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 39."
-        },
-        "primaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the first e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 40."
-        },
-        "secondaryEmail": {
-          "$ref": "#/definitions/email",
-          "description": "The identification of the second e-mail address. Optional: SJP Referral, Summons, Charge, Postal Requisition. Comment: from 1 to 127 characters from 0-9, A-Z, a-z or ' . - _ followed by @ followed by another 1 to 127 characters from the same set. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 41."
-        },
-        "faxNumber": {
-          "$ref": "#/definitions/phone",
-          "description": "The identification of the FAX address. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 42."
-        },
-        "dxAddress": {
-          "type": "string",
-          "maxLength": 80,
-          "description": "The identification of an address as defined by DX group. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 43."
-        },
-        "address": {
-          "$ref": "#/definitions/officerInCaseAddress"
-        }
-      },
-      "required": [
-        "address",
-        "policeOfficerRank",
-        "policeWorkerLocationCode",
-        "policeWorkerReferenceNumber",
-        "surname"
-      ],
-      "additionalProperties": false
-    },
-    "officerInCaseAddress": {
-      "type": "object",
-      "properties": {
-        "address1": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 1. Mandatory: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 32."
-        },
-        "address2": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 2. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 33."
-        },
-        "address3": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 3. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 34."
-        },
-        "address4": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 4. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 35."
-        },
-        "address5": {
-          "type": "string",
-          "maxLength": 35,
-          "description": "Address Line 5. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 36."
-        },
-        "postcode": {
-          "type": "string",
-          "pattern": "^(([gG][iI][rR] {0,}0[aA]{2})|(([aA][sS][cC][nN]|[sS][tT][hH][lL]|[tT][dD][cC][uU]|[bB][bB][nN][dD]|[bB][iI][qQ][qQ]|[fF][iI][qQ][qQ]|[pP][cC][rR][nN]|[sS][iI][qQ][qQ]|[iT][kK][cC][aA]) {0,}1[zZ]{2})|((([a-pr-uwyzA-PR-UWYZ][a-hk-yxA-HK-XY]?[0-9][0-9]?)|(([a-pr-uwyzA-PR-UWYZ][0-9][a-hjkstuwA-HJKSTUW])|([a-pr-uwyzA-PR-UWYZ][a-hk-yA-HK-Y][0-9][abehmnprv-yABEHMNPRV-Y]))) [0-9][abd-hjlnp-uw-zABD-HJLNP-UW-Z]{2}))$",
-          "maxLength": 8,
-          "description": "Post code. Optional: SJP Referral, Summons, Charge, Postal Requisition. NOT IN staging-dlrm-canonical-flattened.json — no equivalent in the reference schema. Sheet row 37."
-        }
-      },
-      "required": [
-        "address1"
-      ],
-      "additionalProperties": false
-    },
-    "date": {
-      "type": "string",
-      "pattern": "^((([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13578]|1[02])\\-(0[1-9]|[12]\\d|3[01]))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13456789]|1[012])\\-(0[1-9]|[12]\\d|30))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-02\\-(0[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))\\-02\\-29))$",
-      "description": "Resolved from http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date in the core-domain repo; not defined in stagingdlrm-domain-value-schema."
-    },
-    "datePattern": {
-      "type": "string",
-      "pattern": "^((([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13578]|1[02])\\-(0[1-9]|[12]\\d|3[01]))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13456789]|1[012])\\-(0[1-9]|[12]\\d|30))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-02\\-(0[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))\\-02\\-29))$"
     },
     "uuid": {
       "type": "string",
       "pattern": "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
       "description": "Resolved from http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid in the core-domain repo; not defined in stagingdlrm-domain-value-schema."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^((([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13578]|1[02])\\-(0[1-9]|[12]\\d|3[01]))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-(0[13456789]|1[012])\\-(0[1-9]|[12]\\d|30))|(([\\+-]?\\d{4}(?!\\d{2}\\b))\\-02\\-(0[1-9]|1\\d|2[0-8]))|(((1[6-9]|[2-9]\\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))\\-02\\-29))$",
+      "description": "Resolved from http://justice.gov.uk/domain/core/common/definitions.json#/definitions/date in the core-domain repo; not defined in stagingdlrm-domain-value-schema."
     },
     "phone": {
       "type": "string",
@@ -1013,12 +476,322 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$"
     },
+    "contactDetails": {
+      "type": "object",
+      "description": "Contact Details",
+      "properties": {
+        "work": {
+          "$ref": "#/definitions/phone"
+        },
+        "home": {
+          "$ref": "#/definitions/phone"
+        },
+        "mobile": {
+          "$ref": "#/definitions/phone"
+        },
+        "primaryEmail": {
+          "$ref": "#/definitions/email"
+        },
+        "secondaryEmail": {
+          "$ref": "#/definitions/email"
+        }
+      },
+      "additionalProperties": false
+    },
+    "selfDefinedInformation": {
+      "type": "object",
+      "description": "Self defined information",
+      "properties": {
+        "nationality": {
+          "type": "string",
+          "maxLength": 3
+        },
+        "ethnicity": {
+          "type": "string",
+          "maxLength": 2
+        },
+        "dateOfBirth": {
+          "$ref": "#/definitions/date"
+        },
+        "gender": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "additionalNationality": {
+          "type": "string",
+          "maxLength": 3,
+          "description": "Additional country of origin as stated by the defendant."
+        }
+      },
+      "additionalProperties": false
+    },
+    "personalInformation": {
+      "type": "object",
+      "description": "Personal Information",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 35
+        },
+        "forename": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "surname": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "middleName": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "observedEthnicity": {
+          "type": "integer"
+        },
+        "contactDetails": {
+          "$ref": "#/definitions/contactDetails"
+        },
+        "address": {
+          "$ref": "#/definitions/address"
+        },
+        "middleName2": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "The third given name of a person, e.g., Barry."
+        }
+      },
+      "required": [
+        "surname"
+      ]
+    },
+    "parentGuardianInformation": {
+      "type": "object",
+      "description": "Parent Guardian Information",
+      "oneOf": [
+        {
+          "properties": {
+            "dateOfBirth": {
+              "$ref": "#/definitions/date"
+            },
+            "gender": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "personalInformation": {
+              "$ref": "#/definitions/personalInformation"
+            },
+            "selfDefinedEthnicity": {
+              "type": "string",
+              "maxLength": 2
+            }
+          },
+          "required": [
+            "gender",
+            "personalInformation"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "organisationName": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "companyTelephoneNumber": {
+              "$ref": "#/definitions/phone"
+            }
+          },
+          "required": [
+            "organisationName"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
     "migrationSourceSystemName": {
       "type": "string",
       "enum": [
         "LIBRA",
         "XHIBIT"
       ]
+    },
+    "individual": {
+      "type": "object",
+      "description": "Individual Details",
+      "properties": {
+        "selfDefinedInformation": {
+          "$ref": "#/definitions/selfDefinedInformation"
+        },
+        "personalInformation": {
+          "$ref": "#/definitions/personalInformation"
+        },
+        "parentGuardianInformation": {
+          "$ref": "#/definitions/parentGuardianInformation"
+        },
+        "custodyStatus": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "bailConditions": {
+          "type": "string",
+          "maxLength": 2500
+        }
+      },
+      "required": [
+        "personalInformation"
+      ]
+    },
+    "plea": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/uuid"
+        },
+        "pleaDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/uuid"
+        },
+        "verdictDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "allocationDecision": {
+      "type": "object",
+      "properties": {
+        "motReasonId": {
+          "$ref": "#/definitions/uuid"
+        },
+        "allocationDecisionDate": {
+          "$ref": "#/definitions/date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caseMarkers": {
+      "type": "object",
+      "properties": {
+        "markerTypeCode": {
+          "type": "string",
+          "maxLength": 3
+        }
+      },
+      "required": [
+        "markerTypeCode"
+      ],
+      "additionalProperties": false
+    },
+    "individualAlias": {
+      "type": "object",
+      "description": "Individual alias",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        },
+        "givenName2": {
+          "type": "string"
+        },
+        "givenName3": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "officerInCase": {
+      "type": "object",
+      "description": "Officer in Case",
+      "properties": {
+        "forename": {
+          "type": "string",
+          "maxLength": 35,
+          "description": "The first given name of a person, e.g., John."
+        },
+        "forename2": {
+          "type": "string",
+          "maxLength": 35,
+          "description": "The second given name of a person, e.g., Ian."
+        },
+        "forename3": {
+          "type": "string",
+          "maxLength": 35,
+          "description": "The third given name of a person, e.g., Barry."
+        },
+        "surname": {
+          "type": "string",
+          "maxLength": 35,
+          "description": "Surname or Family name, e.g., Brown."
+        },
+        "policeOfficerRank": {
+          "type": "string",
+          "maxLength": 35,
+          "description": "Indicates the rank of a police officer within a particular police force."
+        },
+        "policeWorkerReferenceNumber": {
+          "type": "string",
+          "maxLength": 15,
+          "description": "The unique number allocated to a police worker within a police force."
+        },
+        "policeWorkerLocationCode": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "The identification of the location where the officer in the case is based."
+        },
+        "uniquePropertyReferenceNumber": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999999
+        },
+        "workTelephoneNumber": {
+          "$ref": "#/definitions/phone",
+          "description": "A business telephone number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means."
+        },
+        "mobileTelephoneNumber": {
+          "$ref": "#/definitions/phone",
+          "description": "A mobile number, including any exchange of location code, at which a person or organisation can be contacted in the UK by telephonic means."
+        },
+        "primaryEmail": {
+          "$ref": "#/definitions/email",
+          "description": "The identification of the first e-mail address."
+        },
+        "secondaryEmail": {
+          "$ref": "#/definitions/email",
+          "description": "The identification of the second e-mail address."
+        },
+        "faxNumber": {
+          "$ref": "#/definitions/phone",
+          "description": "The identification of the FAX address."
+        },
+        "dxAddress": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The identification of an address as defined by DX group."
+        },
+        "address": {
+          "$ref": "#/definitions/address"
+        }
+      },
+      "required": [
+        "address",
+        "policeOfficerRank",
+        "policeWorkerLocationCode",
+        "policeWorkerReferenceNumber",
+        "surname"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

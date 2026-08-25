@@ -1,0 +1,50 @@
+{
+  "channel" : "DLRM_MIGRATION",
+  "migratedCaseDetails" : {
+    "caseDetails" : {
+      "caseId" : "aaaaaaaa-1111-2222-3333-444444444444",
+      "initiationCode" : "C",
+      "originatingOrganisation" : "G94DV00",
+      "prosecutor" : {
+        "prosecutingAuthority" : "GAEAA01"
+      },
+      "prosecutorCaseReference" : "TVL55117DFXXV"
+    },
+    "defendants" : [ {
+      "address" : {
+        "address1" : "armagaddon house",
+        "postcode" : "M60 1NW"
+      },
+      "documentationLanguage" : "W",
+      "hearingLanguage" : "W",
+      "id" : "00000000-0000-0000-0000-000000000000",
+      "offences" : [ {
+        "offenceCode" : "CA03013",
+        "offenceCommittedDate" : "2018-09-10",
+        "offenceDateCode" : 1,
+        "offenceId" : "00000000-0000-0000-0000-000000000000",
+        "offenceSequenceNumber" : 1,
+        "offenceWording" : "TV Licence not paid",
+        "prosecutorOffenceId" : "off-ref-0001"
+      } ],
+      "prosecutorDefendantId" : "def-ref-0001"
+    } ],
+    "hearings" : [ {
+      "courtHearingLocation" : "B01LY01",
+      "courtRoomId" : 60,
+      "dateOfHearing" : "2024-11-10",
+      "durationMinutes" : 60,
+      "hearingType" : "Trial",
+      "listedDefendants" : [ {
+        "listedOffences" : [ "off-ref-0001" ],
+        "prosecutorDefendantId" : "def-ref-0001"
+      } ],
+      "timeOfHearing" : "10:05:01"
+    } ],
+    "migrationSourceSystem" : {
+      "migrationSourceSystemCaseIdentifier" : "case-identifier-0002",
+      "migrationSourceSystemName" : "LIBRA"
+    }
+  },
+  "submissionId" : "11111111-2222-3333-4444-555555555555"
+}

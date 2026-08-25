@@ -59,6 +59,31 @@
     "alcoholRelatedOffence": {
       "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/alcohol-related-offence.json"
     },
+    "vehicleCode": {
+      "type": "string",
+      "maxLength": 1,
+      "description": "Identifies offences involving an LGV or PCV that are of interest to the DfT. Previously known as Vehicle Type."
+    },
+    "vehicleMake": {
+      "type": "string",
+      "maxLength": 60,
+      "description": "For traffic related prosecutions."
+    },
+    "vehicleRegistrationMark": {
+      "type": "string",
+      "maxLength": 11,
+      "description": "For traffic related prosecutions."
+    },
+    "statementOfFacts": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Statement of facts."
+    },
+    "statementOfFactsWelsh": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Statement of facts in Welsh."
+    },
     "plea": {
       "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/plea.json"
     },

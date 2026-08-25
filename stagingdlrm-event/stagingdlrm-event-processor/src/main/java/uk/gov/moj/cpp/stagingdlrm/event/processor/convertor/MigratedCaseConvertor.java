@@ -13,6 +13,7 @@ import uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.Individual;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.IndividualAlias;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.ParentGuardianInformation;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.SelfDefinedInformation;
+import uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.VehicleRelatedOffence;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.ListedDefendant;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedAllocationDecision;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedCaseDetails;
@@ -109,6 +110,10 @@ public class MigratedCaseConvertor implements Serializable {
                         .withOffenceWording(e.getOffenceWording())
                         .withOffenceWordingWelsh(e.getOffenceWordingWelsh())
                         .withAlcoholRelatedOffence(buildAlcoholRelatedOffence(e.getAlcoholRelatedOffence()))
+                        .withStatementOfFacts(e.getStatementOfFacts())
+                        .withStatementOfFactsWelsh(e.getStatementOfFactsWelsh())
+                        .withVehicleMake(e.getVehicleMake())
+                        .withVehicleRelatedOffence(buildVehicleRelatedOffence(e))
                         .withPlea(buildPlea(e.getPlea()))
                         .withVerdict(buildVerdict(e.getVerdict()))
                         .withAllocationDecision(buildAllocationDecision(e.getAllocationDecision()))
@@ -155,6 +160,14 @@ public class MigratedCaseConvertor implements Serializable {
 
 
 
+    public static VehicleRelatedOffence buildVehicleRelatedOffence(final Offence offence) {
+        if (isNull(offence.getVehicleCode()) && isNull(offence.getVehicleRegistrationMark())) return null;
+        return VehicleRelatedOffence.vehicleRelatedOffence()
+                .withVehicleCode(offence.getVehicleCode())
+                .withVehicleRegistrationMark(offence.getVehicleRegistrationMark())
+                .build();
+    }
+
     public static Individual buildIndividual(final uk.gov.moj.cpp.stagingdlrm.json.schemas.Individual individual) {
         if (isNull(individual)) return null;
         return Individual.individual()
@@ -164,6 +177,9 @@ public class MigratedCaseConvertor implements Serializable {
                 .withParentGuardianInformation(buildParentGuardianInformation(individual.getParentGuardianInformation()))
                 .withCustodyStatus(individual.getCustodyStatus())
                 .withCustodyTimeLimit(individual.getCustodyTimeLimit())
+                .withDriverNumber(individual.getDriverNumber())
+                .withNationalInsuranceNumber(individual.getNationalInsuranceNumber())
+                .withDriverLicenceCode(individual.getLicenseCode())
                 .build();
     }
 
@@ -194,6 +210,7 @@ public class MigratedCaseConvertor implements Serializable {
                 .withEthnicity(selfDefinedInformation.getEthnicity())
                 .withDateOfBirth(selfDefinedInformation.getDateOfBirth())
                 .withGender(getValueFromCode(selfDefinedInformation.getGender()))
+                .withAdditionalNationality(selfDefinedInformation.getAdditionalNationality())
                 .build();
     }
 
@@ -285,6 +302,8 @@ public class MigratedCaseConvertor implements Serializable {
                 .withObservedEthnicity(personalInformation.getObservedEthnicity())
                 .withContactDetails(buildContactDetails(personalInformation.getContactDetails()))
                 .withAddress(buildAddress(personalInformation.getAddress()))
+                .withOccupation(personalInformation.getOccupation())
+                .withOccupationCode(personalInformation.getDefendantOccupationCode())
                 .build();
     }
 

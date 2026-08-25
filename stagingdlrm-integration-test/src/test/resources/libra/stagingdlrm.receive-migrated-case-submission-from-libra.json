@@ -1,0 +1,80 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "C",
+      "prosecutorCaseReference": "LIBRA55117D",
+      "caseMarkers": [
+        {
+          "markerTypeCode": "CD"
+        }
+      ],
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "11:10:01",
+        "durationMinutes": 60,
+        "courtRoomId": 60,
+        "hearingType": "Trial",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "LIBRA-defendant-id-1",
+            "listedOffences": [
+              "LIBRA-offence-id-1"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "LIBRA-defendant-id-1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "address": {
+          "address1": "armagaddon house",
+          "postcode": "M60 1NW"
+        },
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "LIBRA-offence-id-1",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem": {
+      "migrationSourceSystemName": "LIBRA",
+      "migrationSourceSystemCaseIdentifier": "This is from LIBRA"
+    }
+  },
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440009",
+    "numberOfMaterials": 0
+  },
+  "submissionId": "SUBMISSION_ID",
+  "azureLocation": "LIBRA55117D/20082025/case-identifier/SUBMISSION_ID"
+}

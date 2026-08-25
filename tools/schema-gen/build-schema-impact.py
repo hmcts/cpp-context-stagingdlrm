@@ -77,6 +77,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 ANALYSIS = REPO / "docs/analysis/libra-ingestion"
 DEFAULT_LIBRA = ANALYSIS / "schema/libra/dlrm-libra-0.13.json"
+# The internal half of the generated LIBRA schema: what the workbook said, and every point at which
+# the live contract overrode it. The schema itself is shareable and carries none of it.
+DEFAULT_PROVENANCE = ANALYSIS / "schema/libra/dlrm-libra-0.13.provenance.json"
 DEFAULT_CANONICAL = ANALYSIS / "schema/canonical/staging-dlrm-canonical-flattened.json"
 DEFAULT_FUNCAPP = ANALYSIS / "schema/canonical/staging-dlrm-funcapp-flattened.json"
 DEFAULT_NAME = "libra-schema-impact.csv"
@@ -107,12 +110,20 @@ CONSTRAINT_KEYS = ["$ref", "type", "maxLength", "minLength", "maximum", "minimum
 OPAQUE_REFS = set()
 
 # Same concept, different property name: LIBRA supplies a reference-data code where the canonical
-# schema expects a resolved UUID. Keyed by (parent jsonpath, canonical name) -> LIBRA name.
+# schema expects a resolved UUID.
+#
+# These are no longer applied here. generate-dlrm-schema.py emits the CONTRACT's name and takes the
+# contract's definition, recording the workbook's own name and Format-cell reading under `x-sheet`,
+# so a rename is now READ OFF the generated schema in build() rather than asserted in two places.
+# This table is the expectation that keeps that derivation honest: if one of these stops showing up
+# in the generated schema the run fails, instead of quietly reporting the field as unsupplied.
+#
+# Keyed by (parent jsonpath, canonical name) -> the workbook's name for it.
 RENAMES = {
     ("$.migratedCase.defendants[*].offences[*].plea", "id"): "pleaCode",
-    ("$.migratedCase.defendants[*].offences[*].verdict", "id"): "verdictCode",
+    ("$.migratedCase.defendants[*].offences[*].verdict", "id"): "verdictType",
     ("$.migratedCase.defendants[*].offences[*].allocationDecision", "motReasonId"):
-        "allocationDecisionCode",
+        "allocationDecision",
 }
 
 # --- canonical_status ---------------------------------------------------------------------
@@ -470,7 +481,10 @@ def combinator_required(obj):
 def walk(schema, root_property):
     """Return (leaves, objects) keyed by jsonpath.
 
-    leaves[path]  = {name, constraints, ref, array, required, row, alternatives}
+    leaves[path]  = {name, constraints, ref, array, required, row, alternatives,
+                     sheet, sheet_format, difference}   — the last three from the LIBRA schema's
+                     `x-sheet` only; `constraints` is LIBRA's OWN claim where one is recorded
+                     there, not the contract definition the generator emitted in its place.
     objects[path] = {closed: bool}   — `closed` means additionalProperties:false, i.e. an unknown
                                       field here is rejected rather than ignored.
     """
@@ -504,26 +518,56 @@ def walk(schema, root_property):
                 if sub is not None:
                     descend(child, child_path, seen)
                     continue
-                description = child.get("description", "") or ""
-                row = re.search(r"Sheet row (\d+)", description)
-                # The generator deliberately does NOT emit an enum for coded fields (a closed Java
-                # enum downstream makes a rejection terminal), it records the codes in prose. Pull
-                # them back out so a relax-enum row can name the values that have to be allowed.
-                values = re.search(r"Documented values: ([^(]+)", description)
                 leaves[child_path] = {
                     "name": name,
+                    # The six below are filled in by apply_provenance() for the LIBRA schema only.
+                    # The other two documents have no workbook behind them, and the LIBRA schema is
+                    # deliberately free of workbook traces — it is shared outside the team.
+                    "sheet": None,
+                    "difference": None,
+                    "sheet_format": None,
+                    "row": None,
+                    "values": None,
                     "constraints": {k: resolved[k] for k in CONSTRAINT_KEYS if k in resolved},
                     "ref": (child.get("$ref") or "").split("/")[-1] or None,
                     "array": sub_array or resolved.get("type") == "array",
                     "required": name in required,
-                    "row": row.group(1) if row else None,
-                    "values": values.group(1).strip().rstrip(".") if values else None,
                     "alternatives": alternatives.get(name),
                 }
 
     descend({"$ref": root.get("$ref")} if root.get("$ref") else root,
             f"${'.' + root_property}", frozenset())
     return leaves, objects
+
+
+def apply_provenance(leaves, provenance, definitions):
+    """Fold the LIBRA schema's provenance sidecar back onto its leaves.
+
+    The shared schema carries the CONTRACT's name and definition for every field the contract
+    models, so on its own it cannot say what the workbook asked for — and the whole point of this
+    matrix is to compare what LIBRA SUPPLIES against what canonical DECLARES. The sidecar is where
+    that half lives, keyed by the same jsonpath.
+    """
+    unmatched = []
+    for path, record in (provenance.get("fields") or {}).items():
+        if record.get("attachment"):
+            continue        # a sheet row that declares a nested array, not a leaf of its own
+        leaf = leaves.get(path)
+        if leaf is None:
+            unmatched.append(path)
+            continue
+        sheet_name = record.get("sheetField")
+        leaf["sheet"] = sheet_name if sheet_name and sheet_name != leaf["name"] else None
+        leaf["row"] = str(record["sheetRow"]) if record.get("sheetRow") else None
+        leaf["sheet_format"] = record.get("format")
+        values = record.get("documentedValues")
+        leaf["values"] = ", ".join(values) if values else None
+        claim = record.get("sheetConstraint") or {}
+        leaf["difference"] = claim.get("difference")
+        if claim.get("reads"):
+            own = deref(claim["reads"], definitions)
+            leaf["constraints"] = {k: own[k] for k in CONSTRAINT_KEYS if k in own}
+    return unmatched
 
 
 def drop_envelope(store):
@@ -584,6 +628,23 @@ def libra_constraints(libra):
     canonical starts at 1" and invents a relaxation nobody asked for.
     """
     return {k: v for k, v in libra["constraints"].items() if not (k == "minimum" and v == 0)}
+
+
+def needs_transformation(canon, libra):
+    """Does LIBRA's value have to be CONVERTED, not just relabelled, to satisfy canonical?
+
+    True where the two disagree on kind — a different type, or a pattern/enum canonical imposes and
+    the sheet says nothing about (a reference-data code against a resolved UUID). A differing
+    maxLength is a bound, not a conversion, and belongs in the validation rules instead. A Format
+    cell the sheet leaves blank states no type at all, so it cannot evidence a conversion either —
+    that one comes back as a review.
+    """
+    if libra.get("difference") == "sheet unstated":
+        return False
+    c, l = canon["constraints"], libra_constraints(libra)
+    if c.get("type") != l.get("type"):
+        return True
+    return any(key in c and key not in l for key in ("pattern", "enum"))
 
 
 def is_generator_artefact(canon, libra):
@@ -710,9 +771,12 @@ def decide(path, canon, libra, renamed_to, status, xhibit_status, gate_action, m
 
     # --- LIBRA supplies the same concept under another name -----------------------------
     if renamed_to:
+        expects = ("a resolved UUID" if canon.get("ref") == "uuid"
+                   else render(canon["constraints"]))
+        supplies = render(libra_constraints(libra))
         return "yes", CH_MAP_RENAME, (
-            f"Transformation: LIBRA supplies {renamed_to} (a reference-data code) where canonical "
-            f"{container}.{name} expects a resolved UUID — resolve it in the LIBRA transformation "
+            f"Transformation: LIBRA supplies {renamed_to} ({supplies}) where canonical "
+            f"{container}.{name} expects {expects} — convert it in the LIBRA transformation "
             f"strategy, not by loosening the canonical type. {func}")
 
     # --- LIBRA does not supply the field at all -----------------------------------------
@@ -984,8 +1048,17 @@ def note_text(canon, libra, status, mapping):
             notes.append(mapping[5])
     else:
         if status == CANON_CONSTRAINT and libra:
-            notes.append(f"LIBRA {render(libra['constraints'])} vs canonical "
+            sheet_format = libra.get("sheet_format")
+            source = f"LIBRA Format {sheet_format}" if sheet_format else "LIBRA"
+            notes.append(f"{source} {render(libra['constraints'])} vs canonical "
                          f"{render(canon['constraints'])}")
+        if libra is not None and not libra.get("row"):
+            # The LIBRA schema reuses the contract's shared definitions (address,
+            # personalInformation, contactDetails), so a field can be reachable at a path no sheet
+            # row mentions. Permitted, not supplied — and the distinction matters when reading a
+            # row as evidence of what LIBRA sends.
+            notes.append("no sheet row supplies this — reachable only because the contract reuses "
+                         "this definition here")
         if canon["required"] and libra is None:
             notes.append("**required in canonical but absent from the LIBRA sheet — blocker**")
         if canon.get("alternatives"):
@@ -1010,9 +1083,15 @@ def render(constraints):
     return ", ".join(bits)
 
 
-def build(libra_path=None, canonical_path=None, funcapp_path=None,
+def build(libra_path=None, canonical_path=None, funcapp_path=None, provenance_path=None,
           gate_depth=DEFAULT_GATE_DEPTH):
     libra_doc = json.loads(Path(libra_path or DEFAULT_LIBRA).read_text(encoding="utf-8"))
+    prov_path = Path(provenance_path or DEFAULT_PROVENANCE)
+    if not prov_path.exists():
+        sys.exit(f"error: {prov_path} not found — it is written alongside the LIBRA schema by "
+                 "generate-dlrm-schema.py, and without it nothing here knows what the workbook "
+                 "asked for (regenerate.sh runs them in order)")
+    provenance = json.loads(prov_path.read_text(encoding="utf-8"))
     canon_doc = json.loads(Path(canonical_path or DEFAULT_CANONICAL).read_text(encoding="utf-8"))
     func_path = Path(funcapp_path or DEFAULT_FUNCAPP)
     if not func_path.exists():
@@ -1025,6 +1104,11 @@ def build(libra_path=None, canonical_path=None, funcapp_path=None,
     F, F_objects = walk(func_doc, ROOT_PROPERTY)
     for store in (L, C, F):
         drop_envelope(store)
+
+    stray = apply_provenance(L, provenance, libra_doc.get("definitions", {}))
+    if stray:
+        sys.exit(f"error: {prov_path.name} describes fields the LIBRA schema does not have — the "
+                 "two are out of step, regenerate both:\n  " + "\n  ".join(stray))
 
     verified = PCF_SCHEMA.is_dir()
     if not verified:
@@ -1042,11 +1126,19 @@ def build(libra_path=None, canonical_path=None, funcapp_path=None,
     # --- every canonical field, LIBRA measured against it -------------------------------
     for path, canon in C.items():
         parent, _, name = path.rpartition(".")
-        renamed_to = RENAMES.get((parent, name))
-        l_path = f"{parent}.{renamed_to}" if renamed_to else path
-        libra = L.get(l_path)
+        # The generated LIBRA schema now carries the contract's own property name, so the join is
+        # direct; a rename is whatever the generator recorded as the workbook's name for this path.
+        libra = L.get(path)
         if libra is not None:
-            matched.add(l_path)
+            matched.add(path)
+
+        renamed_to = libra["sheet"] if libra else None
+        # Only a rename the contract also RETYPES is a transformation LIBRA has to perform. A field
+        # the sheet merely labels differently (cjsOffenceCode, forename2) needs nothing at runtime,
+        # and nor does one whose length the contract states differently — that is a bound, not a
+        # conversion.
+        if renamed_to and not needs_transformation(canon, libra):
+            renamed_to = None
 
         status = CANON_RENAMED if (renamed_to and libra) else canonical_status(canon, libra)
         xhibit_status = funcapp_xhibit_status(path, F, F_objects)
@@ -1076,6 +1168,16 @@ def build(libra_path=None, canonical_path=None, funcapp_path=None,
             "tier": "",
             "notes": note_text(canon, libra, status, None),
         })
+
+    # The code-vs-UUID renames are derived from the generated schema now, so RENAMES is the claim
+    # that keeps the derivation honest rather than the mechanism. If the workbook stops calling a
+    # field what we say it does, that is a finding, not something to discover by a silent
+    # not_in_libra row.
+    for (parent, canon_name), expected in sorted(RENAMES.items()):
+        actual = (L.get(f"{parent}.{canon_name}") or {}).get("sheet")
+        if actual != expected:
+            failures.append(f"RENAMES: {parent}.{canon_name} should record the workbook name "
+                            f"{expected!r}; the generated LIBRA schema records {actual!r}")
 
     # --- fields LIBRA adds --------------------------------------------------------------
     added = [(p, e) for p, e in L.items() if p not in matched and p not in C]
@@ -1153,6 +1255,9 @@ def main():
     ap.add_argument("--libra", help="generated LIBRA schema (default: the committed one)")
     ap.add_argument("--canonical", help="flattened canonical schema (default: the committed one)")
     ap.add_argument("--funcapp", help="flattened func-app schema (default: the committed one)")
+    ap.add_argument("--provenance",
+                    help="the LIBRA schema's provenance sidecar, which is where what the WORKBOOK "
+                         "says now lives (default: alongside the committed LIBRA schema)")
     ap.add_argument("--pcfdlrm", default=str(PCFDLRM),
                     help="cpp-context-prosecution-casefile-dlrm checkout")
     ap.add_argument("--core", default=str(CORE), help="cpp.platform.core.domain checkout")
@@ -1175,7 +1280,8 @@ def main():
     CORE = Path(args.core)
     PCF_SCHEMA = PCFDLRM / "pcfdlrm-domain/pcfdlrm-domain-value-schema/src/main/resources/json/schema"
 
-    rows = build(args.libra, args.canonical, args.funcapp, args.funcapp_libra_depth)
+    rows = build(args.libra, args.canonical, args.funcapp, args.provenance,
+                 args.funcapp_libra_depth)
     total = len(rows)
     if args.changes_only:
         rows = [r for r in rows if r["change_required"] == "yes"]
