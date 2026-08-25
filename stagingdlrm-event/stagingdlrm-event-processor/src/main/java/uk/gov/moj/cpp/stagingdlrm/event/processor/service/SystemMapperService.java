@@ -49,14 +49,12 @@ public class SystemMapperService {
                     .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_CREATE_MAPPING, ptiUrn)));
 
             final Optional<String> status = getCaseStatus(caseId);
-            status.ifPresentOrElse(
-                    s -> LOGGER.info("Case {} exists in progression with status: {}", ptiUrn, s),
-                    () -> LOGGER.info("Case {} not found in progression despite existing system-id-mapper entry", ptiUrn));
-
             if (status.isEmpty()) {
                 // A case still in flight (pcfdlrm has it, Progression hasn't caught up) also reads as empty here.
+                LOGGER.info("Case {} not found in progression despite existing system-id-mapper entry", ptiUrn);
                 return new CaseIdLookupResult(caseId, false);
             }
+            LOGGER.info("Case {} exists in progression with status: {}", ptiUrn, status.get());
 
             if (status.filter(EJECTED::equals).isPresent()) {
                 systemIdMapperClient.remap(ptiUrn + EJECTED_SUFFIX, existingMapping.get().getMappingId(), systemUserId)

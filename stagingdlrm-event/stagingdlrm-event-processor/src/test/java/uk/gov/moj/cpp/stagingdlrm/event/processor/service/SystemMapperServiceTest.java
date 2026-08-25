@@ -140,7 +140,7 @@ class SystemMapperServiceTest {
         when(progressionService.getProsecutionCaseDetails(existingCaseId)).thenReturn(Optional.of(caseDetailsWithStatus("EJECTED")));
         when(systemIdMapperClient.remap(any(), any(), any())).thenReturn(Optional.empty());
 
-        final Exception e = assertThrows(Exception.class,
+        final IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> systemMapperService.getCaseIdForPtiURN(MOCK_URN));
         assertThat(e.getMessage(), is(format("Unable to remap existing system-id-mapper entry for input String %s", MOCK_URN)));
         verify(systemIdMapperClient, never()).add(any(), any());
