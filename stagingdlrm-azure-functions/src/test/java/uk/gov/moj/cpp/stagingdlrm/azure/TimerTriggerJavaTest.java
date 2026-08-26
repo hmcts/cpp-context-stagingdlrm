@@ -128,10 +128,6 @@ class TimerTriggerJavaTest {
         setField(timerTrigger, "stagingDlrmBaseUri", "http://localhost:8080");
         setField(timerTrigger, "eventGridMonitorHelper", eventGridMonitorHelper);
 
-        // DD-43086 LIBRA03/FR4/FR5 — the source-system-keyed validator map, built explicitly because
-        // Mockito cannot autowire mocks into a Map field. The 'xhibit' entry reuses the two existing
-        // DD-43078 mocks (so every XHIBIT scenario is unchanged), the 'libra' entry adds the LIBRA case
-        // validator, and both entries reference the ONE shared manifest validator (FR5).
         setField(timerTrigger, "validatorsBySourceSystem", Map.of(
                 "xhibit", new SourceSystemValidators(caseJsonSchemaValidator, manifestJsonSchemaValidator),
                 "libra", new SourceSystemValidators(libraCaseJsonSchemaValidator, manifestJsonSchemaValidator)));
@@ -140,9 +136,6 @@ class TimerTriggerJavaTest {
     @Test
     void shouldTestTimerTriggerSuccessfully() {
         final String timerInfo = "timerInfo";
-        // DD-43086 LIBRA03 — corrected from the synthetic single-token "CASEREF-0001" to a realistic
-        // four-token folder/batch/case/submission path, so source-system resolution finds the
-        // configured 'xhibit' entry instead of hitting the new AC6 "unconfigured source system" branch.
         final String queueMessage = "XHIBIT/batch1/CASEREF-0001/submission1";
         final String caseJsonPayload = casePayload(CASE_REFERENCE);
 
@@ -602,26 +595,18 @@ class TimerTriggerJavaTest {
                 anyString(), any(JsonObject.class), anyString(), anyString(), anyString());
     }
 
-    /**
-     * DD-43086 LIBRA03/AC7 (FR8 confirm) — a Function-App-level rejection of a LIBRA submission still
-     * produces a usable outcome file, written under the LIBRA-derived path. The case is never parsed
-     * at this point, so {@code caseUrn} is an <b>explicit empty string</b> (not null, not a missing
-     * key) by construction ({@code TimerTriggerJava.processClientError} sets {@code caseUrn = ""}).
-     * The whole outcome event is asserted — {@code success: "false"}, a populated {@code description}
-     * (the downstream error body), {@code caseUrn: ""}, and the LIBRA {@code migrationSourceSystemName}
-     * — for both the {@code outcome/outcome-<submissionId>.json} and the {@code outcome.json} writes.
-     */
     @Test
-    @DisplayName("LIBRA03/AC7 a Function-App-level LIBRA rejection writes a whole outcome file under "
-            + "the LIBRA path with an empty caseUrn")
-    void shouldWriteOutcomeUnderLibraPathWithEmptyCaseUrnForFunctionAppLevelRejection() {
+    @DisplayName("DD-43180 a Function-App-level LIBRA rejection writes a whole outcome file under "
+            + "the LIBRA path with the extracted caseUrn")
+    void shouldWriteOutcomeUnderLibraPathWithCaseUrnForFunctionAppLevelRejection() {
         final String timerInfo = "timerInfo";
         final String submissionId = "submission1";
         final String queueMessage = "LIBRA/batch1/CASEREF-0001/" + submissionId;
 
         final String caseJsonPayload = casePayload(CASE_REFERENCE);
         final String manifestJsonPayload = emptyJson();
-        final String validationError = "$.migratedCase.caseDetails.initiationCode: is missing but it is required";
+        final String validationError = "$.migratedCase.caseDetails.initiationCode: does not have a value in the enumeration [C, Q, J, R]";
+        final String errorMessage = "JSON schema validation has failed: " + validationError;
         final String errorEntity = fixture(FIXTURES + "error-response.json");
         final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
 
@@ -635,11 +620,11 @@ class TimerTriggerJavaTest {
         when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
         when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/case.json")).thenReturn(caseJsonPayload);
         when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/manifest.json")).thenReturn(manifestJsonPayload);
-        // LIBRA case validation fails — the Function-App-level rejection, before the case is parsed.
+        // LIBRA case validation fails — the Function-App-level rejection. The case JSON is still valid
         when(libraCaseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of(caseValidationMessage));
         when(manifestJsonSchemaValidator.validate(submissionId, manifestJsonPayload)).thenReturn(Set.of());
         when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
-                eq(caseJsonPayload), eq(submissionId), eq(""), eq(queueMessage), eq(validationError)))
+                eq(caseJsonPayload), eq(submissionId), eq(CASE_REFERENCE), eq(queueMessage), eq(errorMessage)))
                 .thenReturn(errorMigratedCaseSubmissionJsonObject);
         when(stagingDlrmCommandHelper.sendPostCommandApi(
                 "http://localhost:8080" + ERROR_MIGRATED_CASE_SUBMISSION_PATH,
@@ -656,7 +641,7 @@ class TimerTriggerJavaTest {
                 "migrationSourceSystemName", "LIBRA",
                 "azureLocation", queueMessage,
                 "description", errorEntity,
-                "caseUrn", "",
+                "caseUrn", CASE_REFERENCE,
                 "success", "false");
 
         verify(eventGridMonitorHelper).processEvent(expectedOutcome, "LIBRA", "outcome/outcome-" + submissionId + ".json");

@@ -14,7 +14,10 @@
       "$ref": "pcf-prosecutor.json"
     },
     "initiationCode": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+        "O"
+      ]
     },
     "dateReceived": {
       "type": "string",

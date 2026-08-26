@@ -52,7 +52,7 @@ public class StagingDlrmEventProcessor {
     private static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
     private static final String CASE_ALREADY_EXISTS_IN_PROGRESSION = "Case Already exists in progression";
     private static final String VALIDATION_FAILED = "Migrated case submission rejected by validation rule(s)";
-    private static final List<String> stagingContextErrors = List.of(JSON_SCHEMA,DUPLICATE_SUBMISSION_ID,CASE_ALREADY_EXISTS_IN_PROGRESSION,VALIDATION_FAILED);
+    private static final List<String> stagingContextErrors = List.of(JSON_SCHEMA, DUPLICATE_SUBMISSION_ID, CASE_ALREADY_EXISTS_IN_PROGRESSION, VALIDATION_FAILED);
     @Inject
     private EventGridService eventGridService;
 
