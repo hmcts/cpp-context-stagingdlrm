@@ -254,10 +254,6 @@
           "type": "string",
           "maxLength": 4000
         },
-        "prosecutorCompensation": {
-          "type": "number",
-          "minimum": 0
-        },
         "vehicleCode": {
           "type": "string",
           "maxLength": 1
@@ -269,9 +265,6 @@
         "vehicleRegistrationMark": {
           "type": "string",
           "maxLength": 11
-        },
-        "prosecutorOfferAOCP": {
-          "type": "boolean"
         },
         "convictingCourtCode": {
           "type": "string",

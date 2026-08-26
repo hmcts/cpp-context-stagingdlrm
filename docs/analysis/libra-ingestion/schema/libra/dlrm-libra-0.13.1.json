@@ -308,11 +308,6 @@
           "maxLength": 4000,
           "description": "Statement of facts in Welsh."
         },
-        "prosecutorCompensation": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Compensation claimed by the prosecutor."
-        },
         "vehicleCode": {
           "type": "string",
           "maxLength": 1,
@@ -327,9 +322,6 @@
           "type": "string",
           "maxLength": 11,
           "description": "For traffic related prosecutions."
-        },
-        "prosecutorOfferAOCP": {
-          "type": "boolean"
         },
         "convictingCourtCode": {
           "type": "string",
