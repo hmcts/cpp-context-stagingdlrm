@@ -5,7 +5,7 @@
     <parent>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
         <artifactId>stagingdlrm-parent</artifactId>
-        <version>17.104.43-LIBRA1-SNAPSHOT</version>
+        <version>17.104.44-LIBRA1-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-performance-test</artifactId>
