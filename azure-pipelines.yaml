@@ -41,10 +41,9 @@ stages:
           sonarqube_project: ${{ variables['sonarqubeProject'] }}
           sonarQubeType: 'sonarQubeAKS'
 
-  - ${{ if eq(variables['Build.Reason'], 'IndividualCI') }}:
-      - template: pipelines/context-validation.yaml@cppAzureDevOpsTemplates
-        parameters:
-          repo: "$(Build.Repository.Name)"
-          sonarQubeType: 'sonarQubeAKS'
-          serviceName: ${{ variables['service_Name'] }}
-          itTestFolder: ${{ variables['itTest_Folder'] }}
+  - template: pipelines/context-validation.yaml@cppAzureDevOpsTemplates
+    parameters:
+      repo: "$(Build.Repository.Name)"
+      sonarQubeType: 'sonarQubeAKS'
+      serviceName: ${{ variables['service_Name'] }}
+      itTestFolder: ${{ variables['itTest_Folder'] }}
