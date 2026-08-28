@@ -51,6 +51,7 @@
     }
   },
   "required": [
-    "surname"
+    "surname",
+    "address"
   ]
 }

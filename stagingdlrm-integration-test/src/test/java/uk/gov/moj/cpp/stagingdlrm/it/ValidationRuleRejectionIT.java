@@ -85,10 +85,7 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
                         "$.migratedCase.hearings[*].dateOfHearing"),
                 arguments("LIBRA missing hearing timeOfHearing", LIBRA_BASE, LIBRA_URN,
                         mutator(payload -> removeFirstHearingField(payload, "timeOfHearing")),
-                        "$.migratedCase.hearings[*].timeOfHearing"),
-                arguments("LIBRA missing defendant address", LIBRA_BASE, LIBRA_URN,
-                        mutator(payload -> removeFirstDefendantField(payload, "address")),
-                        "$.migratedCase.defendants[*].address"));
+                        "$.migratedCase.hearings[*].timeOfHearing"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -144,13 +141,6 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         final JsonObject migratedCase = root.getJsonObject("migratedCase");
         final JsonArray hearings = withoutFieldOnFirstElement(migratedCase.getJsonArray("hearings"), field);
         return put(root, "migratedCase", put(migratedCase, "hearings", hearings)).toString();
-    }
-
-    private static String removeFirstDefendantField(final String payload, final String field) {
-        final JsonObject root = readJson(payload);
-        final JsonObject migratedCase = root.getJsonObject("migratedCase");
-        final JsonArray defendants = withoutFieldOnFirstElement(migratedCase.getJsonArray("defendants"), field);
-        return put(root, "migratedCase", put(migratedCase, "defendants", defendants)).toString();
     }
 
     private static JsonArray withoutFieldOnFirstElement(final JsonArray array, final String field) {
