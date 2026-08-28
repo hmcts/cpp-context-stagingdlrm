@@ -79,10 +79,10 @@ class MigratedCaseValidationRuleEngineTest {
     }
 
     @Test
-    void aLibraSubmissionMissingDefendantAddressIsRejectedAndXhibitIsUnaffected() {
-        assertLibraRejectedXhibitUnaffected(
-                "json/aggregate/libra/submission-missing-defendant-address.json",
-                "$.migratedCase.defendants[*].address");
+    void aLibraSubmissionMissingDefendantAddressIsAccepted() {
+        assertThat(engine.validate(LIBRA,
+                        load("json/aggregate/libra/submission-missing-defendant-address.json", LIBRA)),
+                is(empty()));
     }
 
     @Test

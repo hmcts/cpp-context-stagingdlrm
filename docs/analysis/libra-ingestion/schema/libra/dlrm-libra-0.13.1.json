@@ -216,7 +216,6 @@
         }
       },
       "required": [
-        "address",
         "documentationLanguage",
         "hearingLanguage",
         "offences",
@@ -547,7 +546,8 @@
         }
       },
       "required": [
-        "surname"
+        "surname",
+        "address"
       ]
     },
     "parentGuardianInformation": {

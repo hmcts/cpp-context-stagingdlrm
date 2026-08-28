@@ -366,9 +366,23 @@ class JsonSchemaValidatorTest {
         assertEquals(Set.of(), messages, () -> messages.toString());
     }
 
+    @Test
+    @DisplayName("LIBRA02 a defendant without an address is accepted — address is optional (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithADefendantMissingAddress() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        defendant.remove("address");
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
     @ParameterizedTest(name = "LIBRA02 defendant.{0} is required, matching the LIBRA workbook's defendant "
             + "definition (LIBRA)")
-    @ValueSource(strings = {"prosecutorDefendantId", "documentationLanguage", "hearingLanguage", "address",
+    @ValueSource(strings = {"prosecutorDefendantId", "documentationLanguage", "hearingLanguage",
             "offences"})
     void shouldRejectLibraCaseSubmissionWithADefendantMissingARequiredProperty(final String property)
             throws Exception {
@@ -592,6 +606,23 @@ class JsonSchemaValidatorTest {
     }
 
     @Test
+    @DisplayName("individual.personalInformation requires address (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithPersonalInformationMissingAddress() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        ((ObjectNode) individual.get("personalInformation")).remove("address");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("address"), () -> messages.toString());
+    }
+
+    @Test
     @DisplayName("DD-43180 individual.selfDefinedInformation requires gender (LIBRA)")
     void shouldRejectLibraCaseSubmissionWithSelfDefinedInformationMissingGender() throws Exception {
         final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
@@ -767,7 +798,8 @@ class JsonSchemaValidatorTest {
         final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
         final ObjectNode defendant = validDefendant();
         final ObjectNode individual = MAPPER.createObjectNode();
-        individual.putObject("personalInformation").put("surname", "Brown");
+        individual.putObject("personalInformation").put("surname", "Brown")
+                .putObject("address").put("address1", "1 Test Street");
         defendant.set("individual", individual);
         migratedCase.putArray("defendants").add(defendant);
 
@@ -780,7 +812,9 @@ class JsonSchemaValidatorTest {
 
     private static ObjectNode validIndividual() {
         final ObjectNode individual = MAPPER.createObjectNode();
-        individual.putObject("personalInformation").put("surname", "Brown");
+        final ObjectNode personalInformation = individual.putObject("personalInformation");
+        personalInformation.put("surname", "Brown");
+        personalInformation.putObject("address").put("address1", "1 Test Street");
         individual.putObject("selfDefinedInformation").put("gender", 0);
         return individual;
     }

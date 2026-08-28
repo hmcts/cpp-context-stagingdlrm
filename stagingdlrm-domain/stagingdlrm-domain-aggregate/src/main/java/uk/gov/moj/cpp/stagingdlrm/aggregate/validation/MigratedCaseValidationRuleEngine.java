@@ -5,7 +5,6 @@ import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.
 
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.CaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
-import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Hearing;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 
@@ -38,8 +37,6 @@ public class MigratedCaseValidationRuleEngine {
                             submission -> presentOnEvery(hearings(submission), Hearing::getDateOfHearing)),
                     RequiredFieldRule.of("$.migratedCase.hearings[*].timeOfHearing",
                             submission -> presentOnEvery(hearings(submission), Hearing::getTimeOfHearing)),
-                    RequiredFieldRule.of("$.migratedCase.defendants[*].address",
-                            submission -> presentOnEvery(defendants(submission), Defendant::getAddress)),
                     InitiationCodeValidationRule.withAllowedValues(
                             MigratedCaseValidationRuleEngine::initiationCode, "C", "Q", "J", "R")));
 
@@ -65,10 +62,6 @@ public class MigratedCaseValidationRuleEngine {
 
     private static List<Hearing> hearings(final MigratedCaseSubmission submission) {
         return submission.getMigratedCase().getHearings();
-    }
-
-    private static List<Defendant> defendants(final MigratedCaseSubmission submission) {
-        return submission.getMigratedCase().getDefendants();
     }
 
     /**

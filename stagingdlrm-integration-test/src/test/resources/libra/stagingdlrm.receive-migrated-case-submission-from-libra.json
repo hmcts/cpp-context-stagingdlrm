@@ -45,6 +45,10 @@
             "title": "Baron",
             "forename": "John",
             "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
             "contactDetails": {}
           },
           "selfDefinedInformation": {
