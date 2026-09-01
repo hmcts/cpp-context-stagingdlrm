@@ -20,7 +20,7 @@
       {
         "courtHearingLocation": "C01BL00",
         "courtRoomId": 235,
-        "dateOfHearing": "DATE_OF_HEARING",
+        "dateOfHearing": "2026-06-20",
         "timeOfHearing": "10:05:01",
         "durationMinutes": 120,
         "hearingType": "FHG",
@@ -89,8 +89,7 @@
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

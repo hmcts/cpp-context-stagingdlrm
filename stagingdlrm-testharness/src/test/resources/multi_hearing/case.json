@@ -1,0 +1,238 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "cpsOrganisation": "A30AB00",
+      "initiationCode": "O",
+      "prosecutorCaseReference": "CASE-URN",
+      "prosecutor": {
+        "prosecutingAuthority": "G94DV00"
+      },
+      "sendingCourt": "B01LY00",
+      "dateOfSending": "2024-08-24",
+      "retrialIndicator": false,
+      "receivingCourt": "C50EX00",
+      "dateOfCommittal": "2024-01-15",
+      "dateReceived": "2024-01-15",
+      "receiptType": "Transfer"
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C50EX01",
+        "courtRoomId": 905,
+        "dateOfHearing": "DATE_OF_HEARING_1",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 120,
+        "hearingType": "FHG",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_1",
+            "listedOffences": [
+              "f2f3aa87-d7ac-4c20-897d-c4a24027c449"
+            ]
+          }
+        ]
+      },
+      {
+        "courtHearingLocation": "C01WL00",
+        "courtRoomId": 2884,
+        "durationMinutes": 120,
+        "weekCommencingDate": {
+          "startDate": "DATE_OF_HEARING_2"
+        },
+        "hearingType": "HRG",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_2",
+            "listedOffences": [
+              "ddc87abf-5db4-4ef9-a373-31d91fcf022b"
+            ]
+          }
+        ]
+      },
+      {
+        "courtHearingLocation": "C01BL01",
+        "durationMinutes": 120,
+        "hearingType": "TIS",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_3",
+            "listedOffences": [
+              "fb594376-8a9b-46c6-825a-f2b7bc5c9b88"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "custodyStatus": "C",
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "DEFENDANT_FIRST_NAME_1",
+            "surname": "DEFENDANT_LAST_NAME_1",
+            "address": {
+              "address1": "No 0 Exeter Test Street",
+              "address2": "line 2",
+              "address3": "line 3",
+              "address4": "line 4",
+              "address5": "line 5",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "M3",
+            "gender": 1,
+            "dateOfBirth": "DATE_OF_BIRTH_1",
+            "nationality": "SVK"
+          },
+          "bailConditions": "test"
+        },
+        "offences": [
+          {
+            "offenceCode": "RT88333",
+            "prosecutorOffenceId": "f2f3aa87-d7ac-4c20-897d-c4a24027c449",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2026-06-12",
+            "offenceCommittedEndDate": "2026-06-15",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2026-06-15",
+            "appliedCompensation": 200,
+            "arrestDate": "2026-06-15",
+            "alcoholRelatedOffence": {
+              "alcoholOrDrugLevelMethod": "A",
+              "alcoholOrDrugLevelAmount": 100
+            }
+          }
+        ],
+        "pncIdentifier": "pncID58291",
+        "croNumber": "croNO98679"
+      },
+      {
+        "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_2",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "custodyStatus": "C",
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "DEFENDANT_FIRST_NAME_2",
+            "surname": "DEFENDANT_LAST_NAME_2",
+            "address": {
+              "address1": "No 2 Flat 4",
+              "address2": "line 2",
+              "address3": "line 3",
+              "address4": "line 4",
+              "address5": "line 5",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "M3",
+            "gender": 1,
+            "dateOfBirth": "DATE_OF_BIRTH_2",
+            "nationality": "SVK"
+          },
+          "bailConditions": "test"
+        },
+        "offences": [
+          {
+            "offenceCode": "RT88333",
+            "prosecutorOffenceId": "ddc87abf-5db4-4ef9-a373-31d91fcf022b",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2026-06-12",
+            "offenceCommittedEndDate": "2026-06-15",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2026-06-15",
+            "appliedCompensation": 200,
+            "arrestDate": "2026-06-15",
+            "alcoholRelatedOffence": {
+              "alcoholOrDrugLevelMethod": "A",
+              "alcoholOrDrugLevelAmount": 100
+            }
+          }
+        ],
+        "pncIdentifier": "pncID58291",
+        "croNumber": "croNO98679"
+      },
+      {
+        "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID_3",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "custodyStatus": "C",
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "DEFENDANT_FIRST_NAME_3",
+            "surname": "DEFENDANT_LAST_NAME_3",
+            "address": {
+              "address1": "No 4 Flat 6",
+              "address2": "line 2",
+              "address3": "line 3",
+              "address4": "line 4",
+              "address5": "line 5",
+              "postcode": "M62 1NW"
+            },
+            "contactDetails": {
+              "work": "020111222",
+              "home": "020111223",
+              "mobile": "07572222943",
+              "primaryEmail": "scrooge.mcduck@mail.com",
+              "secondaryEmail": "scrooge.mcduck2@mail.com"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "M3",
+            "gender": 1,
+            "dateOfBirth": "DATE_OF_BIRTH_3",
+            "nationality": "SVK"
+          },
+          "bailConditions": "test"
+        },
+        "offences": [
+          {
+            "offenceCode": "RT88333",
+            "prosecutorOffenceId": "fb594376-8a9b-46c6-825a-f2b7bc5c9b88",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2026-06-12",
+            "offenceCommittedEndDate": "2026-06-15",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "offenceWording",
+            "chargeDate": "2026-06-15",
+            "appliedCompensation": 200,
+            "arrestDate": "2026-06-15",
+            "alcoholRelatedOffence": {
+              "alcoholOrDrugLevelMethod": "A",
+              "alcoholOrDrugLevelAmount": 100
+            }
+          }
+        ],
+        "pncIdentifier": "pncID58291",
+        "croNumber": "croNO98679"
+      }
+    ]
+  }
+}

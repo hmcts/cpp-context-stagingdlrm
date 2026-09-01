@@ -40,7 +40,7 @@
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
-          "custodyStatus": "B",
+          "custodyStatus": "C",
           "personalInformation": {
             "title": "MR",
             "forename": "DEFENDANT_FIRST_NAME",
@@ -89,8 +89,7 @@
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

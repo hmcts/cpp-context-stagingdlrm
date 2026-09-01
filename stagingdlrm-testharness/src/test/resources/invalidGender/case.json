@@ -64,7 +64,7 @@
           },
           "selfDefinedInformation": {
             "ethnicity": "M3",
-            "gender": 1,
+            "gender": 5,
             "dateOfBirth": "DATE_OF_BIRTH",
             "nationality": "SVK"
           },
@@ -89,8 +89,7 @@
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

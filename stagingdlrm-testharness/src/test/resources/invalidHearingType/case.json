@@ -23,7 +23,7 @@
         "dateOfHearing": "DATE_OF_HEARING",
         "timeOfHearing": "10:05:01",
         "durationMinutes": 120,
-        "hearingType": "FHG",
+        "hearingType": "XXX",
         "listedDefendants": [
           {
             "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID",
@@ -89,8 +89,7 @@
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

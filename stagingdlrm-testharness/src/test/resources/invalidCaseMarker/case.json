@@ -14,7 +14,15 @@
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
       "receiptType": "Either way case",
-      "retrialIndicator": false
+      "retrialIndicator": false,
+      "caseMarkers": [
+        {
+          "markerTypeCode": "XXX"
+        },
+        {
+          "markerTypeCode": "XXY"
+        }
+      ]
     },
     "hearings": [
       {
@@ -89,8 +97,7 @@
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

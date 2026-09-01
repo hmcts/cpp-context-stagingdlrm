@@ -18,14 +18,12 @@
     },
     "hearings": [
       {
-        "courtHearingLocation": "C01BL01",
-        "courtRoomId": 235,
+        "courtHearingLocation": "C50EX01",
         "durationMinutes": 120,
+        "hearingType": "TRL",
         "weekCommencingDate": {
-          "startDate": "2025-11-10",
-          "duration": 3
+          "startDate": "DATE_OF_HEARING"
         },
-        "hearingType": "FHG",
         "listedDefendants": [
           {
             "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",

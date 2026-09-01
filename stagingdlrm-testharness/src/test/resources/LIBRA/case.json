@@ -1,0 +1,54 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "prosecutorCaseReference": "CASE-URN",
+      "originatingOrganisation": "B01NM00",
+      "initiationCode": "C",
+      "prosecutor": {
+        "prosecutingAuthority": "G94DV00"
+      },
+      "summonsCode": "A",
+      "informant": "PC 1234",
+      "writtenChargePostingDate": "2024-01-15",
+      "cpsOrganisation": "CPS0007"
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C01BL00",
+        "courtRoomId": 235,
+        "dateOfHearing": "2025-09-11",
+        "timeOfHearing": "10:05:01",
+        "durationMinutes": 120,
+        "hearingType": "FHG",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+            "listedOffences": [
+              "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+        "documentationLanguage": "E",
+        "hearingLanguage": "E",
+        "address": {
+          "address1": "1 Test Street"
+        },
+        "offences": [
+          {
+            "offenceCode": "RT88333",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2024-01-01",
+            "offenceDateCode": 1,
+            "offenceWording": "Test offence wording",
+            "prosecutorOffenceId": "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4"
+          }
+        ]
+      }
+    ]
+  }
+}

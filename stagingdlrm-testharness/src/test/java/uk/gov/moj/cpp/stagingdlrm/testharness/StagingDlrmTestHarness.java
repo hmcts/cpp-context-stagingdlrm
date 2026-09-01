@@ -40,7 +40,8 @@ public class StagingDlrmTestHarness {
             promptln("1: create new XHIBIT case without manifest file");
             promptln("2: create new XHIBIT case with manifest file");
             promptln("3: upload manifest for an existing XHIBIT case");
-            promptln("4: exit");
+            promptln("4: upload all scenarios XHIBIT case");
+            promptln("5: exit");
             prompt("Enter your choice (1, 2, 3 or 4): ");
 
             int systemChoice = scanner.nextInt();
@@ -56,6 +57,9 @@ public class StagingDlrmTestHarness {
                     stagingDlrmTestHelper.updateExistingXhibitCase();
                     break;
                 case 4:
+                    stagingDlrmTestHelper.submitAllXhibitScenarioCase();
+                    break;
+                case 5:
                     System.exit(0);
                 default:
                     prompt("Invalid choice. Please enter 0 for Libra or 1 for Exhibit: ");

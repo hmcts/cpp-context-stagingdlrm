@@ -1,9 +1,4 @@
 {
-  "files" : [ {
-    "fileName" : "WitnessStatementDocument_1.pdf",
-    "fileType" : "99",
-    "documentType" : 1
-  } ],
   "migrationSourceSystem" : {
     "migrationSourceSystemName" : "XHIBIT",
     "migrationSourceSystemCaseIdentifier" : "XHIBIT-HEARINGS"

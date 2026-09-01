@@ -85,12 +85,15 @@
             "alcoholRelatedOffence": {
               "alcoholOrDrugLevelMethod": "A",
               "alcoholOrDrugLevelAmount": 100
+            },
+            "verdict": {
+              "id": "ff95a8b9-aaf4-4cc7-b794-5a9244d3473a",
+              "verdictDate": "2021-08-03"
             }
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

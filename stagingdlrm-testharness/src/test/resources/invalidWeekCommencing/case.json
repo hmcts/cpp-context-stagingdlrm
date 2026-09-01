@@ -18,15 +18,17 @@
     },
     "hearings": [
       {
-        "courtHearingLocation": "C01BL00",
+        "courtHearingLocation": "C01BL01",
         "courtRoomId": 235,
-        "dateOfHearing": "DATE_OF_HEARING",
-        "timeOfHearing": "10:05:01",
         "durationMinutes": 120,
+        "weekCommencingDate": {
+          "startDate": "2025-11-10",
+          "duration": 3
+        },
         "hearingType": "FHG",
         "listedDefendants": [
           {
-            "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID",
+            "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
             "listedOffences": [
               "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4"
             ]
@@ -36,16 +38,15 @@
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID",
+        "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
         "individual": {
           "custodyStatus": "B",
           "personalInformation": {
-            "title": "MR",
+            "title": "Baron",
             "forename": "DEFENDANT_FIRST_NAME",
             "surname": "DEFENDANT_LAST_NAME",
-            "middleName": "DEFENDANT_MIDDLE_NAME",
             "address": {
               "address1": "No 1 Exeter Test Street",
               "address2": "line 2",
@@ -81,16 +82,11 @@
             "offenceLocation": "Croydon",
             "offenceWording": "offenceWording",
             "chargeDate": "2025-06-16",
-            "arrestDate": "2025-06-16",
-            "alcoholRelatedOffence": {
-              "alcoholOrDrugLevelMethod": "A",
-              "alcoholOrDrugLevelAmount": 100
-            }
+            "arrestDate": "2025-06-16"
           }
         ],
         "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292",
-        "asn": "ASEC33563LS"
+        "croNumber": "croNO81292"
       }
     ]
   }

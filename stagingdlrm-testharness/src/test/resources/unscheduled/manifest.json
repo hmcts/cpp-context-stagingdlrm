@@ -1,15 +1,13 @@
 {
-  "files" : [ {
-    "fileName" : "WitnessStatementDocument_1.pdf",
-    "fileType" : "8",
-    "documentType" : 1
-  }, {
-    "fileName" : "WitnessStatementDocument_2.pdf",
-    "fileType" : "8",
-    "documentType" : 1
-  } ],
-  "migrationSourceSystem" : {
-    "migrationSourceSystemName" : "XHIBIT",
-    "migrationSourceSystemCaseIdentifier" : "XHIBIT-HEARINGS"
+  "files": [
+    {
+      "fileName": "WitnessStatementDocument_1.pdf",
+      "fileType": "99",
+      "documentType": 1
+    }
+  ],
+  "migrationSourceSystem": {
+    "migrationSourceSystemName": "XHIBIT",
+    "migrationSourceSystemCaseIdentifier": "XHIBIT-HEARINGS"
   }
 }

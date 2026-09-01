@@ -23,7 +23,6 @@
         "dateOfHearing": "DATE_OF_HEARING",
         "timeOfHearing": "10:05:01",
         "durationMinutes": 120,
-        "hearingType": "FHG",
         "listedDefendants": [
           {
             "prosecutorDefendantId": "PROSECUTOR_DEFENDANT_ID",
