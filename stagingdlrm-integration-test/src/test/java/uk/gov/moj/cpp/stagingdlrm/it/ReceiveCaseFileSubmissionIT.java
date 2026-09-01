@@ -65,6 +65,7 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
     public static final String EMAIL_ADDRESS_1_STRING_INVALID_EMAIL_DOES_NOT_MATCH_PATTERN = "emailAddress1: string [INVALID_EMAIL] does not match pattern";
     public static final String POSTCODE_STRING_INVALID_POSTCODE_DOES_NOT_MATCH_PATTERN = "postcode: string [KJ3 4RF] does not match pattern";
     public static final String DEFENDANTS_EXPECTED_MINIMUM_ITEM_COUNT = "defendants: expected minimum item count: 1, found: 0";
+    public static final String PERSONAL_INFORMATION_ADDRESS_REQUIRED = "required key [address] not found";
     public static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
     private static final String XHIBIT_UNMAPPED_SYSTEM_ID_MAPPER_FIXTURE = "stagingdlrm.receive-migrated-case-submission-from-xhibit-unmapped-system-id-mapper.json";
 
@@ -160,6 +161,18 @@ class ReceiveCaseFileSubmissionIT extends AbstractTestHelper {
                 makePostCall(getWriteUrl("/receive-migrated-case-submission"),
                         "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
                         payload, 400, DEFENDANTS_EXPECTED_MINIMUM_ITEM_COUNT)
+        );
+    }
+
+    @Test
+    void shouldRaiseBadRequestWhenAddressMissingInPersonalInformation() {
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-missing-address.json")
+                .replace("SUBMISSION_ID", submissionId);
+        Assertions.assertDoesNotThrow(() ->
+                makePostCall(getWriteUrl("/receive-migrated-case-submission"),
+                        "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                        payload, 400, PERSONAL_INFORMATION_ADDRESS_REQUIRED)
         );
     }
 
