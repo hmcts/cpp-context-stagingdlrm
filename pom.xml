@@ -10,7 +10,7 @@
 
     <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
     <artifactId>stagingdlrm-parent</artifactId>
-    <version>17.104.24-SNAPSHOT</version>
+    <version>17.104.24-DLRMJ25-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>stagingdlrm Context - Parent Module</name>
@@ -38,7 +38,7 @@
         <coredomain.version>17.104.4</coredomain.version>
         <pcfdlrm.version>17.103.24</pcfdlrm.version>
         <system.id-mapper.version>17.103.5</system.id-mapper.version>
-        <progression.version>17.0.273</progression.version>
+        <progression.version>17.0.297</progression.version>
     </properties>
 
     <modules>

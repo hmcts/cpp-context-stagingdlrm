@@ -64,6 +64,13 @@ lightning-jenkins.properties
 gitleaks-report.json
 .secret-purge/
 
+# tools/ is LIBRA-era and is not carried on team/25.104.x, so its own .gitignore is absent here.
+# Local leftovers from a reconciliation run must never be committed: env_mine.sh holds
+# AZURE_STORAGE_CONNECTION_STRING and PGPASSWORD, and output/ holds real case-level data.
+tools/reconciliation/env_mine.sh
+tools/reconciliation/output/
+tools/**/__pycache__/
+
 #Testharnes
 stagingdlrm-testharness/src/test/resources/config.properties
 stagingdlrm-testharness/src/test/resources/config-dev.properties
