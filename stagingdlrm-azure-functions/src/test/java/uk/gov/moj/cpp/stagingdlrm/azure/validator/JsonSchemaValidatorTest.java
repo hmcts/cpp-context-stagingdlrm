@@ -191,6 +191,18 @@ class JsonSchemaValidatorTest {
     }
 
     @Test
+    @DisplayName("DD-43248 the LIBRA gate accepts initiationCode 'S' (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithInitiationCodeS() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        ((ObjectNode) payload.get("migratedCase").get("caseDetails")).put("initiationCode", "S");
+        final String json = MAPPER.writeValueAsString(payload);
+
+        final Set<ValidationMessage> messages = validateLibraCase(json);
+
+        assertEquals(Set.of(), messages, messages::toString);
+    }
+
+    @Test
     @DisplayName("LIBRA02 the gate enforces the LIBRA workbook's constraints at caseDetails depth — "
             + "informant maxLength:92 (LIBRA)")
     void shouldRejectLibraCaseSubmissionWithACaseDetailsPropertyViolatingADeclaredConstraint() throws Exception {
