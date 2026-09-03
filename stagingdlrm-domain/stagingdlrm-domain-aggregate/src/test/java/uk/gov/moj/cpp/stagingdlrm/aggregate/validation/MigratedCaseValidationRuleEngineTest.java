@@ -58,6 +58,22 @@ class MigratedCaseValidationRuleEngineTest {
     }
 
     @Test
+    void aLibraSubmissionWithInitiationCodeSPassesEveryRule() {
+        assertThat(engine.validate(LIBRA,
+                        load("json/aggregate/libra/submission-valid-initiation-code-s.json", LIBRA)),
+                is(empty()));
+    }
+
+    @Test
+    void aLibraInitiationCodeSIsNotPermittedForXhibit() {
+        final MigratedCaseSubmission libraCoded =
+                load("json/aggregate/libra/submission-valid-initiation-code-s.json", XHIBIT);
+
+        assertThat(engine.validate(XHIBIT, libraCoded).stream().map(ValidationError::jsonPath).toList(),
+                hasItem("$.migratedCase.caseDetails.initiationCode"));
+    }
+
+    @Test
     void aLibraSubmissionMissingCourtRoomIdIsRejectedAndXhibitIsUnaffected() {
         assertLibraRejectedXhibitUnaffected(
                 "json/aggregate/libra/submission-missing-court-room-id.json",
