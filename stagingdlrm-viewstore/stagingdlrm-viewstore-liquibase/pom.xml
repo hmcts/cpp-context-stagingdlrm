@@ -4,7 +4,7 @@
     <parent>
         <artifactId>stagingdlrm-viewstore</artifactId>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
-        <version>17.104.45-LIBRA1-SNAPSHOT</version>
+        <version>17.104.46-LIBRA1-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-viewstore-liquibase</artifactId>
