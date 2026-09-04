@@ -16,6 +16,25 @@
             <version>${coredomain.version}</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- Test dependencies -->
+        <!-- BC-13 parity: everit-org.json-schema + org.json are the catalogue-tier validation
+             stack the DD-43191 Java 25 upgrade moves (org.json 20231013 -> 20251224). Pinned here
+             so the numeric-literal and constraint-class tests exercise the same J17 stack as the
+             framework's runtime catalogue validator. See docs/j25-parity-checklist.md. -->
+        <dependency>
+            <groupId>com.github.everit-org.json-schema</groupId>
+            <artifactId>org.everit.json.schema</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- junit-jupiter-params pulls in junit-jupiter-api transitively; test-utils-core is
+             deliberately not used here (it would drag Mockito/REST Assured/Groovy onto this
+             module's test classpath for no reason - none of the tests in this module need them). -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

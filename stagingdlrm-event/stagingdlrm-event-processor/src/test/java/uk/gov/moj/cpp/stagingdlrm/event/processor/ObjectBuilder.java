@@ -207,6 +207,16 @@ public class ObjectBuilder {
 
     }
 
+    /**
+     * BC-08 (📝 annotated, no new test - see docs/j25-parity-checklist.md and requirements FR14):
+     * the repo's only {@code ZonedDateTime} usage is this {@code now()} call, and it is a test
+     * fixture, not product code. Jackson's serialised zone identity for {@code ZonedDateTime}
+     * ("Z" &rarr; {@code ZoneOffset.UTC}) is the behaviour BC-08 tracks fleet-wide, but authoring
+     * a parity test around a test helper would assert the fixture, not the product. Existing
+     * coverage that already exercises this helper - {@code StagingDlrmEventProcessorTest}'s
+     * {@code shouldHandleMigratedCaseSubmissionReceivedWhenSourceSystemLIBRA} et al. - stands as
+     * the annotation.
+     */
     public static Metadata buildMetaData(final String name) {
         return metadataBuilder()
                 .createdAt(now())
