@@ -42,8 +42,9 @@ case data**.
 
 The reference upgrade is `cpp-context-prosecution-casefile` commit **`122a5a8fdc`** on
 `team/25.104.x` (401 files, +5870/−5018), checked out locally at
-`../cpp-context-prosecution-casefile`. Its **shape** is the template; its version pins are three
-milestones stale and must not be copied (the upgrade-mechanics ADR decision 2).
+`../cpp-context-prosecution-casefile`. Its **shape** is the template; its version pins are stale
+against the fleet tracker (`docs/analysis/j25-upgrade/Java 25 Upgrade Status.pdf`) and must not be
+copied (the upgrade-mechanics ADR decision 2).
 
 Measured surface in this repo, at `main`:
 
@@ -58,11 +59,14 @@ Measured surface in this repo, at `main`:
 | `javax.persistence` | **0** — no JPA code | 118 |
 | `javaee-api` declarations | 9 modules + 2 generator-plugin dependency blocks | — |
 | `beans.xml` to migrate | 10, all legacy `xmlns.jcp.org` namespace | 12 |
-| `.drl` | 1 | 2 |
+| `.drl` | 1 (`command-migrate-case-submission-api.drl`, 2 rules) | 2 |
 
 **This is roughly one sixth of the reference's Java churn**, because the persistence layer that
-dominates the reference does not exist here. The offsetting cost is the Azure Functions module, which
-the reference does not have and no other CPP context has either.
+dominates the reference does not exist here (`docs/architecture/dlrm-flow-reference.md` §3.1's module
+map has no repository/`@Entity` module — `stagingdlrm-viewstore-persistence` ships only
+`persistence.xml`/`beans.xml`). The offsetting cost is the Azure Functions module
+(`stagingdlrm-azure-functions`, §2 of the same reference), which the reference does not have and — per
+the fleet tracker — **no other CPP context has either**.
 
 ## Requirements
 
@@ -75,19 +79,24 @@ the reference does not have and no other CPP context has either.
   parity story, not by this one.
 - **FR1a — Migrate the parity tests as part of this story's `javax`→`jakarta` sweep.** They are source
   files on the same branch and are swept like any other. This is the reason the single-branch layout was
-  chosen: the tests are authored once. Their **assertions must not change** — only their imports.
+  chosen: the tests are authored once. Their **assertions must not change** — only their imports. This
+  includes the BC-11 test's assertion (a `NullPointerException` from a null value reaching
+  `JsonObjects.createObjectBuilder().add(...)`) — the parity-method ADR's decision 8 established that
+  this is the corrected, real mechanism to keep pinning; do not reintroduce a classpath/`ServiceLoader`
+  inventory test on this branch on the strength of the *original*, superseded BC-11 hypothesis.
 - **FR2 — Target the latest platform milestones, verified at implementation time.**
   `cpp-platform-maven-service-parent-pom` `17.104.1` → **`25.104.0-M10`**; `cpp-platform-core-domain`
-  `17.104.4` → **`25.104.0-M11`**. These are the tracker's figures as at 06 Aug 2026 and are where every
-  merged context sits. **Reconfirm before starting** — if they have advanced, take the newer.
+  `17.104.4` → **`25.104.0-M11`**. These are the fleet tracker's figures as at 06 Aug 2026 and are where
+  every merged context sits. **Reconfirm before starting** — if they have advanced, take the newer.
 - **FR3 — The DD-43192 parity tests must be green on Java 25 at the end of this story.** A parity test
   that goes red is a **finding, not a test to relax**. If one cannot be made green, the story stops and
   the divergence is raised; silently adjusting an assertion defeats the entire two-stage design.
 - **FR4 — Interface pins move only as far as the enforcer requires.** The reference bumped
   `referencedata.version`, `progression.version` and `sjp.version` purely to satisfy the
   latest-interfaces enforcer. Bump this repo's pins (`coredomain`, `pcfdlrm`, `system.id-mapper`,
-  `progression`) to what the enforcer demands and no further; an opportunistic bump makes the diff
-  unreviewable.
+  `progression` — `dlrm-flow-reference.md` §1.2's outbound-interface table names the last two as this
+  repo's actual downstream callers) to what the enforcer demands and no further; an opportunistic bump
+  makes the diff unreviewable.
 
 ### B. The Jakarta EE migration
 
@@ -95,9 +104,10 @@ the reference does not have and no other CPP context has either.
   `jakarta.ws.*`, `javax.inject` → `jakarta.inject`, `javax.annotation.PostConstruct` →
   `jakarta.annotation.PostConstruct`, `javax.enterprise` → `jakarta.enterprise`.
 - **FR6 — Do not rename JDK `javax.*` packages.** `javax.net.ssl.SSLContext` in
-  `stagingdlrm-azure-functions`' `StagingDlrmCommandHelper` is **JDK API, not Jakarta**, and has no
-  `jakarta` equivalent. A blanket find-and-replace across `javax.` will break the build here. The same
-  applies to any `javax.crypto`, `javax.xml.parsers` or `javax.naming` that appears later.
+  `stagingdlrm-azure-functions`' `StagingDlrmCommandHelper` (the same class that builds the BC-11 error
+  payload, per `dlrm-flow-reference.md` §2.4/§5) is **JDK API, not Jakarta**, and has no `jakarta`
+  equivalent. A blanket find-and-replace across `javax.` will break the build here. The same applies to
+  any `javax.crypto`, `javax.xml.parsers` or `javax.naming` that appears later.
 - **FR7 — Swap `javaee-api` for the Jakarta equivalent everywhere it is declared, including inside
   plugin `<dependencies>`.** Nine modules declare it as a normal dependency; `stagingdlrm-event-processor`
   also declares it **twice inside generator-plugin dependency blocks** (`pom.xml:105`, `pom.xml:117`).
@@ -130,10 +140,12 @@ renumbering them, so earlier references stay valid.*
      **deleted this exact file** and added a test `persistence.xml` in its place. This repo has no test
      `persistence.xml`.
 - **FR24 — Prefer deletion over migration here, and justify whichever is chosen.**
-  `stagingdlrm-viewstore-persistence` **contains no Java code at all** — no `@Entity`, no repository, no test. The DeltaSpike
-  and Hibernate 5 test scaffolding exists to support tests that do not exist. So the reference's
-  migration path (swap `persistence-deltaspike` → `persistence-jpa`, replace the properties file with a
-  test `persistence.xml`) would faithfully reproduce scaffolding for nothing.
+  `stagingdlrm-viewstore-persistence` **contains no Java code at all** — no `@Entity`, no repository, no
+  test (confirmed against `docs/architecture/dlrm-flow-reference.md` §3.1's module map: role listed as
+  "DeltaSpike/JPA persistence", but this parity story independently verified zero `.java` files exist).
+  The DeltaSpike and Hibernate 5 test scaffolding exists to support tests that do not exist. So the
+  reference's migration path (swap `persistence-deltaspike` → `persistence-jpa`, replace the properties
+  file with a test `persistence.xml`) would faithfully reproduce scaffolding for nothing.
   **Establish first whether the module is needed at all** — it ships a `persistence.xml` and a
   `beans.xml` that the runtime may still require for the view-store datasource wiring, in which case the
   module stays and only its dependencies go. Record the reasoning either way; a module deleted by
@@ -142,11 +154,12 @@ renumbering them, so earlier references stay valid.*
 ### C. Code generation
 
 - **FR9 — Apply the two recorded generator fixes.** Both plugins run in this repo, and both have a
-  documented fleet failure:
+  documented fleet failure (fleet tracker context rows):
   - `messaging-client-generator-plugin` needs **parsson** in its plugin dependencies
-    (as `cpp-context-system-scheduling` found);
+    (as `cpp-context-system-scheduling` found — "messaging-client-generator needed parsson in plugin
+    deps" per the tracker);
   - `rest-client-generator-plugin` needs the **jakartaee-api** swap (as
-    `cpp-context-system-announcement` found).
+    `cpp-context-system-announcement` found — "rest-client-generator jakartaee-api swap" per the tracker).
 - **FR10 — The generated-artefact inventory must not shrink.** BC-21's `reflections` 0.9.10→0.10.2
   scanning-contract change alters what is discovered. The parity story's derived inventory assertion
   (its FR12) must still pass; a silently smaller set of generated types is a defect in this story.
@@ -157,20 +170,22 @@ renumbering them, so earlier references stay valid.*
   `identifier -equals centos8-j17` → **`ubuntu-j25`**; repoint the template ref to the **`wildfly40`**
   track and set `aksDeployBranch` accordingly.
 - **FR12 — `jacoco` must be at 0.8.14 or later.** The parent's 0.8.12 does not handle JDK 25 bytecode;
-  every migrated context has needed a local override.
+  every migrated context on the fleet tracker has needed a local override.
 - **FR13 — Assess `jboss-deployment-structure.xml`, do not assume.** One already exists at
   `stagingdlrm-event/stagingdlrm-event-listener/src/main/webapp/WEB-INF/`. The reference *added* one at
-  repo root. Determine whether the existing one needs amending and whether other WARs need their own —
+  repo root. Determine whether the existing one needs amending and whether other WARs
+  (`dlrm-flow-reference.md` §3.1 lists `command-api`, `command-handler`, `event-listener`,
+  `event-processor`, `query-api`, all WAR-packaged) need their own —
   **and check it against BC-12**, because a `jboss-deployment-structure.xml` that disables the `jaxrs`
   subsystem, combined with the new fleet-wide `packagingExcludes` stripping bundled RESTEasy, is the
-  report's flagged possible deploy-breaker.
+  investigation report's flagged possible deploy-breaker.
 - **FR14 — Establish where this repo's container image comes from before assuming nothing is needed.**
   There is no `Dockerfile` at this repo's root, so the fleet's "Dockerfile base → Ubuntu 24.04, remove
   the RHEL `yum` lines" item has no obvious target here — but that must be **confirmed, not assumed**.
   Three facts to reconcile: `context-validation.yaml`'s image step is gated only by a repo-name
   exclusion list that **does not exclude this repo**, so the image step *will* run; its `dockerfilePath`
   parameter defaults to `'Dockerfile'`; and the reference context does ship one, at
-  `docker/Dockerfile_prosecutioncasefile-service` — not at root. Meanwhile `support`,
+  `docker/Dockerfile_prosecutioncasefile-service` — not at root. Meanwhile the tracker shows `support`,
   `system-id-mapper` and `notification` have no `Dockerfile` at all and all three have QA images.
   **Determine which of those patterns applies here**, then either fix the file the `wildfly40` track
   needs or record that none exists. Do not create a `Dockerfile` to satisfy a checklist, and do not
@@ -180,8 +195,10 @@ renumbering them, so earlier references stay valid.*
 
 - **FR15 — `stagingdlrm-azure-functions` moves to Java 25.** Verified supportable: Azure Functions
   lists Java 25 as GA to May 2029, on both Windows and Linux, and this app is `<os>windows</os>` on a
-  dedicated App Service Plan — so the Linux-Consumption restriction does not apply. Six pom items,
-  enumerated in [the upgrade-mechanics ADR](../adrs/DD-43191-j25-upgrade-mechanics.md) decision 4:
+  dedicated App Service Plan (`dlrm-flow-reference.md` §2: "Runtime: Azure Functions v2 (Java), Extension
+  Bundle 4.x... standalone JAR, runs outside the WildFly/JMS stack") — so the Linux-Consumption
+  restriction does not apply. Six pom items, enumerated in
+  [the upgrade-mechanics ADR](../adrs/DD-43191-j25-upgrade-mechanics.md) decision 4:
   `maven.compiler.source`/`target` 17→25; plugin `<runtime><javaVersion>` 17→25;
   `azure-functions-maven-plugin` 1.24.0 → a version accepting `javaVersion 25`;
   `azure-functions-java-library` 3.1.0 → newer; `javax:javaee-api:8.0` migrated or dropped;
@@ -196,32 +213,37 @@ renumbering them, so earlier references stay valid.*
   stay bundled**. Marking them `provided` compiles and then fails at runtime in Azure with
   `NoClassDefFoundError`, because nothing there supplies them. Exclude the module by name from the
   `provided` + `packagingExcludes` change **and say so in the PR description**, so a later fleet-wide
-  sweep does not "correct" it (the upgrade-mechanics ADR decision 5).
+  sweep does not "correct" it (the upgrade-mechanics ADR decision 5). The parity story's
+  `Bc12RestEasyPackagingParityTest` (or equivalent) pins this carve-out as a build-time assertion —
+  keep it green rather than "fixing" it to match the fleet pattern.
 
 ### F. Known defects to fix in this story
 
-- **FR18 — Delete `liquibase.hub.mode: off` from `liquibase.properties`.** Finding F1 from the parity
+- **FR18 — Delete `liquibase.hub.mode: off` from `liquibase.properties`.** Finding from the parity
   story's stage 2. Liquibase Hub was sunset and its configuration removed; on Liquibase 5.0.3 this is an
   unknown-parameter failure in the **K8s pre-install migration job**, before any application code runs.
   It is a live deploy blocker on this branch. **Also verify `liquibase.headless`** the same way — lower
-  confidence — by running Liquibase 5 against the file.
-- **FR19 — Check the 8 missing core-domain fields before bumping `coredomain.version`.** BC-15 records 8
-  schema fields absent from the J25 `cpp-platform-core-domain` line pending a release-management
-  cherry-pick. Confirm none of them feeds this context before moving `17.104.4` → M11.
+  confidence — by running Liquibase 5 against the file. (The parity story's own `LiquibasePropertiesParityTest`,
+  or equivalent, pins the pre-upgrade key set — this story is what actually removes the offending key.)
+- **FR19 — Check the missing core-domain fields before bumping `coredomain.version`.** The investigation
+  report records schema fields absent from the J25 `cpp-platform-core-domain` line pending a
+  release-management cherry-pick (BC-15). Confirm none of them feeds this context before moving
+  `17.104.4` → M11.
 - **FR20 — Resolve the `anonymise` module decision.** The upgrade-mechanics ADR decision 6 is **open**:
-  `stagingdlrm-domain-transformation-anonymise` exists here, and `defence`, `resulting` and `results`
-  all removed theirs during their upgrades. Determine whether removal was mandated (the framework
-  dropped `stream-transformation-*` support on the 25.104.x line) or incidental. **Default if
+  `stagingdlrm-domain-transformation-anonymise` exists here. Determine whether removal (as seen in other
+  fleet contexts that dropped their equivalent module) was mandated (the framework dropped
+  `stream-transformation-*` support on the 25.104.x line) or incidental. **Default if
   unresolved: retain and migrate** — deleting an anonymisation rule set on an assumption is the more
   expensive mistake. Whichever way it goes, record the reasoning.
 
 ### G. Definition of done
 
-- **FR21 — Done is a QA Docker image, not a merged PR.** Nine contexts on the tracker are "Merged — no
-  Docker image produced (build failed)", several still carrying an open pipeline-revert or Docker-fix PR.
-  Budget for a follow-up pipeline/image PR as part of this story rather than treating it as an
-  afterthought.
-- **FR22 — Integration tests must pass on the Java 25 stack.** The repo has 4 IT classes. If no
+- **FR21 — Done is a QA Docker image, not a merged PR.** Nine contexts on the 06 Aug 2026 fleet tracker
+  are "Merged — no Docker image produced (build failed)", several still carrying an open pipeline-revert
+  or Docker-fix PR. Budget for a follow-up pipeline/image PR as part of this story rather than treating
+  it as an afterthought.
+- **FR22 — Integration tests must pass on the Java 25 stack.** The repo has 4 IT classes
+  (`dlrm-flow-reference.md`'s module map lists `stagingdlrm-integration-test`, WireMock-backed). If no
   WildFly 40 image is available, that is a blocker to record and escalate, not a reason to declare done
   on unit tests alone.
 
@@ -263,34 +285,43 @@ renumbering them, so earlier references stay valid.*
 - `cpp-context-prosecution-casefile-dlrm` — DD-43194, its own pipeline.
 - Framework and platform repository changes — PEG-3296 owns those. In particular BC-15's core-domain
   cherry-pick and BC-17's `cp-event-store` fixes are **not** this story's to make; FR19 only *checks*.
-- A production release. The tracker shows only `support` has gone that far.
+- A production release. The fleet tracker shows only `support` has gone that far ("first Java-25
+  production-release guinea-pig").
 - The "material-client decoupling" PR the fleet standard includes — **verified not applicable**, neither
-  DLRM repo has that dependency.
+  DLRM repo has that dependency. (Not to be confused with the cross-context material *file flow* this
+  repo participates in, `docs/architecture/material-file-flow.md` — that is a runtime message flow to
+  pcfdlrm/Material, not a build dependency.)
 - Opportunistic dependency bumps beyond what the enforcer requires (FR4).
 - Refactoring, reformatting or test cleanup unrelated to the upgrade.
 
 ## Risks and notes
 
 - **`azure-functions-maven-plugin 1.24.0` may not accept `javaVersion 25`.** Unverifiable from the repo,
-  no fleet precedent, and the single highest-uncertainty item in the epic. Sequence it early enough that
-  FR16's fallback can be taken without re-planning the sprint.
+  no fleet precedent (stagingdlrm is the tracker's only Azure Functions context), and the single
+  highest-uncertainty item in the epic. Sequence it early enough that FR16's fallback can be taken
+  without re-planning the sprint.
 - **FR6 is the most likely self-inflicted failure.** A blanket `javax.` → `jakarta.` replacement is the
-  obvious way to do FR5 and it will break `javax.net.ssl`. The migration must be package-by-package.
+  obvious way to do FR5 and it will break `javax.net.ssl` inside `StagingDlrmCommandHelper`. The
+  migration must be package-by-package.
 - **The plugin-internal `javaee-api` declarations (FR7) fail late and obscurely.** They are inside
   `<plugin><dependencies>` in `stagingdlrm-event-processor`, so they surface as a code-generation error
   rather than a compile error, and the message does not name the coordinate.
 - **FR3 is the story's real risk and its real value.** The parity tests exist to go red. Treat a red as
   the system working; the pressure to "just fix the assertion" is exactly what the two-stage split was
-  designed to resist.
-- **The tracker's version figures are a month old** (06 Aug 2026) and the reference branch has been
-  bumped twice since its upgrade commit. FR2 says reconfirm.
-- **BC-12's deploy-breaker interaction is untested anywhere.** The report flags "check this first":
-  whether a query-api WAR retains any JAX-RS runtime path once `packagingExcludes` strips bundled
-  RESTEasy *and* `jboss-deployment-structure.xml` disables the `jaxrs` subsystem. This repo has both an
-  existing `jboss-deployment-structure.xml` and query/command WARs, so FR13 is not a formality.
-- **Owner unassigned.** stagingdlrm shows owner "?" on the PEG-3296 tracker. Confirm with Platform
-  Engineering before cutting the branch.
-
+  designed to resist. This applies with particular force to the BC-11 test (FR1a) — it pins a
+  `NullPointerException`, and "fixing" it to not throw would silently null-guard away a behaviour the
+  parity story deliberately chose to observe rather than patch.
+- **The tracker's version figures are a month old** (06 Aug 2026) and several reference contexts have
+  been bumped since their own upgrade commits (e.g. `mi-reportdata` merged still pointing at
+  `hearing.version 25.104.0-M1-SNAPSHOT`, flagged on the tracker as a follow-up to advance). FR2 says
+  reconfirm.
+- **BC-12's deploy-breaker interaction is untested anywhere.** The investigation report flags "check
+  this first": whether a query-api WAR retains any JAX-RS runtime path once `packagingExcludes` strips
+  bundled RESTEasy *and* `jboss-deployment-structure.xml` disables the `jaxrs` subsystem. This repo has
+  both an existing `jboss-deployment-structure.xml` and query/command WARs
+  (`dlrm-flow-reference.md` §3.1), so FR13 is not a formality.
+- **Owner unassigned.** stagingdlrm shows owner "?" on the 06 Aug 2026 PEG-3296 tracker snapshot.
+  Confirm with Platform Engineering before cutting the branch.
 - **The first `mvn clean install` on the new branch will fail at dependency resolution, not
   compilation** (FR23). Four dead coordinates sit in a module with no Java in it. Expect this as the
   opening move of implementation rather than as a surprise, and resolve FR24 before spending time
@@ -308,5 +339,10 @@ renumbering them, so earlier references stay valid.*
    is whether `uk.gov.justice.services:stream-transformation-*` still resolves on the 25.104.x chain.
 5. **Treat FR13 as an investigation, not a task.** The BC-12 interaction may turn out to be this repo's
    biggest deploy risk, and it is cheaper to find in design than in a failed sandbox deploy.
-6. **Plan the follow-up image PR into the story from the start** (FR21). Nine contexts learned this the
-   expensive way.
+6. **Plan the follow-up image PR into the story from the start** (FR21). Nine fleet contexts learned
+   this the expensive way.
+7. **Re-read `docs/architecture/dlrm-flow-reference.md` and `material-file-flow.md` before migrating
+   `StagingDlrmCommandHelper` and `EventGridMonitorHelper`.** Both classes carry the BC-11 pin and the
+   outcome-write branching (§2.6's four paths) that must survive the `javax`→`jakarta` sweep unchanged
+   in behaviour — the architecture docs are the fastest way to confirm nothing downstream of a renamed
+   import silently changed which write-path fires.

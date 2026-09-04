@@ -3,6 +3,7 @@ package uk.gov.moj.cpp.stagingdlrm.azure.rest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -328,6 +329,34 @@ class StagingDlrmCommandHelperTest {
 
         assertEquals(submissionId, errorMigratedCaseSubmissionPayload.getString("submissionId"));
         assertNotNull(errorMigratedCaseSubmissionPayload.getString("payload"));
+    }
+
+    /**
+     * BC-11 parity test, corrected (see docs/j25-parity-checklist.md and the parity-method ADR's
+     * decision 8). The original BC-11 hypothesis - a JSON-P {@code ServiceLoader} provider collision,
+     * classpath-resource-count driven - was superseded on 2026-08-26 by fleet-wide empirical work: the
+     * real, verified mechanism is that {@link JsonObjects#createObjectBuilder()}'s builder throws
+     * {@code NullPointerException} identically on both J17/glassfish and J25/Parsson when a null value
+     * reaches {@code add(key, value)} - a pre-existing latent-bug parity, not a J25 regression.
+     *
+     * <p>This is not a hypothetical for this repo: {@link StagingDlrmCommandHelper#generateErrorMigratedCaseSubmissionPayload}
+     * builds its payload with exactly this framework helper (see its {@code import static
+     * uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder}) and adds {@code responseString}
+     * as {@code "errorMessage"} - a value reachable as null on this class's own error path. This test
+     * pins that the resulting NPE is J17's actual, observed behaviour - not that it "succeeds" - so a
+     * classpath/ServiceLoader inventory is deliberately not built here; per decision 8, that would pin
+     * the wrong mechanism.
+     */
+    @Test
+    void generateErrorMigratedCaseSubmissionPayloadThrowsNpeParityWhenResponseStringIsNull() {
+        final String submissionId = UUID.randomUUID().toString();
+        final String caseUrn = "test-case-urn";
+        final String azureLocation = "test/azure/location";
+
+        assertThrows(NullPointerException.class, () -> stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
+                buildDefaultMigratedCaseSubmissionPayload(), submissionId, caseUrn, azureLocation, null),
+                "BC-11 parity test: a null responseString must NPE on J17, via JsonObjects.createObjectBuilder()'s own null-guard - "
+                        + "pin that it throws identically, not that it succeeds");
     }
 
     @Test

@@ -25,12 +25,22 @@ and are **not restated** here:
   Function App JDK, BC-12 func-app carve-out, the `anonymise` open question, pipeline track.
   **Read this before stage 2.**
 - [**`DD-43191-j25-parity-method`**](../adrs/DD-43191-j25-parity-method.md) — the parity tests this story must
-  keep green, and the BC matrix explaining which risks apply here.
+  keep green, and the BC matrix explaining which risks apply here (including its decision 8's BC-11
+  correction — this story inherits whatever the parity tests actually pin, not the original BC-11
+  hypothesis).
 
 ## This story's request
 
-Upgrade the context to Java 25 / WildFly 40 / Jakarta EE 11 on a new `team/25.104.x` branch, keeping the
-DD-43192 parity tests green, and produce a QA Docker image.
+Upgrade the context to Java 25 / WildFly 40 / Jakarta EE 11 on the shared `team/25.104.x` branch, keeping
+the DD-43192 parity tests green, and produce a QA Docker image.
+
+**Where this repo sits on the fleet tracker (`docs/analysis/j25-upgrade/Java 25 Upgrade Status.pdf`,
+06 Aug 2026):** stagingdlrm is **"Not yet upgraded"**, owner unassigned ("?"). Of the roughly 45 tracked
+contexts, ~30 already show *QA Docker Image Available*, 9 are "Merged — no Docker image produced (build
+failed)" (several with an open pipeline-revert PR), 2 are on hold pending the Elasticsearch upgrade
+(neither applies here — this repo uses no Elasticsearch, Camunda or Activiti), and 1 (`material`) is
+blocked. **stagingdlrm is the only tracked context with an Azure Functions module** — every fleet-learned
+lesson about that specific migration path (item FR15/FR16 below) has no precedent to check against.
 
 **The hard dependency, and why it is hard.** Both stages share `team/25.104.x`. The parity PR must
 merge into it **while it is still J17** — that is what makes its runs J17 evidence. This story is what
@@ -45,10 +55,13 @@ A useful consequence of the shared branch: the parity tests are migrated `javax`
 story's own sweep**, along with every other source file. They are authored once, not twice.
 
 **Reference implementation:** `cpp-context-prosecution-casefile` commit `122a5a8fdc` on `team/25.104.x`
-(401 files, +5870/−5018), checked out locally at `../cpp-context-prosecution-casefile`. Take its
-**shape, not its version numbers** — it pinned `25.104.0-M4` and has since been bumped twice.
+(401 files, +5870/−5018), checked out locally at `../cpp-context-prosecution-casefile`. Per the tracker,
+that context is now merged with a QA Docker image published (service-parent-pom M10, core-domain M11)
+and its own PR history (Elasticsearch 9.3.3 removed as a dependency question — this repo has none
+regardless). Take **shape, not version numbers** — the reference pinned `25.104.0-M4` and has since been
+bumped twice; the tracker's current milestone figures (below) are the ones to build against.
 
-**Target versions** (tracker, 06 Aug 2026 — reconfirm at stage 5):
+**Target versions** (fleet tracker, 06 Aug 2026 — reconfirm at stage 5):
 `cpp-platform-maven-service-parent-pom` `17.104.1` → **`25.104.0-M10`**;
 `cpp-platform-core-domain` `17.104.4` → **`25.104.0-M11`**.
 
@@ -56,17 +69,21 @@ story's own sweep**, along with every other source file. They are authored once,
 
 | Area | Detail |
 |---|---|
-| `javax.json` → jakarta/parsson | 6 coordinates: command-handler, event-listener, domain-event, domain-aggregate, **and the func-app** (`org.glassfish:javax.json:1.0.2`). This is the largest mechanical item |
-| Generator plugins | `messaging-client-generator` needs parsson in its **plugin** deps (system-scheduling hit this); `rest-client-generator` needs the jakartaee-api swap (system-announcement hit this). This repo uses all four generators + RAML |
-| `stagingdlrm-azure-functions` → Java 25 | Verified GA on Azure Functions to May 2029, Windows included. 6 pom items, listed in the upgrade-mechanics ADR decision 4, with a documented fallback to 17 |
-| BC-12 carve-out | The fleet's `resteasy-client` → `provided` fix must **not** be applied to the func-app — it is a standalone JAR and needs them bundled. The upgrade-mechanics ADR decision 5 |
-| `@Inject EntityManager` | → `@PersistenceContext(unitName)` (staging-dcs) — *likely N/A here, no JPA code* |
-| `persistence.xml` | 1.0 → 3.0 namespace (system-announcement) |
+| `javax.json` → jakarta/parsson | 6 coordinates: command-handler, event-listener, domain-event, domain-aggregate, **and the func-app** (`org.glassfish:javax.json:1.0.2`). This is the largest mechanical item. Note: the parity story's BC-11 test does **not** assert on this inventory (it moved to a different mechanism, decision 8) — it is still real classpath fact to migrate correctly, just not a regression gate in itself |
+| Generator plugins | `messaging-client-generator` needs parsson in its **plugin** deps (`system-scheduling` hit this per the tracker); `rest-client-generator` needs the jakartaee-api swap (`system-announcement` hit this). This repo uses all four generators + RAML |
+| `stagingdlrm-azure-functions` → Java 25 | Verified GA on Azure Functions to May 2029, Windows included (this app is `<os>windows</os>` per `docs/architecture/dlrm-flow-reference.md` §2 — "standalone JAR, runs outside the WildFly/JMS stack"). 6 pom items, listed in the upgrade-mechanics ADR decision 4, with a documented fallback to 17 |
+| BC-12 carve-out | The fleet's `resteasy-client` → `provided` fix must **not** be applied to the func-app — `dlrm-flow-reference.md` §2 confirms it is a standalone JAR, not a WAR, so it needs RESTEasy bundled. The upgrade-mechanics ADR decision 5 |
+| `@Inject EntityManager` | → `@PersistenceContext(unitName)` (`staging-dcs` per the tracker) — *likely N/A here, no JPA code* |
+| `persistence.xml` | 1.0 → 3.0 namespace (`system-announcement` per the tracker) |
 | Pipeline | `centos8-j17` → `ubuntu-j25`; `wildfly40` template ref; `aksDeployBranch`; Dockerfile base Ubuntu 24.04, RHEL `yum` lines removed; jacoco → 0.8.14 |
-| `jboss-deployment-structure.xml` | Reference added one — check whether this repo needs it |
+| `jboss-deployment-structure.xml` | Reference added one at repo root; this repo already has one at `stagingdlrm-event-listener/src/main/webapp/WEB-INF/` — check whether it needs amending and whether other WARs need their own |
 
 **Not needed here, verified:** the "material-client decoupling" half of the standard fleet upgrade —
-neither DLRM repo has that dependency, so no decouple PR (the upgrade-mechanics ADR decision 3).
+neither DLRM repo has that dependency, so no decouple PR (the upgrade-mechanics ADR decision 3). Note
+this is a *different* "material" from the cross-context material-file flow this repo participates in
+(`docs/architecture/material-file-flow.md`) — that flow is pcfdlrm/Material/Alfresco/Progression's
+concern downstream of this repo's `receive-migrated-case-file` REST call, not a build-time dependency of
+this repo.
 
 ## Decisions taken with the requester
 
@@ -86,6 +103,7 @@ neither DLRM repo has that dependency, so no decouple PR (the upgrade-mechanics 
 | `azure-pipelines.yaml` + `Dockerfile` for the `wildfly40`/`ubuntu-j25` track | `cpp-context-prosecution-casefile-dlrm` — DD-43194, its own pipeline |
 | Producing a QA Docker image (this is the definition of done) | Framework/platform repo changes — PEG-3296 owns those |
 | `stagingdlrm-domain-transformation-anonymise` decision + action | Production release — the tracker shows only `support` has gone that far |
+| | Anything past `receive-migrated-case-file` — `material-file-flow.md`'s Material/Alfresco/Progression trace is a downstream concern with no build dependency on this repo's own upgrade |
 
 ## Known blockers / open items
 
@@ -100,26 +118,25 @@ neither DLRM repo has that dependency, so no decouple PR (the upgrade-mechanics 
   framework repos, never swept here. **Delete the line; verify `liquibase.headless` the same way** (lower
   confidence) by running Liquibase 5 against the file. It was deliberately not fixed in the parity story:
   there is no J17 behaviour to pin, and FR15/AC9 there keep that PR to test-only changes.
-
-- **`anonymise` module — unresolved.** `defence`, `resulting` and `results` all removed theirs during
-  the J25 upgrade; this repo has one, pcfdlrm does not. The upgrade-mechanics ADR decision 6 sets out both readings and
+- **`anonymise` module — unresolved.** The upgrade-mechanics ADR decision 6 sets out both readings and
   the default. Close it at the stage 2 gate.
-- **Expect the Docker image build to fail first time.** Nine contexts on the tracker are "Merged — no
-  Docker image produced (build failed)", several still carrying an open pipeline-revert or Docker-fix
-  PR. **The image build never runs on a pull request** — `azure-pipelines.yaml` sends PR builds to
-  `context-verify.yaml` (SonarQube only) and only merge builds to `context-validation.yaml`, which is
-  where `docker-build.yaml` pushes to `crmdvrepo01.azurecr.io`. So whatever breaks it is undiscoverable
-  until after this story's PR has merged. The image stays **in this story's scope** — treat "QA Docker
-  image available", not "upgrade PR merged", as done — but expect it to take a second merge to get
-  there.
+- **Expect the Docker image build to fail first time.** Nine contexts on the 06 Aug 2026 tracker are
+  "Merged — no Docker image produced (build failed)" (`correspondence`, `defence`, `hearing-nows`,
+  `prosecutiondocumentqueue`, `resulting`, `results`, `staging-dcs`, `staging-dvla`, `subscriptions`),
+  several still carrying an open pipeline-revert or Docker-fix PR (e.g. `resulting`'s and `results`'
+  fix PRs both cite the same `file-service-liquibase M12 404`). **The image build never runs on a pull
+  request** — `azure-pipelines.yaml` sends PR builds to `context-verify.yaml` (SonarQube only) and only
+  merge builds to `context-validation.yaml`, which is where `docker-build.yaml` pushes to
+  `crmdvrepo01.azurecr.io`. So whatever breaks it is undiscoverable until after this story's PR has
+  merged. The image stays **in this story's scope** — treat "QA Docker image available", not "upgrade PR
+  merged", as done — but expect it to take a second merge to get there.
 - **`azure-functions-maven-plugin 1.24.0` may not accept `javaVersion 25`.** Unverifiable from the repo;
-  the highest-uncertainty item in the epic, with no fleet precedent (no other CPP context has an Azure
-  Functions module). Sequence it early enough to fall back without re-planning.
-- **No local WildFly 40 Docker image exists** — `cpp-developers-docker` was still on the 26.1.3 image as
-  of the investigation report; the tracker says a `java-25` branch now exists. Confirm before relying on
-  local ITs.
-- **BC-15 watch item.** `coredomain.version` moves `17.104.4` → M11. The report records 8 schema fields
-  missing from the J25 core-domain line, pending a release-management cherry-pick. Check whether any
-  field this context reads is among them before bumping.
-- Owner is unassigned for stagingdlrm on the PEG-3296 tracker. Confirm with Platform Engineering before
-  cutting the branch.
+  the highest-uncertainty item in the epic, with no fleet precedent (stagingdlrm is the tracker's only
+  Azure Functions line item). Sequence it early enough to fall back without re-planning.
+- **No local WildFly 40 Docker image confirmed at brief time** — `cpp-developers-docker` was on the
+  26.1.3 image as of the investigation report. Confirm current state before relying on local ITs.
+- **BC-15 watch item.** `coredomain.version` moves `17.104.4` → M11. The investigation report records
+  schema fields missing from the J25 core-domain line, pending a release-management cherry-pick. Check
+  whether any field this context reads is among them before bumping.
+- Owner is unassigned for stagingdlrm on the PEG-3296 tracker (06 Aug 2026 snapshot). Confirm with
+  Platform Engineering before cutting the branch.

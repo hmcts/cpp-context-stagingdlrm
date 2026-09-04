@@ -54,6 +54,39 @@ public class AccessControlTest extends BaseDroolsAccessControlTest {
         verify(userAndGroupProvider).isSystemUser(action);
     }
 
+    /**
+     * BC-03 parity test (see docs/j25-parity-checklist.md). {@code command-migrate-case-submission-api.drl}
+     * declares two rules; only "Command - Rule for Migrate Case Submission" (above) had ever been
+     * tested on any JDK. This closes that pre-existing coverage gap for "Command - Rule for Error
+     * Migrate Case Submission" - a genuine J17 coverage fix as well as a parity pin. Note: BC-03 itself
+     * (Drools 7-&gt;10 recompilation silently flipping allow/deny) is <b>Refuted</b> fleet-wide - this
+     * test closes a testing gap that happens to share the ticket number, it does not mitigate a live
+     * J25 risk.
+     */
+    @Test
+    public void shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(true);
+        final ExecutionResults results = executeRulesWith(action);
+        assertSuccessfulOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
+    @Test
+    public void shouldNotAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(false);
+        final ExecutionResults results = executeRulesWith(action);
+        assertFailureOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
     @Override
     protected Map<Class<?>, Object> getProviderMocks() {
         return singletonMap(UserAndGroupProvider.class, userAndGroupProvider);
