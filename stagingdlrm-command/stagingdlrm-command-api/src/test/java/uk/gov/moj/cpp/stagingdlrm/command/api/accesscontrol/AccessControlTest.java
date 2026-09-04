@@ -20,6 +20,14 @@ import org.kie.api.runtime.ExecutionResults;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * The two "ErrorMigrateCaseSubmission" tests below close the BC-03 branch gap (see
+ * docs/j25-parity-checklist.md and docs/pipeline/adrs/DD-43191-j25-parity-method.md's Bucket A table):
+ * {@code command-migrate-case-submission-api.drl} declares two rules, and until now only
+ * "Command - Rule for Migrate Case Submission" had any test coverage on any JDK. FR9 requires
+ * both rules to have an allow and a deny case - a genuine J17 coverage fix as well as a parity
+ * pin (this is not a behaviour change; both rules already existed).
+ */
 @ExtendWith(MockitoExtension.class)
 public class AccessControlTest extends BaseDroolsAccessControlTest {
 
@@ -47,6 +55,36 @@ public class AccessControlTest extends BaseDroolsAccessControlTest {
         final Map<String, String> metadata = new HashMap<>();
         metadata.putIfAbsent("id", UUID.randomUUID().toString());
         metadata.putIfAbsent("name", "stagingdlrm.receive-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(false);
+        final ExecutionResults results = executeRulesWith(action);
+        assertFailureOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
+    // ------------------------------------------------------------------
+    // BC-03 - the second rule, "Command - Rule for Error Migrate Case Submission", matching
+    // action "stagingdlrm.receive-error-migrated-case-submission". Same allow/deny shape as the
+    // rule above, over the previously-untested action name.
+    // ------------------------------------------------------------------
+
+    @Test
+    public void shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(true);
+        final ExecutionResults results = executeRulesWith(action);
+        assertSuccessfulOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
+    @Test
+    public void shouldNotAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
         Action action = createActionFor(metadata);
         given(this.userAndGroupProvider.isSystemUser(action)).willReturn(false);
         final ExecutionResults results = executeRulesWith(action);

@@ -38,6 +38,14 @@
             <groupId>uk.gov.justice.services</groupId>
             <artifactId>messaging-core</artifactId>
         </dependency>
+
+        <!-- Test dependency - BC-11 parity (see docs/j25-parity-checklist.md); this module had
+             no test sources before that pin. -->
+        <dependency>
+            <groupId>uk.gov.justice.services</groupId>
+            <artifactId>test-utils-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
