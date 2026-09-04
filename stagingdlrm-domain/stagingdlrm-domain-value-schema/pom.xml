@@ -16,6 +16,27 @@
             <version>${coredomain.version}</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- Test dependencies - added for the DD-43192 parity story (BC-13, BC-21).
+             This module had zero Java before this story. Both coordinates are already
+             proven resolvable offline in this reactor: stagingdlrm-viewstore-persistence's
+             pom.xml declares the same everit coordinate (unused there), and the parent BOM
+             manages a version for it without one being pinned locally. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.everit-org.json-schema</groupId>
+            <artifactId>org.everit.json.schema</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

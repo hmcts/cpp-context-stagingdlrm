@@ -207,6 +207,14 @@ public class ObjectBuilder {
 
     }
 
+    /**
+     * BC-08 (see docs/j25-parity-checklist.md): {@code now()} is {@code ZonedDateTime.now()} - the
+     * only {@code ZonedDateTime} anywhere in this repo, verified by a repo-wide grep on 2026-09-04.
+     * It is a <b>test helper</b>, not product code, so no new parity test is authored around it -
+     * doing so would pin this fixture, not the product (per 01-requirements.md's FR14). The existing
+     * {@code StagingDlrmEventProcessorTest} suite already exercises this helper incidentally, which is
+     * this repo's actual J17 coverage of BC-08.
+     */
     public static Metadata buildMetaData(final String name) {
         return metadataBuilder()
                 .createdAt(now())

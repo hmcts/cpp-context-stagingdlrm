@@ -230,6 +230,42 @@ holding), **BC-15** (core-domain missing schema fields — a precondition on the
 decision 2), **BC-16** (`/internal/metrics/*` gutted to 404), **BC-17** (`stream_error` hash/identity
 shift).
 
+## Decision 8 — BC-11 corrected: `JsonObjectBuilder` null-value NPE parity, not JSON-P provider collision
+
+*Added 2026-09-04. Supersedes this ADR's original BC-11 characterization wherever it appears above (the
+Bucket A tables' BC-11 rows, and decision 3's scope list) — this decision is the amendment instrument and
+wins where the two disagree, exactly as decision 7 established for its own corrections.*
+
+**What changed.** Every BC-11 reference elsewhere in this ADR was written against the original
+investigation report's hypothesis: a JSON-P `ServiceLoader` provider collision (glassfish → Parsson),
+provable by a classpath-resource count. Fleet-wide empirical work across the ~14 contexts Platform
+Engineering has since completed (`docs/pipeline/DD-43191-DD-43192-j25-parity/Parity+Testing+Java17+-_+Java25.pdf`,
+its BC-11 entry marked "CORRECTED 2026-08-26") replaces that hypothesis with a verified one:
+
+> Via the framework helper `uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder()`,
+> `add(key, (String) null)` throws `NullPointerException` identically on **both** J17/glassfish and
+> J25/Parsson — the helper carries its own null-guard, so glassfish never silently accepted a null value
+> either. Empirically verified on `cpp-context-notification-notify`. A nullable value reaching `add()`
+> (e.g. an error message that can be null) is a **pre-existing latent bug that NPEs the same on both
+> runtimes — not a J25 regression.** Disposition: **Refuted / parity** (the report's original entry rated
+> it a **Fix**).
+
+**Effect on Bucket A — BC-11 stays in scope in both repos, but its test shape changes.** A real call site
+exists in each:
+
+| Repo | Call site | What the corrected test pins |
+|---|---|---|
+| stagingDLRM | `stagingdlrm-azure-functions`' `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` — `createObjectBuilder().add("errorMessage", responseString)`, `responseString` reachable as null on an error path | That a null `responseString` throws `NullPointerException` identically — parity, not a classpath inventory |
+| PCFDLRM | Verify against this repo's own code at stage 4 before assuming the same shape applies — do not copy stagingDLRM's call site without checking | — |
+
+The **javax.json coordinate inventory** (glassfish vs Parsson GAVs, which modules declare which, at what
+scope) that this ADR's earlier decisions recorded for BC-11 is not wrong as *classpath fact* and may be
+kept as background in a repo's checklist — but it is no longer the BC-11 **assertion**. A `ServiceLoader`/
+provider-count test proves nothing about this corrected mechanism, and should not be built or kept as the
+BC-11 pin. Where a repo's parity story already has such a test authored, replace it with a call-site NPE-
+parity test rather than running both — the corrected finding is what BC-11 now means, not an addition to
+the old one.
+
 ## Consequences
 
 - The parity story is **on the critical path** in each repo. It cannot be deferred without stalling that
