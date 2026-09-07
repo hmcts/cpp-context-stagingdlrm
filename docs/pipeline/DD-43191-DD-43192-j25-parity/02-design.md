@@ -147,10 +147,23 @@ artifacts, all `4.3.0.Final`, no `<scope>` (compile, the default) — the Functi
   `pcfdlrm-command-api` and `progression-query-api` RAML artifacts this offline sandbox has never
   resolved (confirmed via a clean `git stash`).
 
-### BC-07 — pin the Liquibase property set
+### BC-07 — the Liquibase property set has no meaningful unit-level pin
 
 **Verified fresh:** exactly three keys — `changelogFile`, `liquibase.hub.mode`, `liquibase.headless` — no
-`searchPath`. Design: load as `java.util.Properties`, assert the exact key set and J17 values.
+`searchPath`. `liquibase/stagingdlrm.xml` (the changelog `changelogFile` points at) is **empty** — no
+`<changeSet>` elements — a separate, pre-existing fact this story does not fix. The properties file is
+nonetheless genuinely deployed and executed: `docker/Dockerfile_stagingdlrm-service` bakes
+`stagingdlrm-viewstore-liquibase.jar` into the image, and `docker/scripts/liquibase.sh` runs
+`java -jar ... update` against a real Postgres database as part of container startup, aborting the whole
+init script on failure.
+
+**Design reconsidered:** a `java.util.Properties.load()` unit test asserting the key set was authored and
+then removed. It is true on both J17 and J25 regardless of Liquibase's own version — it proves the file
+has three keys, not that Liquibase 5 would reject one of them (BC-07's actual risk). The only test that
+would mean anything here needs Liquibase itself to run against this properties file, which is IT-tier
+(needs `CPP_DOCKER_DIR`) per this story's own depth model. Recorded in the checklist as a Bucket-B-style
+check (⚪), not authored-not-executed (🟡) — there is no unit-tier version of this pin worth writing in
+the meantime.
 
 ### BC-08 — annotate, do not author
 

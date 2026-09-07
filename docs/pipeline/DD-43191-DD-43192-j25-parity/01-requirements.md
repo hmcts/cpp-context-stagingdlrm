@@ -163,9 +163,16 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   (pojo, catalog, messaging-client, rest-client) plus RAML. The `reflections` 0.9.10→0.10.2 scanning
   contract change alters what is discovered. Assert the **set of generated types** the build is
   expected to produce, so a silently smaller set fails rather than surfacing as a missing bean later.
-- **FR13 — BC-07: pin the Liquibase property set.** Liquibase 4→5 rejects properties it removed, as a
-  pre-install migration-job failure — a deploy blocker, not a behaviour change. Assert the key set
-  present in `liquibase.properties` so an unsupported key is caught in `mvn test`, not in a K8s job.
+- **FR13 — BC-07: record the Liquibase property-set risk; do not author a unit test that doesn't
+  actually pin it.** Liquibase 4→5 rejects properties it removed, as a pre-install migration-job
+  failure — a deploy blocker, not a behaviour change, and genuinely live here: `liquibase.properties`
+  is bundled into `stagingdlrm-viewstore-liquibase.jar` and executed by `docker/scripts/liquibase.sh` at
+  container startup. A plain `Properties.load()`-based unit test only proves the file's key set, which
+  is identical on J17 and J25 regardless of Liquibase's own version — it does not exercise Liquibase's
+  property-validation logic, so it cannot actually catch the divergence. The only test that would mean
+  anything here needs Liquibase itself to run, which is IT-tier per this story's own depth model.
+  Record the risk, the key set, and the reasoning in the checklist as a Bucket-B-style check; do not
+  author a unit test that reads as a pin but doesn't function as one.
 - **FR14 — BC-08: annotate, do not author.** The repo's only `ZonedDateTime` is in an event-processor
   **test helper**. Annotate the existing coverage as already pinning J17 behaviour (📝) and record why
   no new test is warranted. Authoring a parity test around a test helper asserts the fixture, not the
@@ -197,7 +204,7 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 ## Acceptance criteria
 
 - **AC1** — Each of the nine Bucket A items has either a test executed green on J17 (🟢), or a
-  checklist row explaining why it is 📝 or 🔴, with a named reason. No item is silently absent.
+  checklist row explaining why it is 📝, ⚪ or 🔴, with a named reason. No item is silently absent.
 - **AC2** — `mvn clean install -DskipITs` passes on `main` with JDK 17, with every new test executing
   (not skipped, not disabled).
 - **AC3** — The BC-13 and DLRM-01 numeric-literal tables each exist, are separate, cover the seven
@@ -285,9 +292,12 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    testable only as far as that mock allows. Establish whether the parse outcomes can be observed at
    the validator, or whether `TimerTriggerJava` is the necessary entry point — this determines whether
    FR6 is one test class or two.
-3. **Choose the instrument for FR11, FR12, FR13.** These are build-time facts. A unit test, a
+3. **Choose the instrument for FR11 and FR12.** These are build-time facts. A unit test, a
    `maven-enforcer` rule and a small script are all viable and have very different maintenance costs.
-   Pick one instrument for all three rather than three different ones.
+   Pick one instrument for both rather than two different ones. **FR13 is different in kind, not just
+   depth**: its real risk only manifests when Liquibase itself parses the properties file, so no
+   build-time unit-test instrument actually pins it — don't reach for the same instrument here by
+   analogy with FR11/FR12; record the risk instead (see FR13).
 4. **Verify FR8's call site fresh, don't assume it still matches this document.** Code moves between
    stage 1 and stage 4; confirm `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload`
    still builds its payload via `JsonObjects.createObjectBuilder()` with a nullable value before writing

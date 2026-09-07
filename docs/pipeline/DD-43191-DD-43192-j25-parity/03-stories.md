@@ -28,9 +28,13 @@
 - `Bc21MessagingClientGenerationParityTest`.
 - Acceptance: FR12, AC1.
 
-## T7 — `stagingdlrm-viewstore-liquibase`: BC-07
-- `LiquibasePropertiesParityTest`.
-- Acceptance: FR13, AC1.
+## T7 — `stagingdlrm-viewstore-liquibase`: BC-07 — no unit-level pin, recorded as a check
+- A `Properties.load()` unit test was authored, then removed - it doesn't exercise Liquibase's own
+  property-validation logic, only that the file has 3 keys (true on both J17 and J25 regardless of
+  Liquibase's version). The changelog it points at is also empty (a separate, pre-existing fact).
+  Recorded in `docs/j25-parity-checklist.md` as a Bucket-B-style check (⚪) with the reasoning, not a
+  unit test - a meaningful pin needs Liquibase itself to run, which is IT-tier.
+- Acceptance: FR13 revised (see `01-requirements.md`), AC1.
 
 ## T8 — `stagingdlrm-event-processor`: BC-08
 - Javadoc annotation on `ObjectBuilder.buildMetaData`; no new test.

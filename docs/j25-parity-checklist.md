@@ -28,7 +28,7 @@
 | BC-21 (messaging-client-generator-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — RAML-driven messaging client | `Bc21MessagingClientGenerationParityTest` (`stagingdlrm-command-api`) — asserts `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client, via reflection | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=Bc21MessagingClientGenerationParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
 | BC-21 (pojo-generation-plugin) | medium | Codegen — POJO generation from JSON schema | Not instrumented — see note below | 🟡 | Not authored |
 | BC-21 (rest-client-generator-plugin) | medium | Codegen — RAML-driven REST client | Not instrumented — see note below | 🟡 | Not authored |
-| BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | `LiquibasePropertiesParityTest` — pins the exact key set (`changelogFile`, `liquibase.hub.mode`, `liquibase.headless`) and their J17 values | 🟢 | `mvn -o test -pl stagingdlrm-viewstore/stagingdlrm-viewstore-liquibase -Dtest=LiquibasePropertiesParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
+| BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | None — a plain `Properties.load()` unit test was authored, then removed: it only reads the file's key set, which is true on both J17 and J25 and doesn't exercise Liquibase's own property-validation logic at all. Pinning the *real* risk (Liquibase 5 rejecting `liquibase.hub.mode`) needs Liquibase itself to run, which is IT-tier (needs Docker) — see the note below | ⚪ | Not applicable — see note below |
 | BC-08 | thin | Jackson `'Z'` → `ZoneOffset.UTC` — the repo's only `ZonedDateTime` is in an event-processor **test helper** (`ObjectBuilder.buildMetaData`), not product code | Annotated in place (Javadoc naming BC-08 and FR14) rather than a new test | 📝 | N/A — no new test; existing `StagingDlrmEventProcessorTest` coverage already exercises the annotated helper |
 
 **BC-11 note.** Unlike the earlier DD-43192 attempts, this pass's `00-input-brief.md` and
@@ -38,6 +38,30 @@
 `javax.json` coordinate inventory across the modules that declare it (`command-handler`,
 `event-listener`, `domain-event`, `domain-aggregate`, `azure-functions`) remains true classpath fact but
 is not, on its own, evidence of a behavioural difference.
+
+**BC-07 note.** `liquibase/stagingdlrm.xml` (the changelog this module's `liquibase.properties` points
+at) is **empty** — a bare `<databaseChangeLog>` wrapper, no `<changeSet>` elements at all — verified on
+disk 2026-09-07. That is a separate, pre-existing fact from BC-07 itself and this story does not fix it
+(FR15/FR18 — pin existing behaviour, don't change it): the `update` command this repo's own
+`docker/scripts/liquibase.sh:35` runs against a real Postgres database as part of container startup
+currently applies zero changesets against `${contextName}viewstore`.
+
+That said, **the config file is genuinely deployed and executed, independent of the changelog being
+empty.** `docker/Dockerfile_stagingdlrm-service:21` bakes `stagingdlrm-viewstore-liquibase.jar`
+(bundling both `liquibase.properties` and the changelog) into the image, and `liquibase.sh` runs it via
+`java -jar stagingdlrm-viewstore-liquibase.jar ... update`, aborting the whole init script on failure.
+BC-07's actual risk — Liquibase 5 rejecting the unsupported `liquibase.hub.mode` key — fires at
+config-parse time, before Liquibase ever looks at whether the changelog has changesets. An empty
+changelog does not insulate this repo from that.
+
+A `Properties.load()` unit test asserting the file's key set was authored and then **removed**: it is
+true on both J17 and J25 regardless of Liquibase's own version, so it never actually exercised Liquibase's
+property-validation logic — it only proved the file has three keys, not that Liquibase 5 would reject one
+of them. A test that actually pins the J17-vs-J25 divergence needs Liquibase itself to run against this
+properties file, which is IT-tier (needs `CPP_DOCKER_DIR`) per this story's own depth model, not a unit
+test. Recorded here as a Bucket-B-style check (⚪) rather than authored-not-executed (🟡), since no
+context-level unit test is possible here — the only version of a test that means anything for this BC
+belongs at the IT tier, which this story does not execute (see the requirements' depth model).
 
 **BC-03 note.** Per both the investigation report and the fleet-wide guide, BC-03 itself (Drools
 recompilation silently flipping allow/deny) is **Refuted** — rules are unchanged and fail-closed. This
@@ -124,6 +148,13 @@ verified fresh against the code on 2026-09-04, matched what both source document
   → `BUILD SUCCESS`, all 22 remaining reactor modules, every new and pre-existing test executing and
   none skipped (2026-09-04). Verified via a clean `git stash` that this artifact-resolution failure is
   pre-existing on `team/25.104.x` and not introduced by this story.
-- **Integration-tier items: none in this repo's Bucket A.** All 9 items land at the unit/component
-  or build-time-assertion tier (per the depth model), so there is no 🟡-authored-not-executed row for
-  an IT-tier item — everything above is 🟢 or 📝, except the two BC-21 generator families explained above.
+- **BC-07's only meaningful pin is IT-tier, and this story does not execute IT-tier items.** A
+  context-level unit test would only prove the properties file has three keys — true regardless of
+  Liquibase's version, so it cannot actually catch the J17→J25 divergence. The real check needs Liquibase
+  itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
+  model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
+  is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
+- **Integration-tier items: none of this repo's Bucket A items land at the IT tier *as unit-executable
+  work*.** BC-07 is the one item whose only meaningful test is IT-tier; it is recorded as a check (⚪),
+  not a 🟡-authored-not-executed unit test, for the reason above. Every other item is 🟢 or 📝, except
+  the two BC-21 generator families explained above.
