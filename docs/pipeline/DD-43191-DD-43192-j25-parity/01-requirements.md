@@ -45,7 +45,7 @@ instead of a suite that keeps passing because none of the framework's own code r
 | Tier | Depth | Rationale |
 |---|---|---|
 | **Unit / component** | Originally **exhaustive** for both primary items (BC-13, DLRM-01): every input class the validator treats differently, accept *and* reject. Both tables were built, run green, and withdrawn (FR5, FR6) — neither primary item has a test any more. Sufficient-branch coverage for the rest still stands. | Fast, in `mvn test`, no environment. The right place for an input matrix, when one exists. |
-| **Build-time assertion** | **Single decisive check** per item (BC-11, BC-21's remaining family). BC-12 and BC-07 originally sat in this tier too; both ended up unpinned by a test, for different reasons — see FR11/FR13. | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
+| **Build-time assertion** | Originally **a single decisive check** per item (BC-11, BC-12, BC-21's `messaging-client-generator-plugin` sub-item). All three were built and run green, then withdrawn — BC-07 never had one to begin with. No item in this tier carries a test any more; see FR8/FR11/FR12/FR13, each withdrawn for its own distinct reason. | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
 | **Integration** | **Authored, not executed.** Any IT-tier item is written and marked 🟡 until Docker and a WildFly image are available. | ITs need `CPP_DOCKER_DIR`; no WildFly 40 image existed as of the investigation report. Blocking this story on that would block the whole epic. |
 
 ## Scope
@@ -160,10 +160,16 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   would compile cleanly and then fail at runtime in Azure with `NoClassDefFoundError` if applied here.
   See [the upgrade-mechanics ADR](../adrs/DD-43191-j25-upgrade-mechanics.md) decision 5 — **its carve-out
   is now the only safeguard**; nothing in this repo's test suite catches a violation of it.
-- **FR12 — BC-21: pin the generated-artefact inventory.** All four generators run in this repo
-  (pojo, catalog, messaging-client, rest-client) plus RAML. The `reflections` 0.9.10→0.10.2 scanning
-  contract change alters what is discovered. Assert the **set of generated types** the build is
-  expected to produce, so a silently smaller set fails rather than surfacing as a missing bean later.
+- **FR12 — BC-21: pin the generated-artefact inventory, where the `reflections` premise actually
+  applies.** *(Revised 2026-09-07 — the `messaging-client-generator-plugin` sub-item was authored, run
+  green, and then withdrawn: re-verifying its own premise by decompiling the generator's full dependency
+  chain found zero use of `org.reflections` anywhere in it, unlike `catalog-generation-plugin` where the
+  library is genuinely bundled and called. See `docs/j25-parity-checklist.md`'s BC-21 note.)* All four
+  generators run in this repo (pojo, catalog, messaging-client, rest-client) plus RAML, but the
+  `reflections` 0.9.10→0.10.2 scanning-contract change this requirement targets only actually applies to
+  `catalog-generation-plugin`'s file-discovery mechanism — confirmed by decompilation, not assumed
+  uniform across all four. No sub-item of BC-21 carries a test any more; each is unpinned for its own
+  distinct, recorded reason.
 - **FR13 — BC-07: record the Liquibase property-set risk; do not author a unit test that doesn't
   actually pin it.** Liquibase 4→5 rejects properties it removed, as a pre-install migration-job
   failure — a deploy blocker, not a behaviour change, and genuinely live here: `liquibase.properties`
@@ -307,13 +313,16 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    `TimerTriggerJava`, ran green, and was then withdrawn (FR6). If a future pass reopens DLRM-01, this
    was the seam choice that worked — don't re-derive it, but do re-confirm FR6's reasoning still holds
    before rebuilding on it.
-3. **FR11 and FR13 both ended up unpinned by a test, for different reasons — don't conflate them.**
+3. **FR11, FR12 and FR13 all ended up unpinned by a test, for different reasons — don't conflate them.**
    FR13 (BC-07) has no test because no unit-tier instrument can actually catch its risk. FR11 (BC-12) had
    a working instrument (a `pom.xml` DOM-parsing unit test, run green) that was withdrawn by explicit
-   decision despite the risk being real and verified. If BC-12 is ever revisited, the instrument choice
-   from the removed test — a unit test, not a `maven-enforcer` rule or script — is still the right
-   answer; only FR13 needed the "no unit-tier instrument exists" reasoning. FR12 (BC-21's remaining
-   family) still uses the same unit-test instrument as BC-12 did.
+   decision despite the risk being real and verified. FR12's `messaging-client-generator-plugin` sub-item
+   had a working instrument too (a reflection-based method-count test, run green), withdrawn because
+   re-verifying its stated premise found the generator never actually used `org.reflections` at all — a
+   third reason again, distinct from both FR11's and FR13's. If BC-12 is ever revisited, the instrument
+   choice from its removed test — a unit test, not a `maven-enforcer` rule or script — is still the right
+   answer; only FR13 needed the "no unit-tier instrument exists" reasoning, and only FR12's
+   messaging-client sub-item needed the "premise doesn't apply to this generator" reasoning.
 4. **FR8's call site was verified fresh at the time — re-verify again if BC-11 is reopened.** Code moves
    between stage 1 and stage 4; the test that was built confirmed
    `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` still built its payload via
@@ -321,10 +330,10 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    don't assume that confirmation still holds without checking again.
 5. **Neither primary item has a test any more — this repo has no "primary item" left to protect.**
    *(Revised 2026-09-07.)* BC-13 (FR5) and DLRM-01 (FR6) were both built, run green, and withdrawn; so
-   was BC-11 (FR8), the one remaining item this note previously pointed to as still tested. If the story
-   is cut further, there is no primary-item test left to sequence first or protect by comparison —
-   BC-03, BC-20 (FR9/FR10) and BC-21's messaging-client half (FR12) are now the only Bucket A items this
-   story actually leaves behind as 🟢.
+   was BC-11 (FR8) and, most recently, BC-21's `messaging-client-generator-plugin` sub-item (FR12) — the
+   one remaining item this note previously pointed to as still tested. If the story is cut further, there
+   is no primary-item test left to sequence first or protect by comparison — BC-03 and BC-20 (FR9/FR10)
+   are now the *only* Bucket A items this story actually leaves behind as 🟢.
 6. **Read `docs/architecture/dlrm-flow-reference.md` before scoping any Function App test.** It is the
    single most detailed map of exactly which class does what at each processing stage, including line
    citations, and prevents re-deriving facts (schema file names, retry/outcome-write branching) that are

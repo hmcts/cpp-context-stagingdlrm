@@ -25,7 +25,7 @@
 | BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | `AccessControlRuleCountTest` — loads `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` directly (a `StatelessKieSession` does not expose the `KieBase`) and asserts the exact 2-rule name set. Named to match the fleet-wide convention (confirmed in all 13 fleet PRs read for this story, e.g. `system-id-mapper`#27), rather than a bespoke BC-numbered name | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlRuleCountTest` → `Tests run: 1, Failures: 0` (2026-09-07) |
 | BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | None — see note below. (Authored and run green on J17 2026-09-04, then removed 2026-09-07 per decision — not "never written") | ⚪ | Not applicable — see note below |
-| BC-21 (messaging-client-generator-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — RAML-driven messaging client | `Bc21MessagingClientGenerationParityTest` (`stagingdlrm-command-api`) — asserts `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client, via reflection | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=Bc21MessagingClientGenerationParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
+| BC-21 (messaging-client-generator-plugin) | medium | Codegen — RAML-driven messaging client | None — see note below. (Authored and run green on J17 2026-09-04 as `Bc21MessagingClientGenerationParityTest`, asserting `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client via reflection, then removed 2026-09-07 — the test's own stated `reflections` 0.9.10→0.10.2 premise turned out to be false for this generator) | ⚪ | Not applicable — see note below |
 | BC-21 (pojo-generation-plugin) | medium | Codegen — POJO generation from JSON schema | Not instrumented — see note below | 🟡 | Not authored |
 | BC-21 (rest-client-generator-plugin) | medium | Codegen — RAML-driven REST client | Not instrumented — see note below | 🟡 | Not authored |
 | BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | None — a plain `Properties.load()` unit test was authored, then removed: it only reads the file's key set, which is true on both J17 and J25 and doesn't exercise Liquibase's own property-validation logic at all. Pinning the *real* risk (Liquibase 5 rejecting `liquibase.hub.mode`) needs Liquibase itself to run, which is IT-tier (needs Docker) — see the note below | ⚪ | Not applicable — see note below |
@@ -111,17 +111,32 @@ recompilation silently flipping allow/deny) is **Refuted** — rules are unchang
 story's BC-03 row closes a genuine, pre-existing **coverage gap** (the second rule had never been tested
 on any JDK) that happens to share the ticket number; it does not mitigate a live J25 risk.
 
-**BC-21 note.** One of the four generator plugin families that run in this repo is instrumented directly
-(🟢 above); three are not (🟡):
+**BC-21 note.** None of the four generator plugin families that run in this repo carries a test any
+more — each for its own distinct reason:
 
 - `catalog-generation-plugin` (`stagingdlrm-domain-value-schema`) — a schema-file-count vs.
   catalogue-entry-count test was authored, and investigated in depth: the plugin's actual file-discovery
   class (`generator-io-utils`'s `FileTreeScanner`, decompiled to check) does genuinely bundle and call
   `org.reflections.Reflections` (`ResourcesScanner`, `ConfigurationBuilder`), so BC-21's premise is not
-  unfounded. **Decision: not needed** — the schema `.json` files this catalogue is generated from will
-  still be present, under the same paths, through the J25 upgrade; there is no file-removal or
+  unfounded here. **Decision: not needed** — the schema `.json` files this catalogue is generated from
+  will still be present, under the same paths, through the J25 upgrade; there is no file-removal or
   file-relocation scenario for the generator to silently mishandle here, so a count-parity test has
   nothing live to guard against. Removed rather than kept as a speculative check.
+- `messaging-client-generator-plugin` (`stagingdlrm-command-api`) — a RAML-schema-count vs.
+  `@Handles`-method-count test (`Bc21MessagingClientGenerationParityTest`) was authored, ran green on J17
+  (2026-09-04), and asserted a true fact (4 media types in `stagingdlrm-command-handler.messaging.raml`,
+  each `!include`-ing one schema file, one `@Handles` method each). **Removed 2026-09-07 for a different
+  reason than every other BC-21 sub-item:** re-verifying the test's own stated premise (the same
+  `reflections` 0.9.10→0.10.2 scanning-contract risk as `catalog-generation-plugin`) by decompiling every
+  class in this generator's actual dependency chain (`messaging-client-generator`, `generators-commons`,
+  `generators-subscription`, `generator-core` — every jar the plugin pulls in) found **zero** bytecode
+  references to `org.reflections` anywhere. Unlike `catalog-generation-plugin`, this generator reads the
+  command-handler's RAML artifact via an **explicit** Maven dependency (`classifier=raml`, all
+  transitives excluded) and parses it directly — no classpath reflection scan at all. The test's assertion
+  was true, but the risk it claimed to guard against was never real for this generator; what it actually
+  pinned was a RAML-parsing/JavaPoet codegen invariant unrelated to any J25 library bump. Removed because
+  the premise didn't hold, not because the risk was found present-but-unimportant (contrast with
+  `catalog-generation-plugin` above, where the reflections premise *was* confirmed true).
 - `pojo-generation-plugin`'s `pojo-generation-schema` execution in `stagingdlrm-domain-event` scans the
   *entire test classpath* (`sourceDirectory: CLASSPATH`), including `common-core-domain` and
   `criminal-court-public-model` — third-party jars this repo doesn't own. A hard-coded count or manifest
@@ -206,12 +221,14 @@ verified fresh against the code on 2026-09-04, matched what both source document
   Distinct from every other removal in this checklist: BC-11's corrected finding is itself classified
   "Refuted / parity" (identical behaviour on J17 and J25), so its test was arguably never pinning a J25
   upgrade risk in the first place, only a pre-existing, JDK-independent NPE contract.
-- **`stagingdlrm-event-processor`'s `rest-client-generator-plugin` execution is not instrumented.**
-  It depends on `pcfdlrm-command-api` and `progression-query-api` RAML-classified artifacts that
-  are not resolvable in this offline development environment. BC-21's contract is pinned for only 1 of
-  the 4 generator families that run in this repo (`messaging-client-generator-plugin`); the other 3
-  (`catalog-generation-plugin`, `pojo-generation-plugin`, `rest-client-generator-plugin`) are each
-  unpinned for their own distinct reason — see the BC-21 note above.
+- **BC-21 now has no test at all, for any of its four generator families** — see the BC-21 note above.
+  `messaging-client-generator-plugin`'s test is the most recent removal: its assertion was true but its
+  stated risk (reflections scanning-contract change) was verified false for this generator after the
+  fact, a different flavour of gap from the other three families' reasons (schema files not moving;
+  third-party classpath scan; RAML artifacts unresolvable offline). `stagingdlrm-event-processor`'s
+  `rest-client-generator-plugin` execution specifically needs `pcfdlrm-command-api` and
+  `progression-query-api` RAML-classified artifacts that are not resolvable in this offline development
+  environment.
 - **`mvn clean install -DskipITs` (AC2) could not be run for the full reactor in this environment,
   for the same reason** — `stagingdlrm-event-processor` (and its two dependents, `stagingdlrm-service`
   and `stagingdlrm-testharness`) need `uk.gov.moj.cpp.progression:progression-query-api:jar:raml:17.0.297`,
@@ -226,11 +243,15 @@ verified fresh against the code on 2026-09-04, matched what both source document
   itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
   model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
   is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
-- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 3
-  (BC-03, BC-20, BC-21 messaging-client-generator-plugin), 📝 1 (BC-08), ⚪ 6 (BC-13, DLRM-01, BC-11,
-  BC-12, BC-21 catalog-generation-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
-  rest-client-generator-plugin). Of the six ⚪ rows, four (BC-13, BC-21 catalog-generation-plugin, BC-07,
-  and — on the specific grounds that its finding is "Refuted / parity," never a J25 candidate — BC-11)
-  were removed because no live upgrade risk was found to pin; **BC-12 and DLRM-01 are the exceptions** —
-  real, verified-or-plausible risks, removed by explicit decision rather than because the risk was
-  absent (see their notes above).
+- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 2
+  (BC-03, BC-20), 📝 1 (BC-08), ⚪ 7 (BC-13, DLRM-01, BC-11, BC-12, BC-21 catalog-generation-plugin,
+  BC-21 messaging-client-generator-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
+  rest-client-generator-plugin). Of the seven ⚪ rows, five (BC-13, BC-21 catalog-generation-plugin,
+  BC-21 messaging-client-generator-plugin, BC-07, and — on the specific grounds that its finding is
+  "Refuted / parity," never a J25 candidate — BC-11) were removed because no live upgrade risk was found
+  to pin (messaging-client-generator-plugin's case is distinct again within that group: its stated risk
+  was checked and found never to have applied to this generator at all, not merely judged unimportant);
+  **BC-12 and DLRM-01 are the exceptions** — real, verified-or-plausible risks, removed by explicit
+  decision rather than because the risk was absent (see their notes above). With this removal, no BC-21
+  sub-item and no Bucket A item at all in `stagingdlrm-command/stagingdlrm-command-api` carries a test
+  from this story except BC-03 and BC-20.

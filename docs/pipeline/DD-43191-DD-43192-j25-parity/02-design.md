@@ -119,7 +119,7 @@ found absent; it was confirmed concrete first (see above and `docs/j25-parity-ch
 note). The upgrade-mechanics ADR's decision 5 is now the only safeguard against the fleet-wide RESTEasy
 `provided` sweep being wrongly applied to this module.
 
-### BC-21 — pin the generated-artefact inventory by contract, not manifest
+### BC-21 — none of the four generator families carries a test any more, each for its own reason
 
 - **`catalog-generation-plugin`** — **not instrumented.** A schema-file-count vs. catalogue-entry-count
   test was authored and investigated: the plugin's file-discovery class (`generator-io-utils`'s
@@ -128,10 +128,20 @@ note). The upgrade-mechanics ADR's decision 5 is now the only safeguard against 
   generated from will still be present, under the same paths, through the J25 upgrade — there is no
   file-removal/relocation scenario for the generator to silently mishandle here, so a count-parity test
   has nothing live to guard against.
-- **`messaging-client-generator-plugin`** (`stagingdlrm-command-api`) — the generated
+- **`messaging-client-generator-plugin`** (`stagingdlrm-command-api`) — built, verified, then withdrawn
+  for a different reason from every other BC-21 sub-item. The generated
   `RemoteCommandApi2CommandHandlerMessageStagingdlrmStagingdlrmHandlerCommand` carries one `@Handles`
   method per JSON schema under `stagingdlrm-command-handler`'s own `src/raml/json/schema/**` (4 and 4,
-  confirmed). Assert the count match via reflection.
+  confirmed) — a test asserting this count match via reflection (`Bc21MessagingClientGenerationParityTest`)
+  was built and ran green on J17 (2026-09-04). **Removed 2026-09-07** after re-verifying the test's own
+  stated premise — the same `reflections` 0.9.10→0.10.2 scanning-contract risk as
+  `catalog-generation-plugin` — by decompiling every class in this generator's actual dependency chain
+  (`messaging-client-generator`, `generators-commons`, `generators-subscription`, `generator-core`): zero
+  references to `org.reflections` anywhere. This generator reads the command-handler's RAML artifact via
+  an **explicit** Maven dependency (`classifier=raml`, transitives excluded) and parses it directly — no
+  classpath reflection scan. The assertion itself was true (confirmed against the real RAML file: 4 media
+  types, each `!include`-ing one schema), but the risk it was framed around was never real for this
+  generator, so it wasn't pinning a J25-upgrade risk at all.
 - **`pojo-generation-plugin`** — **not instrumented**: its `sourceDirectory` is `CLASSPATH`-wide,
   scanning third-party jars this repo doesn't own.
 - **`rest-client-generator-plugin`** — **not instrumented**, for an environment reason: needs

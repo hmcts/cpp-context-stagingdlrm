@@ -39,9 +39,15 @@
   BC-12 note.
 - Acceptance: FR11 (revised), AC1.
 
-## T6 — `stagingdlrm-command-api`: BC-21 (messaging-client half)
-- `Bc21MessagingClientGenerationParityTest`.
-- Acceptance: FR12, AC1.
+## T6 — `stagingdlrm-command-api`: BC-21 (messaging-client half) — built, verified, withdrawn
+- `Bc21MessagingClientGenerationParityTest` was built and ran green on J17 (2026-09-04) - it asserted a
+  true fact (RAML-schema-count == `@Handles`-method-count, 4 == 4). Removed 2026-09-07 after re-verifying
+  its own stated premise: unlike `catalog-generation-plugin`, decompiling this generator's full
+  dependency chain found zero use of `org.reflections` anywhere in it. The generator reads the
+  command-handler's RAML artifact via an explicit Maven dependency, not a classpath scan, so the
+  `reflections` 0.9.10→0.10.2 risk this test was framed around was never real for it. See
+  `docs/j25-parity-checklist.md`'s BC-21 note.
+- Acceptance: FR12 (revised), AC1.
 
 ## T7 — `stagingdlrm-viewstore-liquibase`: BC-07 — no unit-level pin, recorded as a check
 - A `Properties.load()` unit test was authored, then removed - it doesn't exercise Liquibase's own
