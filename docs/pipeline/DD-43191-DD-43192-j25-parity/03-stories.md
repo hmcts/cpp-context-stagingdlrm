@@ -17,7 +17,7 @@
 - Acceptance: FR8, AC1, AC5.
 
 ## T4 — `stagingdlrm-command-api`: BC-03 + BC-20
-- `AccessControlTest` allow/deny pair for `stagingdlrm.receive-error-migrated-case-submission`; `Bc20RuleHarnessParityTest`.
+- `AccessControlTest` allow/deny pair for `stagingdlrm.receive-error-migrated-case-submission`; `AccessControlRuleCountTest` (named to match the fleet-wide convention, not a BC-numbered name).
 - Acceptance: FR9, FR10, AC1, AC4.
 
 ## T5 — `stagingdlrm-azure-functions`: BC-12

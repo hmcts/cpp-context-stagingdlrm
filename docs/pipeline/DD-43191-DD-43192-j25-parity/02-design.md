@@ -117,7 +117,8 @@ filter (confirmed indirectly: the existing allow/deny tests only make sense if t
 loaded and firing). This repo does **not** have the "`packages` names the resource folder, DRL declares a
 different `package`" gotcha the fleet-wide guide's `system-doc-generator` entry warns about.
 
-**Design:** `Bc20RuleHarnessParityTest`, loading
+**Design:** `AccessControlRuleCountTest` — named to match the fleet-wide convention (confirmed in all
+13 fleet PRs read for this story), not a bespoke BC-numbered name — loading
 `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` (a
 `StatelessKieSession` does not expose the `KieBase`) and asserting the summed rule count equals exactly
 **2**, named by rule name.

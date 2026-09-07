@@ -13,8 +13,16 @@ import org.kie.api.definition.rule.Rule;
 
 /**
  * BC-20 parity test (see docs/j25-parity-checklist.md). Guards the vacuous-deny failure mode: a
- * {@code KieBase} that silently loads zero rules makes every {@code *RulesTest} deny assertion pass
- * for the wrong reason, indistinguishable from a genuine allow/deny flip.
+ * {@code KieBase} that silently loads zero rules makes every {@code *RulesTest}/{@code AccessControlTest}
+ * deny assertion pass for the wrong reason, indistinguishable from a genuine allow/deny flip.
+ *
+ * <p>Named {@code AccessControlRuleCountTest} to match the fleet-wide convention - confirmed against
+ * the real merged BC-20 guard in every one of the 13 completed contexts read directly for this story
+ * (e.g. {@code system-id-mapper}#27, {@code notification}#38, {@code hearing}#293), all of which use
+ * this exact class name for the same check. This class asserts the exact rule <b>name set</b> rather
+ * than the fleet's more common bare {@code ruleCount > 0} - a strictly stronger pin, since this repo's
+ * rule count and names are both small and stable, and a name-set assertion also catches a rule silently
+ * renamed or duplicated, not just a zero-rule load.
  *
  * <p>Deliberately interrogates the real, classpath-built {@code KieBase} directly rather than the
  * {@code StatelessKieSession} {@code AccessControlTest} uses - per the fleet-wide guide's reusable
@@ -30,7 +38,7 @@ import org.kie.api.definition.rule.Rule;
  * folder, the DRL declares a different {@code package}" gotcha the fleet-wide guide's
  * {@code system-doc-generator} entry warns about - checked, not assumed.
  */
-class Bc20RuleHarnessParityTest {
+class AccessControlRuleCountTest {
 
     private static final String KBASE_NAME = "COMMAND_API";
 
