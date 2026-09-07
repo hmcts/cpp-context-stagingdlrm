@@ -22,7 +22,7 @@
 | **DLRM-01** | primary (see note — no test) | Jackson `ObjectMapper.readTree` parse behaviour (2.12.7→2.21.4) at the Function App gate — not in the 24-BC catalogue (parity-method ADR decision 6) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-11 | **corrected** (parity-method ADR decision 8); see note — no test | `JsonObjects.createObjectBuilder().add(key, null)` throws `NullPointerException` identically on J17 and J25 — a pre-existing latent-bug parity, not a J25 regression | None — see note below | ⚪ | Not applicable — see note below |
 | BC-03 | high (coverage gap, not a live risk — see note) | Drools 7→10 allow/deny — `command-migrate-case-submission-api.drl`, 2 rules, previously only 1 covered | `AccessControlTest` — added `shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` / `shouldNotAllowSystemUserForErrorMigrateCaseSubmission` alongside the pre-existing pair for the first rule | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlTest` → `Tests run: 4, Failures: 0` (2026-09-04) |
-| BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | `AccessControlRuleCountTest` — loads `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` directly (a `StatelessKieSession` does not expose the `KieBase`) and asserts the exact 2-rule name set. Named to match the fleet-wide convention (confirmed in all 13 fleet PRs read for this story, e.g. `system-id-mapper`#27), rather than a bespoke BC-numbered name | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlRuleCountTest` → `Tests run: 1, Failures: 0` (2026-09-07) |
+| BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | None — see note below. (Authored and run green on J17 2026-09-07 as `AccessControlRuleCountTest`, then removed the same day — the test's own mechanism turned out not to guard the risk it was named for) | ⚪ | Not applicable — see note below |
 | BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | None — see note below. (Authored and run green on J17 2026-09-04, then removed 2026-09-07 per decision — not "never written") | ⚪ | Not applicable — see note below |
 | BC-21 (messaging-client-generator-plugin) | medium | Codegen — RAML-driven messaging client | None — see note below. (Authored and run green on J17 2026-09-04 as `Bc21MessagingClientGenerationParityTest`, asserting `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client via reflection, then removed 2026-09-07 — the test's own stated `reflections` 0.9.10→0.10.2 premise turned out to be false for this generator) | ⚪ | Not applicable — see note below |
@@ -110,6 +110,36 @@ belongs at the IT tier, which this story does not execute (see the requirements'
 recompilation silently flipping allow/deny) is **Refuted** — rules are unchanged and fail-closed. This
 story's BC-03 row closes a genuine, pre-existing **coverage gap** (the second rule had never been tested
 on any JDK) that happens to share the ticket number; it does not mitigate a live J25 risk.
+
+**BC-20 note.** `AccessControlRuleCountTest` was built and ran green on J17 (`Tests run: 1, Failures: 0`,
+2026-09-07), then **removed the same day** on re-verification of its own premise — a different kind of
+finding from every other removal in this checklist: the test's assertion was true, but its actual
+*mechanism* cannot detect the risk it claims to guard, in two compounding ways.
+
+1. **The confirmed defect doesn't exist in this repo's current dependency.** BC-20's investigation
+   describes `BaseDroolsAccessControlTest.setup()` (the shared harness `AccessControlTest` extends) being
+   rewritten into a hand-rolled `kmodule.xml`/`.drl` loader with a missing `else` branch for `jar:`-resolved
+   resources — silently building a zero-rule `KieBase`. Decompiling this repo's actually-resolved
+   `access-control-test-utils:17.104.1` (`javap -p -c` on `BaseDroolsAccessControlTest.class`) shows its
+   `setup()` is still the original, safe one-liner: `KieServices.get().getKieClasspathContainer()` →
+   `newStatelessKieSession(...)`. The defective rewrite exists only in the platform's J25-line fork of
+   this framework library (`cpp-platform-libraries`, out of this story's scope per FR18) — this repo
+   hasn't pulled it in.
+2. **Even if that dependency were bumped, this test wouldn't notice.** `AccessControlRuleCountTest` calls
+   `KieServices.get().getKieClasspathContainer()` **directly**, entirely bypassing
+   `BaseDroolsAccessControlTest`. `AccessControlTest` — the class actually exposed to BC-20's risk, since
+   it extends the harness — builds its session through the harness's own (separate, potentially
+   defective) code path instead. Testing one tells you nothing about the other: if
+   `access-control-test-utils` is later bumped to the defective version, `AccessControlTest`'s deny
+   assertions could start passing vacuously while `AccessControlRuleCountTest` keeps passing right
+   alongside it, unaffected — a false "all clear," not a guard. The investigation report itself locates
+   the real fix inside `BaseDroolsAccessControlTest.setup()` (a framework-level fix in
+   `access-control-test-utils`), not a per-context test, for exactly this reason.
+
+All 13 fleet PRs read for this story use this same direct-`getKieClasspathContainer()` pattern under this
+same class name — so this may be a fleet-wide blind spot, not one specific to this repo's test. That
+observation is recorded here for whoever next touches BC-20 fleet-wide; it is not this story's to fix
+(`access-control-test-utils` is a framework repository, out of scope per FR18).
 
 **BC-21 note.** None of the four generator plugin families that run in this repo carries a test any
 more — each for its own distinct reason:
@@ -222,13 +252,19 @@ verified fresh against the code on 2026-09-04, matched what both source document
   "Refuted / parity" (identical behaviour on J17 and J25), so its test was arguably never pinning a J25
   upgrade risk in the first place, only a pre-existing, JDK-independent NPE contract.
 - **BC-21 now has no test at all, for any of its four generator families** — see the BC-21 note above.
-  `messaging-client-generator-plugin`'s test is the most recent removal: its assertion was true but its
-  stated risk (reflections scanning-contract change) was verified false for this generator after the
-  fact, a different flavour of gap from the other three families' reasons (schema files not moving;
-  third-party classpath scan; RAML artifacts unresolvable offline). `stagingdlrm-event-processor`'s
+  `messaging-client-generator-plugin`'s test was one removal: its assertion was true but its stated risk
+  (reflections scanning-contract change) was verified false for this generator after the fact, a
+  different flavour of gap from the other three families' reasons (schema files not moving; third-party
+  classpath scan; RAML artifacts unresolvable offline). `stagingdlrm-event-processor`'s
   `rest-client-generator-plugin` execution specifically needs `pcfdlrm-command-api` and
   `progression-query-api` RAML-classified artifacts that are not resolvable in this offline development
   environment.
+- **BC-20 has no test at all, for a third distinct flavour of reason** — see the dedicated BC-20 note
+  above. Its assertion was true, but its mechanism (`getKieClasspathContainer()` called directly) neither
+  encounters the confirmed defect (this repo's dependency doesn't carry it) nor would notice it if a
+  future dependency bump introduced it (the test bypasses `BaseDroolsAccessControlTest` entirely, so it
+  can't observe a defect confined to that class's own loading path). **With this gone, BC-03 is the only
+  Bucket A item left carrying a 🟢 in this checklist.**
 - **`mvn clean install -DskipITs` (AC2) could not be run for the full reactor in this environment,
   for the same reason** — `stagingdlrm-event-processor` (and its two dependents, `stagingdlrm-service`
   and `stagingdlrm-testharness`) need `uk.gov.moj.cpp.progression:progression-query-api:jar:raml:17.0.297`,
@@ -243,15 +279,17 @@ verified fresh against the code on 2026-09-04, matched what both source document
   itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
   model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
   is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
-- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 2
-  (BC-03, BC-20), 📝 1 (BC-08), ⚪ 7 (BC-13, DLRM-01, BC-11, BC-12, BC-21 catalog-generation-plugin,
-  BC-21 messaging-client-generator-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
-  rest-client-generator-plugin). Of the seven ⚪ rows, five (BC-13, BC-21 catalog-generation-plugin,
+- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 1
+  (BC-03), 📝 1 (BC-08), ⚪ 8 (BC-13, DLRM-01, BC-11, BC-12, BC-21 catalog-generation-plugin,
+  BC-21 messaging-client-generator-plugin, BC-20, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
+  rest-client-generator-plugin). Of the eight ⚪ rows, five (BC-13, BC-21 catalog-generation-plugin,
   BC-21 messaging-client-generator-plugin, BC-07, and — on the specific grounds that its finding is
   "Refuted / parity," never a J25 candidate — BC-11) were removed because no live upgrade risk was found
   to pin (messaging-client-generator-plugin's case is distinct again within that group: its stated risk
   was checked and found never to have applied to this generator at all, not merely judged unimportant);
   **BC-12 and DLRM-01 are the exceptions** — real, verified-or-plausible risks, removed by explicit
-  decision rather than because the risk was absent (see their notes above). With this removal, no BC-21
-  sub-item and no Bucket A item at all in `stagingdlrm-command/stagingdlrm-command-api` carries a test
-  from this story except BC-03 and BC-20.
+  decision rather than because the risk was absent; **BC-20 is a fourth, distinct flavour again** — its
+  risk is real fleet-wide, but its own test's mechanism cannot detect it in this repo, whether or not the
+  underlying dependency is ever bumped (see its dedicated note above). With this removal, **BC-03's two
+  added tests in `AccessControlTest` are the only 🟢 this story leaves behind anywhere in the repo** —
+  every other Bucket A item is either 📝, ⚪, or 🟡.

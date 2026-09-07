@@ -27,9 +27,16 @@
   was never really a J25-divergence candidate. See the checklist's BC-11 note.
 - Acceptance: FR8 (revised), AC1, AC5 (withdrawn).
 
-## T4 — `stagingdlrm-command-api`: BC-03 + BC-20
-- `AccessControlTest` allow/deny pair for `stagingdlrm.receive-error-migrated-case-submission`; `AccessControlRuleCountTest` (named to match the fleet-wide convention, not a BC-numbered name).
-- Acceptance: FR9, FR10, AC1, AC4.
+## T4 — `stagingdlrm-command-api`: BC-03 (kept) + BC-20 (built, verified, withdrawn)
+- `AccessControlTest` allow/deny pair for `stagingdlrm.receive-error-migrated-case-submission` - this
+  survived every review pass and is the *only* 🟢 this story leaves behind anywhere in the repo.
+- `AccessControlRuleCountTest` (named to match the fleet-wide convention, not a BC-numbered name) was
+  built and ran green on J17 (2026-09-07), then withdrawn the same day: it called
+  `getKieClasspathContainer()` directly, bypassing `BaseDroolsAccessControlTest` (the harness
+  `AccessControlTest` actually extends) entirely - so it could not detect BC-20's confirmed risk even in
+  principle, whether or not `access-control-test-utils` is ever bumped to the defective version. See
+  `docs/j25-parity-checklist.md`'s BC-20 note.
+- Acceptance: FR9, FR10 (revised), AC1, AC4 (revised).
 
 ## T5 — `stagingdlrm-azure-functions`: BC-12 - built, verified, withdrawn by decision
 - `Bc12RestEasyPackagingParityTest` was built and ran green on J17, then removed on direct instruction -

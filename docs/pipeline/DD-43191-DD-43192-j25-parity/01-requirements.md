@@ -60,9 +60,10 @@ instead of a suite that keeps passing because none of the framework's own code r
   validates `case.json`/`manifest.json` against `stagingdlrm.case-submission.json` /
   `stagingdlrm.manifest.json`; `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` (§2.4,
   §5) is BC-11's real call site
-- `stagingdlrm-command/stagingdlrm-command-api` — access-control DRL and its harness (BC-03, BC-20).
-  `docs/architecture/material-file-flow.md` §3 confirms `stagingdlrm.receive-migrated-case-submission` is
-  system-user-only ACL; the untested rule gates the sibling error-path command
+- `stagingdlrm-command/stagingdlrm-command-api` — access-control DRL (BC-03 only; BC-20's harness
+  rule-count test was built, run green, then withdrawn — see FR10). `docs/architecture/material-file-flow.md`
+  §3 confirms `stagingdlrm.receive-migrated-case-submission` is system-user-only ACL; the untested rule
+  gates the sibling error-path command
 - `stagingdlrm-viewstore/stagingdlrm-viewstore-liquibase` — `liquibase.properties` (BC-07)
 - `stagingdlrm-event/stagingdlrm-event-processor` — the single `ZonedDateTime` site (BC-08)
 - Module POMs — `javax.json` coordinate inventory (background only, see FR8) and generator-plugin
@@ -147,9 +148,19 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   BC-03 *itself* (Drools recompilation flipping allow/deny) is independently **Refuted** by both the
   investigation report and the fleet-wide guide; this requirement's value is the coverage gap, not risk
   mitigation.
-- **FR10 — BC-20: prove the rule harness is not vacuous.** Assert a **non-zero loaded rule count** for
-  the command-API knowledge base. Without it, a J25 zero-rule load presents as a passing deny test and
-  is indistinguishable from a BC-03 allow/deny flip.
+- **FR10 — BC-20: recorded, not pinned by a test.** *(Revised 2026-09-07 — `AccessControlRuleCountTest`
+  was authored, run green on J17, and then withdrawn on re-verifying its own premise; see
+  `docs/j25-parity-checklist.md`'s BC-20 note.)* The confirmed defect lives inside
+  `BaseDroolsAccessControlTest.setup()` (the shared harness `AccessControlTest` extends) in a J25-line
+  fork of `access-control-test-utils` this repo hasn't pulled in — decompiling this repo's actually
+  resolved `access-control-test-utils:17.104.1` shows the safe original one-liner
+  (`getKieClasspathContainer()`), not the defective hand-rolled rewrite. The withdrawn test also called
+  `getKieClasspathContainer()` directly, bypassing the harness entirely — so even had the dependency
+  carried the defect, this test's own mechanism would not have detected it: it exercises a different code
+  path from the one `AccessControlTest` (the class actually exposed to the risk) uses. The real fix
+  belongs inside `BaseDroolsAccessControlTest.setup()` itself, a framework-level change to
+  `access-control-test-utils` — out of scope here (FR18); this repo has no context-level instrument that
+  would actually close this gap.
 - **FR11 — BC-12: recorded, not pinned by a test.** *(Revised 2026-09-07 — a build-time assertion was
   authored, run green on J17, and then withdrawn by explicit decision — not because the risk was found
   absent; see `docs/j25-parity-checklist.md`'s BC-12 note.)* The func-app carries four compile-scope
@@ -218,8 +229,9 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   (not skipped, not disabled).
 - **AC3** — **Withdrawn.** *(Revised 2026-09-07 — required a DLRM-01 numeric-literal table; that table
   was authored, run green, and removed. See FR6.)*
-- **AC4** — Both rules in `command-migrate-case-submission-api.drl` have a passing allow case and a
-  passing deny case, and the command-API knowledge base asserts a non-zero rule count.
+- **AC4** — *(Revised 2026-09-07 — narrowed to its BC-03 half; the rule-count clause is withdrawn, see
+  FR10.)* Both rules in `command-migrate-case-submission-api.drl` have a passing allow case and a passing
+  deny case.
 - **AC5** — **Withdrawn.** *(Revised 2026-09-07 — required a BC-11 test pinning the corrected
   `JsonObjectBuilder` null-value NPE parity; that test was authored, run green, and removed. See FR8.)*
 - **AC6** — **Withdrawn.** *(Revised 2026-09-07 — required the Function App gate's accept/reject paths
@@ -328,22 +340,29 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` still built its payload via
    `JsonObjects.createObjectBuilder()` with a nullable value, ran green, and was then withdrawn (FR8) —
    don't assume that confirmation still holds without checking again.
-5. **Neither primary item has a test any more — this repo has no "primary item" left to protect.**
-   *(Revised 2026-09-07.)* BC-13 (FR5) and DLRM-01 (FR6) were both built, run green, and withdrawn; so
-   was BC-11 (FR8) and, most recently, BC-21's `messaging-client-generator-plugin` sub-item (FR12) — the
-   one remaining item this note previously pointed to as still tested. If the story is cut further, there
-   is no primary-item test left to sequence first or protect by comparison — BC-03 and BC-20 (FR9/FR10)
-   are now the *only* Bucket A items this story actually leaves behind as 🟢.
+5. **Neither primary item has a test any more — this repo has no "primary item" left to protect, and its
+   Bucket A tail has narrowed to one item.** *(Revised 2026-09-07.)* BC-13 (FR5) and DLRM-01 (FR6) were
+   both built, run green, and withdrawn; so were BC-11 (FR8) and BC-21's `messaging-client-generator-plugin`
+   sub-item (FR12); so, most recently, was BC-20 (FR10) — its test's own mechanism turned out unable to
+   detect the risk it was named for, a different reason again from every prior withdrawal (see the
+   checklist's BC-20 note). If the story is cut further there is nothing left to cut but BC-03 — **it is
+   now the *only* Bucket A item this story leaves behind as 🟢.**
 6. **Read `docs/architecture/dlrm-flow-reference.md` before scoping any Function App test.** It is the
    single most detailed map of exactly which class does what at each processing stage, including line
    citations, and prevents re-deriving facts (schema file names, retry/outcome-write branching) that are
    already documented.
-7. **Name the BC-20 test `AccessControlRuleCountTest`, not a BC-numbered name.** Every one of the 13
-   fleet PRs read for this story that includes a BC-20 guard uses this exact class name (confirmed from
-   `system-id-mapper`#27's real merged file), with a single
-   `kieBaseShouldCompileAtLeastOneRule()`-style test asserting
-   `KieServices.get().getKieClasspathContainer().getKieBase(name).getKiePackages()...sum() > 0`. This
-   requirements document does not prescribe class names as a rule (see the header note), but this one
-   naming choice is worth calling out explicitly: a reviewer familiar with the fleet's other ~12 parity
-   PRs will look for this exact name, and a differently-named class doing the same job reads as a
-   bespoke, unreviewed pattern rather than the fleet's own established one.
+7. **If BC-20 is ever reopened here, name the test `AccessControlRuleCountTest` — but design its
+   mechanism to actually exercise `BaseDroolsAccessControlTest`, not `getKieClasspathContainer()` in
+   isolation.** *(Revised 2026-09-07.)* Every one of the 13 fleet PRs read for this story that includes a
+   BC-20 guard uses this exact class name (confirmed from `system-id-mapper`#27's real merged file), with
+   a single `kieBaseShouldCompileAtLeastOneRule()`-style test asserting
+   `KieServices.get().getKieClasspathContainer().getKieBase(name).getKiePackages()...sum() > 0` — this
+   repo's own version of that pattern was built, run green, and then withdrawn on re-verification: it
+   calls `getKieClasspathContainer()` directly, which neither encounters this repo's current (safe)
+   `access-control-test-utils:17.104.1` dependency's defect-free harness nor would notice a future
+   version's defect, because `AccessControlTest` (the class actually exposed to BC-20's risk) builds its
+   session through `BaseDroolsAccessControlTest`'s own separate code path instead. If this is reopened, a
+   test worth keeping would need to observe rule counts *through* the harness `AccessControlTest` itself
+   uses, not bypass it — the fleet's own convention across all 13 PRs read for this story may share this
+   same blind spot, so copying it uncritically would reproduce the same gap. See the checklist's dedicated
+   BC-20 note before rebuilding.

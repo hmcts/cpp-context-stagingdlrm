@@ -88,7 +88,7 @@ pre-existing coverage gap that shares the ticket number, not a J25-risk mitigati
 `shouldNotAllowSystemUserForErrorMigrateCaseSubmission` to `AccessControlTest`, mirroring the existing
 pair exactly.
 
-### BC-20 — prove the rule harness is not vacuous
+### BC-20 — built, verified, then withdrawn: the mechanism can't detect its own risk (see FR10)
 
 **Verified:** `kmodule.xml` declares `kbase name="COMMAND_API"
 packages="uk.gov.moj.cpp.stagingdlrm.command.api.accesscontrol"`; the DRL has no explicit `package`
@@ -97,11 +97,26 @@ filter (confirmed indirectly: the existing allow/deny tests only make sense if t
 loaded and firing). This repo does **not** have the "`packages` names the resource folder, DRL declares a
 different `package`" gotcha the fleet-wide guide's `system-doc-generator` entry warns about.
 
-**Design:** `AccessControlRuleCountTest` — named to match the fleet-wide convention (confirmed in all
-13 fleet PRs read for this story), not a bespoke BC-numbered name — loading
+`AccessControlRuleCountTest` — named to match the fleet-wide convention (confirmed in all 13 fleet PRs
+read for this story), not a bespoke BC-numbered name — was built loading
 `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` (a
 `StatelessKieSession` does not expose the `KieBase`) and asserting the summed rule count equals exactly
-**2**, named by rule name.
+**2**, named by rule name. Ran green on J17 (2026-09-07).
+
+**Removed the same day**, on re-verifying the test's own premise rather than trusting the fleet
+convention it copied. BC-20's confirmed mechanism is a hand-rolled `kmodule.xml`/`.drl` loader inside
+`BaseDroolsAccessControlTest.setup()` (the shared harness `AccessControlTest` extends) that silently
+builds a zero-rule `KieBase` for `jar:`-resolved resources. Two things this test missed: (1) decompiling
+this repo's actually-resolved `access-control-test-utils:17.104.1` shows `setup()` is still the original
+safe one-liner (`getKieClasspathContainer()`) — the defective rewrite is confined to a J25-line fork of
+that framework library this repo hasn't pulled in; (2) `AccessControlRuleCountTest` called
+`getKieClasspathContainer()` **directly**, bypassing `BaseDroolsAccessControlTest` entirely — so even if
+that dependency were bumped to the defective version, this test's own mechanism would never observe it,
+because it doesn't exercise the harness's loading path at all. The design flaw: testing Drools's own
+classpath-container API tells you nothing about a defect confined to a separate, hand-rolled loader
+inside the test harness. A test worth keeping here would need to observe rule counts *through*
+`BaseDroolsAccessControlTest` itself, not around it — not attempted in this pass. See
+`01-requirements.md`'s FR10 and the checklist's BC-20 note.
 
 ### BC-12 — built, verified, then withdrawn by decision despite the risk being real (see FR11)
 
