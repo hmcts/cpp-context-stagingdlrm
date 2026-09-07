@@ -24,32 +24,38 @@ so there is nothing live for a strictness test to catch here. Both files are rec
 (commit `a3fa641` on this branch) if a future story reopens BC-13 — see `01-requirements.md` design note 1
 before rebuilding rather than assuming the old design still applies.
 
-### DLRM-01 (primary) — Jackson parse behaviour at the Function App gate
+### DLRM-01 (primary) — built, verified, then withdrawn (see FR6)
 
-**Module:** `stagingdlrm-azure-functions`. **Seam:** `JsonSchemaValidator.validate()`
+**Module:** `stagingdlrm-azure-functions`. **Seam (verified):** `JsonSchemaValidator.validate()`
 (`dlrm-flow-reference.md` §2.3 step 3d, §5) — Jackson's `objectMapper.readTree(payload)` first, an
 explicit array-payload rejection **before** schema validation, then
 `com.networknt.schema.JsonSchema.validate()` (hard-pinned 1.0.83, confirmed in `pom.xml:132` — not
 exposed to J25).
 
-**Extend the existing `JsonSchemaValidatorTest`**, not a new class — it already constructs both the case
-and manifest validators against the real production schema resources and has a passing full-payload
-fixture. Four additions:
+A full design was implemented directly on the existing `JsonSchemaValidatorTest` (not a new class — it
+already constructs both the case and manifest validators against the real production schema resources
+and has a passing full-payload fixture) and run green on J17 (2026-09-04): four additions —
 
 1. **Malformed JSON** → wrapped `RuntimeException` (cause: `JsonProcessingException`).
 2. **Array payload** (`"[]"`) → the specific `RuntimeException("Json Schema validation failed")`.
 3. **Duplicate object keys** → Jackson's `readTree` resolves to the **last** value silently — pinned via
    the manifest's `documentType` field.
 4. **Numeric-literal table on `stagingdlrm.manifest.json`'s `documentType`** (`"type": "integer"`, **no**
-   `maximum` configured), same seven literals. This table stands alone per FR7's revision — BC-13's
-   equivalent table existed briefly (2026-09-04 to 2026-09-07) and genuinely diverged from this one on
-   several literals; that comparison is recorded in the checklist's "Notable J17 findings" as history,
-   not carried forward as a live requirement.
+   `maximum` configured), same seven literals. BC-13's equivalent table existed briefly (2026-09-04 to
+   2026-09-07) and genuinely diverged from this one on several literals; that comparison is recorded in
+   the checklist's "Notable J17 findings" as history.
 
-**Source-system keying:** per the parity-method ADR decision 7, the gate is not source-system-keyed on
-this branch — FR6's "both source systems" clause does not apply; a single gate is pinned once.
+**Removed 2026-09-07** on direct instruction ("this is not part of the java 25 upgrades"): unlike
+BC-13/BC-21's catalog test, this was not a risk-absent finding — the seam is real and code-verified, and
+the Jackson version genuinely does move (2.12.7→2.21.4) behind this exact `readTree` call. The
+`stagingdlrm.case-submission.json` / `stagingdlrm.manifest.json` validation the test targeted was, in
+this case, only ever run once (J17) rather than compared before/after upgrade, so its withdrawal leaves
+this seam recorded but unpinned — see `01-requirements.md`'s FR6 and `docs/j25-parity-checklist.md`'s
+DLRM-01 note. **Source-system keying:** per the parity-method ADR decision 7, the gate is not
+source-system-keyed on this branch regardless — a single gate would have been pinned once had the test
+survived.
 
-### BC-11 (corrected from the outset) — `JsonObjectBuilder` null-value NPE parity
+### BC-11 (corrected from the outset) — built, verified, then withdrawn (see FR8)
 
 **Module:** `stagingdlrm-azure-functions`. **Seam (verified):**
 `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` (`dlrm-flow-reference.md` §2.4,
@@ -58,10 +64,16 @@ this branch — FR6's "both source systems" clause does not apply; a single gate
 parity-method ADR's decision 8 names), with `responseString` reachable as null on the error path
 (§2.6's Path 3 — a direct outcome write when the error POST itself gets a 4xx).
 
-**Design:** one focused test on `StagingDlrmCommandHelperTest` (extend the existing class): call
+One focused test was added to `StagingDlrmCommandHelperTest` (extending the existing class): call
 `generateErrorMigratedCaseSubmissionPayload(...)` with `responseString == null` and assert
-`NullPointerException`. No classpath/`ServiceLoader` inventory test — per ADR decision 8, that would pin
-the wrong, superseded mechanism.
+`NullPointerException`. Ran green on J17 (2026-09-04). No classpath/`ServiceLoader` inventory test was
+ever built — per ADR decision 8, that would have pinned the wrong, superseded mechanism.
+
+**Removed 2026-09-07**, same instruction as DLRM-01 ("this is not part of the java 25 upgrades"). Distinct
+reasoning from DLRM-01, though: BC-11's corrected finding is itself classified "Refuted / parity" — the
+NPE is a pre-existing, JDK-independent contract, not a J25-introduced divergence — so this test was
+arguably never a candidate to catch an upgrade-caused behaviour shift in the first place, only a
+latent-bug parity fact. See `01-requirements.md`'s FR8 and the checklist's BC-11 note.
 
 ### BC-03 — close the access-control branch gap
 
@@ -91,15 +103,21 @@ different `package`" gotcha the fleet-wide guide's `system-doc-generator` entry 
 `StatelessKieSession` does not expose the `KieBase`) and asserting the summed rule count equals exactly
 **2**, named by rule name.
 
-### BC-12 — pin the Function App's RESTEasy packaging expectation
+### BC-12 — built, verified, then withdrawn by decision despite the risk being real (see FR11)
 
 **Verified fresh:** `stagingdlrm-azure-functions/pom.xml` declares exactly 4 `org.jboss.resteasy`
 artifacts, all `4.3.0.Final`, no `<scope>` (compile, the default) — the Function App is a standalone JAR
 (`dlrm-flow-reference.md` §2: "runs outside the WildFly/JMS stack"), not a WAR, so the fleet-wide
-"exclude bundled RESTEasy" fix does **not** apply here.
+"exclude bundled RESTEasy" fix does **not** apply here. `StagingDlrmCommandHelper` genuinely builds a
+JAX-RS `Client` via `ClientBuilder` to POST to `stagingdlrm-command-api` — live production code, so this
+isn't a theoretical exposure.
 
-**Design:** a JUnit test parses `pom.xml` directly (DOM) and asserts exactly 4 `org.jboss.resteasy`
-`<dependency>` elements, none carrying a `<scope>` element. Version is deliberately not asserted.
+A JUnit test parsing `pom.xml` directly (DOM), asserting exactly 4 `org.jboss.resteasy` `<dependency>`
+elements with none carrying a `<scope>` element, was built and run green on J17 (2026-09-04). **Removed
+2026-09-07 on direct instruction** — unlike BC-13/BC-21's catalog test, this was not because the risk was
+found absent; it was confirmed concrete first (see above and `docs/j25-parity-checklist.md`'s BC-12
+note). The upgrade-mechanics ADR's decision 5 is now the only safeguard against the fleet-wide RESTEasy
+`provided` sweep being wrongly applied to this module.
 
 ### BC-21 — pin the generated-artefact inventory by contract, not manifest
 

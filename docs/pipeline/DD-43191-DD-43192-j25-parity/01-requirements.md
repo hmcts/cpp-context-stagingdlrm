@@ -44,8 +44,8 @@ instead of a suite that keeps passing because none of the framework's own code r
 
 | Tier | Depth | Rationale |
 |---|---|---|
-| **Unit / component** | **Exhaustive** for DLRM-01 (this repo's remaining tested primary item): every input class the validator treats differently, accept *and* reject. Sufficient-branch for the rest. BC-13 was originally in this tier too; FR5 records why it no longer has a test. | Fast, in `mvn test`, no environment. The right place for an input matrix. |
-| **Build-time assertion** | **Single decisive check** per item (BC-11, BC-12, BC-21, BC-07). | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
+| **Unit / component** | Originally **exhaustive** for both primary items (BC-13, DLRM-01): every input class the validator treats differently, accept *and* reject. Both tables were built, run green, and withdrawn (FR5, FR6) — neither primary item has a test any more. Sufficient-branch coverage for the rest still stands. | Fast, in `mvn test`, no environment. The right place for an input matrix, when one exists. |
+| **Build-time assertion** | **Single decisive check** per item (BC-11, BC-21's remaining family). BC-12 and BC-07 originally sat in this tier too; both ended up unpinned by a test, for different reasons — see FR11/FR13. | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
 | **Integration** | **Authored, not executed.** Any IT-tier item is written and marked 🟡 until Docker and a WildFly image are available. | ITs need `CPP_DOCKER_DIR`; no WildFly 40 image existed as of the investigation report. Blocking this story on that would block the whole epic. |
 
 ## Scope
@@ -53,8 +53,10 @@ instead of a suite that keeps passing because none of the framework's own code r
 - `stagingdlrm-domain/stagingdlrm-domain-value-schema` — **out of scope.** BC-13's catalogue-tier test
   was built here, ran green on J17, then removed per FR5's revision; the module has zero Java again and
   no code change is expected in it for this story.
-- `stagingdlrm-azure-functions` — the networknt/Jackson gate (DLRM-01), plus BC-11 (corrected) and BC-12
-  surface. `docs/architecture/dlrm-flow-reference.md` §2.3–§2.4 and §6 is the seam map: `JsonSchemaValidator`
+- `stagingdlrm-azure-functions` — **out of scope for new code.** The networknt/Jackson gate (DLRM-01),
+  BC-11 (corrected) and BC-12 each had a test built here, run green on J17, then withdrawn (FR6, FR8,
+  FR11) — the module carries no test-scope change for this story any more. `docs/architecture/dlrm-flow-reference.md`
+  §2.3–§2.4 and §6 remains the seam map for the record: `JsonSchemaValidator`
   validates `case.json`/`manifest.json` against `stagingdlrm.case-submission.json` /
   `stagingdlrm.manifest.json`; `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` (§2.4,
   §5) is BC-11's real call site
@@ -105,38 +107,38 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   `catalog-generation-plugin`. Record the seam, the fact that a test existed and passed on J17, and this
   reasoning in the checklist; do not carry a numeric-literal table or `ClasspathSchemaClient`-style
   `$ref` resolver for this item.
-- **FR6 — DLRM-01: pin parse behaviour at the Function App gate.** The gate's schema library
-  (`com.networknt:json-schema-validator` 1.0.83) is hard-pinned and does **not** move; Jackson
+- **FR6 — DLRM-01: recorded, not pinned by a test.** *(Revised 2026-09-07 — a full test suite was
+  authored, run green on J17, and then withdrawn by explicit instruction: "this is not part of the java
+  25 upgrades." Recorded plainly: unlike BC-11's FR8, DLRM-01's Jackson-version premise was never
+  actually confirmed to diverge on J25 in this repo — only J17 was run, which is this story's own
+  author-then-confirm-at-upgrade method, not a completed before/after comparison.)* The gate's schema
+  library (`com.networknt:json-schema-validator` 1.0.83) is hard-pinned and does **not** move; Jackson
   (2.12.7→2.21.4) does, behind `ObjectMapper.readTree` (`dlrm-flow-reference.md` §2.3 step 3d, §5's
-  `JsonSchemaValidator` row). Pin the gate's observed J17 outcome for:
-  malformed JSON; the **array-payload rejection** the validator performs before schema validation
-  (`JsonSchemaValidator.validate()`'s explicit `isArray()` guard); duplicate object keys; and a
-  numeric-literal table on a field with **no configured `maximum`** (the manifest schema's
-  `documentType`). Cover **both source systems** where
-  the gate is source-system-keyed — [the parity-method ADR](../adrs/DD-43191-j25-parity-method.md)
-  decision 7 records that it is **not**, on this branch; pin the single gate as it stands.
-- **FR7 — DLRM-01's table stands alone.** *(Revised 2026-09-07 — originally required a matching BC-13
-  table asserted separately per FR5; FR5 now records rather than tests, so there is only one table.)*
-  When BC-13's table existed (2026-09-04 to 2026-09-07) it genuinely diverged from DLRM-01's on several
-  literals — recorded as historical context in the checklist's "Notable J17 findings," not as a live
-  requirement any more.
+  `JsonSchemaValidator` row) — the seam remains real and code-verified even with no test pinning it.
+- **FR7 — withdrawn.** *(Revised 2026-09-07.)* Originally required DLRM-01's and BC-13's numeric-literal
+  tables to be asserted separately rather than shared. Both tables have since been removed (FR5, FR6);
+  the finding that they genuinely diverged on several literals while both existed is recorded as
+  historical context in the checklist's "Notable J17 findings," not as a live requirement.
 
 ### C. The remaining items
 
-- **FR8 — BC-11 (corrected): pin `JsonObjectBuilder` null-value NPE parity.** The original 24-BC catalogue
-  and this repo's earlier planning both characterised BC-11 as a JSON-P `ServiceLoader` provider
-  collision, provable by a classpath-resource count across the modules declaring `javax.json`
-  coordinates. **`Parity+Testing+Java17+-_+Java25.pdf`'s BC-11 entry, marked "CORRECTED 2026-08-26",
-  supersedes that hypothesis** (parity-method ADR decision 8): the verified mechanism is that
+- **FR8 — BC-11: recorded, not pinned by a test.** *(Revised 2026-09-07 — a test was authored, run
+  green on J17, and then withdrawn by the same instruction as FR6. Distinct reasoning from FR6, though:
+  BC-11's corrected finding — see below — is itself classified "Refuted / parity," so its test was
+  arguably never a candidate to catch a J25 upgrade difference in the first place, only a pre-existing,
+  JDK-independent contract.)* The original 24-BC catalogue and this repo's earlier planning both
+  characterised BC-11 as a JSON-P `ServiceLoader` provider collision, provable by a classpath-resource
+  count across the modules declaring `javax.json` coordinates. **`Parity+Testing+Java17+-_+Java25.pdf`'s
+  BC-11 entry, marked "CORRECTED 2026-08-26", supersedes that hypothesis** (parity-method ADR decision
+  8): the verified mechanism is that
   `uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder().add(key, null)` throws
   `NullPointerException` identically on J17/glassfish and J25/Parsson — a pre-existing latent-bug parity,
   not a J25 regression. This repo has a real, concrete binding site for the *corrected* mechanism:
   `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` (`dlrm-flow-reference.md` §2.4,
   §5) builds its payload with exactly this framework helper and adds a `responseString` parameter as
   `"errorMessage"` — a value reachable as null on the error path (§2.6's Path 3, the direct-write outcome
-  case). Pin that a null `responseString` throws `NullPointerException` identically — the parity, not a
-  classpath inventory. The `javax.json` coordinate/provider inventory the original hypothesis would have
-  required is **not** the assertion here and should not be built as a substitute or an addition.
+  case). The `javax.json` coordinate/provider inventory the original hypothesis would have required
+  remains **not** the right instrument regardless of whether this item ends up tested or recorded.
 - **FR9 — BC-03: close the access-control branch gap.** `command-migrate-case-submission-api.drl`
   declares **two** rules; `receive-error-migrated-case-submission` has never been tested on any JDK.
   This is the rule gating the error path traced in `dlrm-flow-reference.md` §2.5/§2.6 (schema-validation
@@ -148,13 +150,16 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 - **FR10 — BC-20: prove the rule harness is not vacuous.** Assert a **non-zero loaded rule count** for
   the command-API knowledge base. Without it, a J25 zero-rule load presents as a passing deny test and
   is indistinguishable from a BC-03 allow/deny flip.
-- **FR11 — BC-12: pin the Function App's RESTEasy packaging expectation.** The func-app carries four
-  compile-scope RESTEasy artifacts and, unlike a WAR, has no container to supply them
-  (`dlrm-flow-reference.md` §2 confirms the func-app is a "standalone JAR — runs outside the WildFly/JMS
-  stack"). Record — as a build-time assertion, not prose — that these must remain bundled, so the
-  fleet-wide `provided` + `packagingExcludes` fix cannot later be applied here and turn into a runtime
-  `NoClassDefFoundError` in Azure. See [the upgrade-mechanics ADR](../adrs/DD-43191-j25-upgrade-mechanics.md)
-  decision 5.
+- **FR11 — BC-12: recorded, not pinned by a test.** *(Revised 2026-09-07 — a build-time assertion was
+  authored, run green on J17, and then withdrawn by explicit decision — not because the risk was found
+  absent; see `docs/j25-parity-checklist.md`'s BC-12 note.)* The func-app carries four compile-scope
+  RESTEasy artifacts and, unlike a WAR, has no container to supply them (`dlrm-flow-reference.md` §2
+  confirms the func-app is a "standalone JAR — runs outside the WildFly/JMS stack"; `StagingDlrmCommandHelper`
+  genuinely builds a JAX-RS `Client` via `ClientBuilder` to POST to `stagingdlrm-command-api`, so this is
+  live production code, not a theoretical risk). The fleet-wide `provided` + `packagingExcludes` fix
+  would compile cleanly and then fail at runtime in Azure with `NoClassDefFoundError` if applied here.
+  See [the upgrade-mechanics ADR](../adrs/DD-43191-j25-upgrade-mechanics.md) decision 5 — **its carve-out
+  is now the only safeguard**; nothing in this repo's test suite catches a violation of it.
 - **FR12 — BC-21: pin the generated-artefact inventory.** All four generators run in this repo
   (pojo, catalog, messaging-client, rest-client) plus RAML. The `reflections` 0.9.10→0.10.2 scanning
   contract change alters what is discovered. Assert the **set of generated types** the build is
@@ -205,15 +210,14 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   checklist row explaining why it is 📝, ⚪ or 🔴, with a named reason. No item is silently absent.
 - **AC2** — `mvn clean install -DskipITs` passes on `main` with JDK 17, with every new test executing
   (not skipped, not disabled).
-- **AC3** — DLRM-01's numeric-literal table exists, covers the seven named inputs at minimum, and each
-  input has a **named expected outcome** rather than a "does not throw" assertion. *(Revised
-  2026-09-07 — BC-13's own table is no longer required; see FR5.)*
+- **AC3** — **Withdrawn.** *(Revised 2026-09-07 — required a DLRM-01 numeric-literal table; that table
+  was authored, run green, and removed. See FR6.)*
 - **AC4** — Both rules in `command-migrate-case-submission-api.drl` have a passing allow case and a
   passing deny case, and the command-API knowledge base asserts a non-zero rule count.
-- **AC5** — BC-11's test pins the corrected `JsonObjectBuilder` null-value NPE parity at its real call
-  site (`StagingDlrmCommandHelper`), not a JSON-P provider-resolution count.
-- **AC6** — The Function App gate's accept and reject paths are pinned, including the array-payload
-  rejection and the malformed-JSON parse failure.
+- **AC5** — **Withdrawn.** *(Revised 2026-09-07 — required a BC-11 test pinning the corrected
+  `JsonObjectBuilder` null-value NPE parity; that test was authored, run green, and removed. See FR8.)*
+- **AC6** — **Withdrawn.** *(Revised 2026-09-07 — required the Function App gate's accept/reject paths
+  pinned; DLRM-01's test suite covering this was authored, run green, and removed. See FR6.)*
 - **AC7** — `docs/j25-parity-checklist.md` exists, covers every BC-01..BC-24 plus DLRM-01 with a
   legend mark, and records the exact command and result for every 🟢.
 - **AC8** — Every new test names its BC/DLRM item.
@@ -240,31 +244,39 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 
 ## Risks and notes
 
+- **BC-12 is an unguarded, verified-real risk, not a theoretical one dropped for lack of exposure.**
+  Unlike BC-13/BC-21's catalog test, FR11's removal (2026-09-07) was a deliberate decision made *after*
+  confirming the risk is live: `StagingDlrmCommandHelper` genuinely depends on the bundled RESTEasy
+  artifacts at runtime, and the upgrade-mechanics ADR's decision 5 documents a fleet-wide sweep that
+  would silently break this module if applied here. The only remaining safeguard is that decision being
+  read and followed by whoever performs the upgrade — flag this explicitly to whoever picks up the
+  DD-43192 upgrade stage.
 - **A source document can itself be superseded, and this story has already lived through it once.**
   BC-11's treatment changed between the original investigation report and the later fleet-wide guide.
   Treat every BC entry as a hypothesis to verify against this repo's actual code, not a fact to
   transcribe — and prefer the fleet-wide guide's dated corrections over the original report's verdict
   wherever the two disagree.
-- **DLRM-01 has no precedent anywhere in the fleet.** No other CPP context has an Azure Functions
-  module (confirmed against the 06 Aug 2026 tracker — `stagingdlrm` is the only Azure Functions line
-  item), so no other parity story has pinned a networknt/Jackson gate. There is no reference
-  implementation to copy and no reviewer with prior experience of it. Confirmed directly, not just
-  inferred from the tracker: reading the 13 fleet PRs it cites as completed
+- **DLRM-01 had no precedent anywhere in the fleet, which is part of why it was withdrawn rather than
+  kept.** *(Revised 2026-09-07 — DLRM-01's test suite was built, run green on J17, then removed; this
+  entry is kept as the reasoning that made the withdrawal an easier call, not as live scope.)* No other
+  CPP context has an Azure Functions module (confirmed against the 06 Aug 2026 tracker — `stagingdlrm`
+  is the only Azure Functions line item), so no other parity story had pinned a networknt/Jackson gate;
+  there was no reference implementation to copy and no reviewer with prior experience of it. Confirmed
+  directly, not just inferred from the tracker: reading the 13 fleet PRs cited as completed
   (`notification`#38, `notification-notify`#44, `system-id-mapper`#27, `system-scheduling`#22,
   `system-announcement`#14, `system-doc-generator`#590, `hearing`#293, `listing`#106,
   `mi-reportdata`#587, `work-management-proxy`#29, `businessprocesses`#77, `resulting`#123,
   `users-groups`#217), none attempts a schema-validation numeric-literal matrix at any depth — the
   deepest of them (`users-groups`#217) covers persistence, access-control branch gaps and one Jackson-zone
-  test. **This story's scope is a real outlier against the fleet baseline** (11 of the 13 PRs are a
-  single ~26-line `AccessControlRuleCountTest` and nothing else, even a 37-`@Entity` JPA context once its
-  persistence cluster comes back parity-clean) — and the outlier is earned: stagingdlrm is the only
-  tracked context with an Azure Functions module, its own everit/`org.json` schema catalogue, and its own
-  `liquibase.properties`, none of which the lean fleet contexts carry. `users-groups`#217's own checklist
-  puts BC-07/11/12/13/21 in its *own* "Bucket B — verify once, no per-context test" — a call specific to
-  a persistence-dominated context, not a precedent this repo can lean on.
-- **BC-11's assertion is about a real call site, which is easy to get wrong if copied from another
-  repo without checking.** The parity-method ADR's decision 8 explicitly warns pcfdlrm's own story not
-  to assume the same call-site shape applies there.
+  test. **The withdrawal brings this story's scope back in line with the fleet baseline** rather than
+  leaving it a real outlier: 11 of the 13 PRs are a single ~26-line `AccessControlRuleCountTest` and
+  nothing else, and `users-groups`#217's own checklist puts BC-07/11/12/13/21 in its *own* "Bucket B —
+  verify once, no per-context test" — the same landing spot this story ended up at for those same items,
+  by a different route (built, run green, then withdrawn, rather than never attempted).
+- **BC-11's assertion was about a real call site, which is easy to get wrong if copied from another
+  repo without checking — this still matters even though the test itself was withdrawn.** The parity-method
+  ADR's decision 8 explicitly warns pcfdlrm's own story not to assume the same call-site shape applies
+  there; that warning stands regardless of whether this repo carries a test for it.
 - **BC-21's inventory assertion risks becoming a maintenance burden.** A hard-coded list of every
   generated type will be edited by every future schema change. The design stage should prefer an
   assertion over the generator's *contract* (a count, or the presence of the types a named schema
@@ -289,24 +301,30 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    `$ref`s via the module's own generated `META-INF/schema_catalog.json`) rather than needing
    re-deriving from scratch — but building it back by default, without re-confirming the reasoning in
    FR5 no longer holds, would silently re-widen scope this story deliberately narrowed.
-2. **Decide the DLRM-01 seam.** `JsonSchemaValidator` takes an `ExecutionContext`, so the gate is
-   testable only as far as that mock allows. Establish whether the parse outcomes can be observed at
-   the validator, or whether `TimerTriggerJava` is the necessary entry point — this determines whether
-   FR6 is one test class or two.
-3. **Choose the instrument for FR11 and FR12.** These are build-time facts. A unit test, a
-   `maven-enforcer` rule and a small script are all viable and have very different maintenance costs.
-   Pick one instrument for both rather than two different ones. **FR13 is different in kind, not just
-   depth**: its real risk only manifests when Liquibase itself parses the properties file, so no
-   build-time unit-test instrument actually pins it — don't reach for the same instrument here by
-   analogy with FR11/FR12; record the risk instead (see FR13).
-4. **Verify FR8's call site fresh, don't assume it still matches this document.** Code moves between
-   stage 1 and stage 4; confirm `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload`
-   still builds its payload via `JsonObjects.createObjectBuilder()` with a nullable value before writing
-   the test.
-5. **DLRM-01 is now this repo's only tested primary item.** BC-13 carried real novelty and no fleet
-   precedent existed for either (see the risks section), but only DLRM-01 has a test after FR5's
-   revision. Sequence it first if the story has to be cut further; there is no second primary item's
-   test left to protect by comparison.
+2. **DLRM-01's seam question is moot now — recorded for history only.** *(Revised 2026-09-07.)*
+   `JsonSchemaValidator` takes an `ExecutionContext`, so the gate was testable only as far as that mock
+   allowed; the suite that was built extended `JsonSchemaValidatorTest` directly rather than going via
+   `TimerTriggerJava`, ran green, and was then withdrawn (FR6). If a future pass reopens DLRM-01, this
+   was the seam choice that worked — don't re-derive it, but do re-confirm FR6's reasoning still holds
+   before rebuilding on it.
+3. **FR11 and FR13 both ended up unpinned by a test, for different reasons — don't conflate them.**
+   FR13 (BC-07) has no test because no unit-tier instrument can actually catch its risk. FR11 (BC-12) had
+   a working instrument (a `pom.xml` DOM-parsing unit test, run green) that was withdrawn by explicit
+   decision despite the risk being real and verified. If BC-12 is ever revisited, the instrument choice
+   from the removed test — a unit test, not a `maven-enforcer` rule or script — is still the right
+   answer; only FR13 needed the "no unit-tier instrument exists" reasoning. FR12 (BC-21's remaining
+   family) still uses the same unit-test instrument as BC-12 did.
+4. **FR8's call site was verified fresh at the time — re-verify again if BC-11 is reopened.** Code moves
+   between stage 1 and stage 4; the test that was built confirmed
+   `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload` still built its payload via
+   `JsonObjects.createObjectBuilder()` with a nullable value, ran green, and was then withdrawn (FR8) —
+   don't assume that confirmation still holds without checking again.
+5. **Neither primary item has a test any more — this repo has no "primary item" left to protect.**
+   *(Revised 2026-09-07.)* BC-13 (FR5) and DLRM-01 (FR6) were both built, run green, and withdrawn; so
+   was BC-11 (FR8), the one remaining item this note previously pointed to as still tested. If the story
+   is cut further, there is no primary-item test left to sequence first or protect by comparison —
+   BC-03, BC-20 (FR9/FR10) and BC-21's messaging-client half (FR12) are now the only Bucket A items this
+   story actually leaves behind as 🟢.
 6. **Read `docs/architecture/dlrm-flow-reference.md` before scoping any Function App test.** It is the
    single most detailed map of exactly which class does what at each processing stage, including line
    citations, and prevents re-deriving facts (schema file names, retry/outcome-write branching) that are

@@ -12,21 +12,32 @@
 - Module ends this story exactly as it started: zero Java, no test-scope pom dependencies.
 - Acceptance: FR5 (revised), AC1.
 
-## T2 — `stagingdlrm-azure-functions`: DLRM-01 pins (this repo's only tested primary item)
-- Extend `JsonSchemaValidatorTest`: malformed JSON, array-payload rejection, duplicate-key resolution, `documentType` numeric-literal table.
-- Acceptance: FR6, FR7, AC1, AC3, AC6.
+## T2 — `stagingdlrm-azure-functions`: DLRM-01 — built, verified, withdrawn
+- `JsonSchemaValidatorTest` was extended with malformed JSON, array-payload rejection, duplicate-key
+  resolution and the `documentType` numeric-literal table; ran green on J17 (2026-09-04), then reverted
+  whole-file to its pre-story state (2026-09-07) on direct instruction ("this is not part of the java 25
+  upgrades") - the seam is real and code-verified but is no longer pinned by any test in this repo. See
+  `docs/j25-parity-checklist.md`'s DLRM-01 note.
+- Acceptance: FR6 (revised), FR7 (withdrawn), AC1, AC3 (withdrawn), AC6 (withdrawn).
 
-## T3 — `stagingdlrm-azure-functions`: BC-11 corrected pin
-- Extend `StagingDlrmCommandHelperTest`: null `responseString` → `NullPointerException`.
-- Acceptance: FR8, AC1, AC5.
+## T3 — `stagingdlrm-azure-functions`: BC-11 — built, verified, withdrawn
+- `StagingDlrmCommandHelperTest` was extended with a null-`responseString` → `NullPointerException` test;
+  ran green on J17 (2026-09-04), then reverted whole-file to its pre-story state (2026-09-07), same
+  instruction as T2 - distinct reasoning, though: BC-11's corrected finding is "Refuted / parity", so this
+  was never really a J25-divergence candidate. See the checklist's BC-11 note.
+- Acceptance: FR8 (revised), AC1, AC5 (withdrawn).
 
 ## T4 — `stagingdlrm-command-api`: BC-03 + BC-20
 - `AccessControlTest` allow/deny pair for `stagingdlrm.receive-error-migrated-case-submission`; `AccessControlRuleCountTest` (named to match the fleet-wide convention, not a BC-numbered name).
 - Acceptance: FR9, FR10, AC1, AC4.
 
-## T5 — `stagingdlrm-azure-functions`: BC-12
-- `Bc12RestEasyPackagingParityTest`.
-- Acceptance: FR11, AC1.
+## T5 — `stagingdlrm-azure-functions`: BC-12 - built, verified, withdrawn by decision
+- `Bc12RestEasyPackagingParityTest` was built and ran green on J17, then removed on direct instruction -
+  not because the risk was found absent (it's real: `StagingDlrmCommandHelper` genuinely needs the
+  bundled RESTEasy artifacts at runtime), but as a deliberate scope call. The upgrade-mechanics ADR's
+  decision 5 is now the only safeguard against this regression - see `docs/j25-parity-checklist.md`'s
+  BC-12 note.
+- Acceptance: FR11 (revised), AC1.
 
 ## T6 — `stagingdlrm-command-api`: BC-21 (messaging-client half)
 - `Bc21MessagingClientGenerationParityTest`.

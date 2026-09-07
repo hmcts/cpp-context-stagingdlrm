@@ -19,11 +19,11 @@
 | Item | Weight | Seam | Test(s) | Status | J17 run evidence |
 |---|---|---|---|---|---|
 | **BC-13** | primary (see note — no test) | JSON-schema validation strictness (`org.json` 20231013→20251224, everit) at the schema-catalogue tier — `stagingdlrm-domain-value-schema` | None — see note below | ⚪ | Not applicable — see note below |
-| **DLRM-01** | primary | Jackson `ObjectMapper.readTree` parse behaviour (2.12.7→2.21.4) at the Function App gate — not in the 24-BC catalogue (parity-method ADR decision 6) | 4 tests added to the existing `JsonSchemaValidatorTest`: malformed-JSON parse failure, array-payload rejection (before schema validation runs), duplicate-object-key resolution (Jackson keeps the LAST value silently), and a 7-value numeric-literal table on the manifest schema's `documentType` (no `maximum`, unlike BC-13's field) | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=JsonSchemaValidatorTest` → `Tests run: 9, Failures: 0` (2026-09-04) |
-| BC-11 | **corrected from the outset** (parity-method ADR decision 8) | `JsonObjects.createObjectBuilder().add(key, null)` throws `NullPointerException` identically on J17 and J25 — a pre-existing latent-bug parity, not a J25 regression | `StagingDlrmCommandHelperTest.generateErrorMigratedCaseSubmissionPayloadThrowsNpeParityWhenResponseStringIsNull` — pins the real call site (`StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload`'s `.add("errorMessage", responseString)`, `responseString` reachable as null on the error path per `docs/architecture/dlrm-flow-reference.md` §2.6 Path 3) | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=StagingDlrmCommandHelperTest` → `Tests run: 13, Failures: 0` (2026-09-04) |
+| **DLRM-01** | primary (see note — no test) | Jackson `ObjectMapper.readTree` parse behaviour (2.12.7→2.21.4) at the Function App gate — not in the 24-BC catalogue (parity-method ADR decision 6) | None — see note below | ⚪ | Not applicable — see note below |
+| BC-11 | **corrected** (parity-method ADR decision 8); see note — no test | `JsonObjects.createObjectBuilder().add(key, null)` throws `NullPointerException` identically on J17 and J25 — a pre-existing latent-bug parity, not a J25 regression | None — see note below | ⚪ | Not applicable — see note below |
 | BC-03 | high (coverage gap, not a live risk — see note) | Drools 7→10 allow/deny — `command-migrate-case-submission-api.drl`, 2 rules, previously only 1 covered | `AccessControlTest` — added `shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` / `shouldNotAllowSystemUserForErrorMigrateCaseSubmission` alongside the pre-existing pair for the first rule | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlTest` → `Tests run: 4, Failures: 0` (2026-09-04) |
 | BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | `AccessControlRuleCountTest` — loads `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` directly (a `StatelessKieSession` does not expose the `KieBase`) and asserts the exact 2-rule name set. Named to match the fleet-wide convention (confirmed in all 13 fleet PRs read for this story, e.g. `system-id-mapper`#27), rather than a bespoke BC-numbered name | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlRuleCountTest` → `Tests run: 1, Failures: 0` (2026-09-07) |
-| BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | `Bc12RestEasyPackagingParityTest` — reads `stagingdlrm-azure-functions/pom.xml` directly, asserts exactly 4 `org.jboss.resteasy` deps and no `<scope>` (i.e. compile); version is deliberately not pinned | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=Bc12RestEasyPackagingParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
+| BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | None — see note below. (Authored and run green on J17 2026-09-04, then removed 2026-09-07 per decision — not "never written") | ⚪ | Not applicable — see note below |
 | BC-21 (messaging-client-generator-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — RAML-driven messaging client | `Bc21MessagingClientGenerationParityTest` (`stagingdlrm-command-api`) — asserts `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client, via reflection | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=Bc21MessagingClientGenerationParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
 | BC-21 (pojo-generation-plugin) | medium | Codegen — POJO generation from JSON schema | Not instrumented — see note below | 🟡 | Not authored |
@@ -31,18 +31,27 @@
 | BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | None — a plain `Properties.load()` unit test was authored, then removed: it only reads the file's key set, which is true on both J17 and J25 and doesn't exercise Liquibase's own property-validation logic at all. Pinning the *real* risk (Liquibase 5 rejecting `liquibase.hub.mode`) needs Liquibase itself to run, which is IT-tier (needs Docker) — see the note below | ⚪ | Not applicable — see note below |
 | BC-08 | thin | Jackson `'Z'` → `ZoneOffset.UTC` — the repo's only `ZonedDateTime` is in an event-processor **test helper** (`ObjectBuilder.buildMetaData`), not product code | None — no code change of any kind, including a comment. `ObjectBuilder.java` is otherwise untouched by this story; adding a javadoc note there would be noise on unrelated code, not a pin. The finding is recorded here instead | 📝 | N/A — checked, not assumed: `StagingDlrmEventProcessorTest` only ever uses this `Metadata` as a Mockito stub return value, never serialized through Jackson and never asserted on. There is **no incidental J17 coverage of BC-08 anywhere in this repo** — an earlier version of this row, and a code comment briefly added then removed, both claimed otherwise; corrected 2026-09-07 |
 
-**BC-13 note — this repo's other primary item now has no test.** `Bc13SchemaValidationParityTest`
-(8 tests: required/enum/anyOf/type accept+reject on `case-details.json`, a 7-value numeric-literal table
-on `migrated-hearing.json`'s `durationMinutes`, one parse-vs-validation pair) and its `ClasspathSchemaClient`
-`$ref` resolver were authored and run green on J17 (2026-09-04: `Tests run: 8, Failures: 0`), then
-**removed 2026-09-07** on the same reasoning as BC-21's catalog-generation-plugin test below: the schema
-`.json` files and their content are not changing during the J25 upgrade, so there is no live scenario for
-an everit/`org.json`-strictness test to catch here either. **Unlike BC-21's catalog test, this was this
-story's declared primary item** — the parity-method ADR and both `00-input-brief.md`/`01-requirements.md`
-call BC-13 "primary," the highest-novelty item in this repo's Bucket A. Its removal means **this repo's
-regression gate has zero unit-level coverage of BC-13** going into the upgrade stage; DLRM-01 (the
-Function App's separate networknt/Jackson gate) remains the only primary item with a test. Recorded here
-explicitly so the upgrade story does not assume BC-13 coverage exists because the ADR calls it primary.
+**BC-13 note — this repo's other primary item had no test even before DLRM-01's removal, below.**
+`Bc13SchemaValidationParityTest` (8 tests: required/enum/anyOf/type accept+reject on `case-details.json`,
+a 7-value numeric-literal table on `migrated-hearing.json`'s `durationMinutes`, one parse-vs-validation
+pair) and its `ClasspathSchemaClient` `$ref` resolver were authored and run green on J17 (2026-09-04:
+`Tests run: 8, Failures: 0`), then **removed 2026-09-07** on the same reasoning as BC-21's
+catalog-generation-plugin test below: the schema `.json` files and their content are not changing during
+the J25 upgrade, so there is no live scenario for an everit/`org.json`-strictness test to catch here
+either. The parity-method ADR and both `00-input-brief.md`/`01-requirements.md` call BC-13 "primary," the
+highest-novelty item in this repo's Bucket A — its removal alone would have left DLRM-01 as the sole
+tested primary item; see the DLRM-01 note immediately below for why that is no longer true either.
+
+**DLRM-01 note — this repo's last tested primary item, removed 2026-09-07.** 4 tests added to
+`JsonSchemaValidatorTest` (malformed-JSON parse failure, array-payload rejection, duplicate-object-key
+resolution, a 7-value numeric-literal table on the manifest schema's `documentType`) were authored and
+run green on J17 (`Tests run: 9, Failures: 0`, 2026-09-04), then removed on direct instruction: **"this
+is not part of the java 25 upgrades."** Recorded plainly: unlike BC-11 below, DLRM-01's Jackson-version
+premise (2.12.7→2.21.4) was never actually confirmed to diverge on J25 in this repo — only the J17 side
+was ever run, which is this story's own method (author-then-confirm-at-upgrade), not a completed
+comparison. **With this removal, this repo's regression gate has no tested primary item at all** — both
+BC-13 and DLRM-01, the two items every planning document in this story called "primary," now have zero
+unit-level coverage.
 
 **BC-11 note.** Unlike the earlier DD-43192 attempts, this pass's `00-input-brief.md` and
 `01-requirements.md` were authored *from the start* against the fleet-wide guide's corrected finding
@@ -50,7 +59,28 @@ explicitly so the upgrade story does not assume BC-13 coverage exists because th
 `ServiceLoader` provider collision. No classpath/`ServiceLoader` inventory test was built. The
 `javax.json` coordinate inventory across the modules that declare it (`command-handler`,
 `event-listener`, `domain-event`, `domain-aggregate`, `azure-functions`) remains true classpath fact but
-is not, on its own, evidence of a behavioural difference.
+is not, on its own, evidence of a behavioural difference. **The resulting test
+(`StagingDlrmCommandHelperTest.generateErrorMigratedCaseSubmissionPayloadThrowsNpeParityWhenResponseStringIsNull`)
+was itself removed 2026-09-07**, on the same instruction as DLRM-01 above: BC-11's own corrected finding
+is classified **"Refuted / parity"** — it throws identically on J17 and J25 by definition, so, unlike
+every other item in this table, it was never a candidate to diverge under the upgrade in the first
+place. Its test was authored and run green (`Tests run: 13, Failures: 0`, 2026-09-04) before removal.
+
+**BC-12 note — removed despite a verified, real risk, not because the risk was found to be absent.**
+`Bc12RestEasyPackagingParityTest` (reads `stagingdlrm-azure-functions/pom.xml` directly, asserted exactly
+4 `org.jboss.resteasy` deps with no `<scope>` element) was authored, run green on J17
+(`mvn -o test -pl stagingdlrm-azure-functions -Dtest=Bc12RestEasyPackagingParityTest` →
+`Tests run: 1, Failures: 0`, 2026-09-04), then removed 2026-09-07 on a direct instruction, **not** on the
+same "nothing live to catch" reasoning as BC-13/BC-21's catalog test. Unlike those two, this risk was
+verified concrete before removal: `StagingDlrmCommandHelper.java` genuinely builds a real JAX-RS
+`Client` via `ClientBuilder` to POST to `stagingdlrm-command-api` — this Function App is a standalone
+JAR with no container to supply RESTEasy at runtime, so it needs these 4 artifacts bundled. The
+upgrade-mechanics ADR's own decision 5 documents a fleet-wide sweep (mark bundled RESTEasy `provided`)
+that would compile cleanly if applied here and then fail at runtime in Azure with
+`NoClassDefFoundError` — the ADR text itself says a build-time assertion exists "precisely so the
+carve-out cannot be undone silently." Recorded here so the upgrade story does not assume this specific
+regression is guarded against by a test — it is only guarded against by the ADR's decision 5 being read
+and followed by whoever does the RESTEasy `provided` sweep.
 
 **BC-07 note.** `liquibase/stagingdlrm.xml` (the changelog this module's `liquibase.properties` points
 at) is **empty** — a bare `<databaseChangeLog>` wrapper, no `<changeSet>` elements at all — verified on
@@ -135,10 +165,11 @@ verified fresh against the code on 2026-09-04, matched what both source document
 
 ## Notable J17 findings
 
-> **BC-13's half of these findings is no longer backed by an executing test** (see the BC-13 note
-> above — `Bc13SchemaValidationParityTest` was removed 2026-09-07). The observations below were
-> genuinely run and true on J17 when recorded (2026-09-04); kept here as historical context for
-> DLRM-01's still-live table, not as a current pin of BC-13's behaviour.
+> **Neither half of these findings is backed by an executing test any more.** Both
+> `Bc13SchemaValidationParityTest` and DLRM-01's numeric-literal table in `JsonSchemaValidatorTest` were
+> removed 2026-09-07 (see the BC-13 and DLRM-01 notes above). The observations below were genuinely run
+> and true on J17 when recorded (2026-09-04); kept purely as historical context — no live test currently
+> pins any of this.
 
 - **BC-13's and DLRM-01's tables diverge sharply on the identical literals `007`/`01`/`.5`.** At the
   BC-13 tier, `org.json` 20231013 parses these leniently (`007`/`01` → `Integer`, within the schema's
@@ -158,10 +189,23 @@ verified fresh against the code on 2026-09-04, matched what both source document
 
 ## Gaps
 
-- **BC-13 has no test at all** — see the dedicated BC-13 note above. This is this story's largest gap:
-  its own primary item, deliberately dropped, not merely narrowed (its "format"-constraint sub-case was
-  a gap even while the rest of the test existed; that distinction no longer matters now the whole test
-  is gone).
+- **BC-12 has no test at all, and the risk it guarded is real** — see the dedicated BC-12 note above.
+  Arguably the single most concerning gap in this checklist: unlike every other ⚪ row, this one was not
+  removed because the risk was found absent — it was verified concrete (a real runtime dependency, a
+  fleet-wide sweep the upgrade-mechanics ADR itself documents as dangerous here) and removed anyway by
+  explicit decision. The upgrade stage has no automated guard against this specific regression; only the
+  ADR's decision 5, read and followed by whoever performs the RESTEasy `provided` sweep, prevents it.
+- **BC-13 has no test at all** — see the dedicated BC-13 note above. Its own primary item, deliberately
+  dropped, not merely narrowed (its "format"-constraint sub-case was a gap even while the rest of the
+  test existed; that distinction no longer matters now the whole test is gone). Unlike BC-12, this one
+  *was* removed because the risk was judged not to apply.
+- **DLRM-01 has no test at all** — see the dedicated DLRM-01 note above. This repo's *other* declared
+  primary item, removed on the instruction that it isn't part of the Java 25 upgrade. **With this and
+  BC-13 both gone, this story's regression gate has no tested primary item.**
+- **BC-11 has no test at all** — see the BC-11 note above. Removed on the same instruction as DLRM-01.
+  Distinct from every other removal in this checklist: BC-11's corrected finding is itself classified
+  "Refuted / parity" (identical behaviour on J17 and J25), so its test was arguably never pinning a J25
+  upgrade risk in the first place, only a pre-existing, JDK-independent NPE contract.
 - **`stagingdlrm-event-processor`'s `rest-client-generator-plugin` execution is not instrumented.**
   It depends on `pcfdlrm-command-api` and `progression-query-api` RAML-classified artifacts that
   are not resolvable in this offline development environment. BC-21's contract is pinned for only 1 of
@@ -182,8 +226,11 @@ verified fresh against the code on 2026-09-04, matched what both source document
   itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
   model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
   is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
-- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 6
-  (DLRM-01, BC-11, BC-03, BC-20, BC-12, BC-21 messaging-client-generator-plugin), 📝 1 (BC-08), ⚪ 3
-  (BC-13, BC-21 catalog-generation-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
-  rest-client-generator-plugin). No IT-tier item was authored-and-not-executed for environment reasons
-  alone — BC-07's ⚪ is because no unit-level test is possible, not because Docker was unavailable.
+- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 3
+  (BC-03, BC-20, BC-21 messaging-client-generator-plugin), 📝 1 (BC-08), ⚪ 6 (BC-13, DLRM-01, BC-11,
+  BC-12, BC-21 catalog-generation-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
+  rest-client-generator-plugin). Of the six ⚪ rows, four (BC-13, BC-21 catalog-generation-plugin, BC-07,
+  and — on the specific grounds that its finding is "Refuted / parity," never a J25 candidate — BC-11)
+  were removed because no live upgrade risk was found to pin; **BC-12 and DLRM-01 are the exceptions** —
+  real, verified-or-plausible risks, removed by explicit decision rather than because the risk was
+  absent (see their notes above).
