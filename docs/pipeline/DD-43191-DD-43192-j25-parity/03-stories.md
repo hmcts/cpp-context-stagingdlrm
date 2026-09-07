@@ -3,14 +3,18 @@
 > Stage 3 artefact. Source: [`02-design.md`](./02-design.md). Each task is independently committable
 > and independently verifiable with a single `mvn -o test -pl <module> -Dtest=<class>` run.
 
-## T1 — `stagingdlrm-domain-value-schema`: BC-13 test infrastructure and pins (primary)
-- Test-scope deps: everit-json-schema, junit-jupiter-api/engine.
-- `ClasspathSchemaClient` + `Bc13SchemaValidationParityTest` (required/enum/anyOf/type + numeric table + parse-vs-validation) + `SchemaCatalogGenerationParityTest` (BC-21 catalog half).
-- Acceptance: FR5, FR7 (BC-13 half), FR12 (catalog half), AC1, AC3.
+## T1 — `stagingdlrm-domain-value-schema`: no change (BC-13 and BC-21's catalog half both withdrawn)
+- BC-13: `ClasspathSchemaClient` + `Bc13SchemaValidationParityTest` were built and run green on J17
+  (2026-09-04), then removed (2026-09-07) - the schema files aren't changing during the J25 upgrade, so
+  there's nothing live for a strictness test to catch (see `docs/j25-parity-checklist.md`'s BC-13 note).
+- BC-21's `catalog-generation-plugin` half: same reasoning, same outcome - not instrumented (see the
+  BC-21 note).
+- Module ends this story exactly as it started: zero Java, no test-scope pom dependencies.
+- Acceptance: FR5 (revised), AC1.
 
-## T2 — `stagingdlrm-azure-functions`: DLRM-01 pins (primary)
+## T2 — `stagingdlrm-azure-functions`: DLRM-01 pins (this repo's only tested primary item)
 - Extend `JsonSchemaValidatorTest`: malformed JSON, array-payload rejection, duplicate-key resolution, `documentType` numeric-literal table.
-- Acceptance: FR6, FR7 (DLRM-01 half), AC1, AC3, AC6.
+- Acceptance: FR6, FR7, AC1, AC3, AC6.
 
 ## T3 — `stagingdlrm-azure-functions`: BC-11 corrected pin
 - Extend `StagingDlrmCommandHelperTest`: null `responseString` → `NullPointerException`.

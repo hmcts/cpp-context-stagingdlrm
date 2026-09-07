@@ -18,18 +18,31 @@
 
 | Item | Weight | Seam | Test(s) | Status | J17 run evidence |
 |---|---|---|---|---|---|
-| **BC-13** | primary | JSON-schema validation strictness (`org.json` 20231013→20251224, everit) at the schema-catalogue tier — `stagingdlrm-domain-value-schema` | `Bc13SchemaValidationParityTest` (8 tests: required/enum/anyOf/type accept+reject on `case-details.json`, a 7-value numeric-literal table on `migrated-hearing.json`'s `durationMinutes`, one parse-vs-validation pair) + `SchemaCatalogGenerationParityTest` (BC-21 half, below), via `ClasspathSchemaClient` — resolves `$ref`s from the module's own generated `META-INF/schema_catalog.json`, not a hand-written URI map (necessary: several schema ids do not match their file's own name) | 🟢 | `mvn -o test -pl stagingdlrm-domain/stagingdlrm-domain-value-schema -Dtest=Bc13SchemaValidationParityTest,SchemaCatalogGenerationParityTest` → `Tests run: 9, Failures: 0` (2026-09-04) |
+| **BC-13** | primary (see note — no test) | JSON-schema validation strictness (`org.json` 20231013→20251224, everit) at the schema-catalogue tier — `stagingdlrm-domain-value-schema` | None — see note below | ⚪ | Not applicable — see note below |
 | **DLRM-01** | primary | Jackson `ObjectMapper.readTree` parse behaviour (2.12.7→2.21.4) at the Function App gate — not in the 24-BC catalogue (parity-method ADR decision 6) | 4 tests added to the existing `JsonSchemaValidatorTest`: malformed-JSON parse failure, array-payload rejection (before schema validation runs), duplicate-object-key resolution (Jackson keeps the LAST value silently), and a 7-value numeric-literal table on the manifest schema's `documentType` (no `maximum`, unlike BC-13's field) | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=JsonSchemaValidatorTest` → `Tests run: 9, Failures: 0` (2026-09-04) |
 | BC-11 | **corrected from the outset** (parity-method ADR decision 8) | `JsonObjects.createObjectBuilder().add(key, null)` throws `NullPointerException` identically on J17 and J25 — a pre-existing latent-bug parity, not a J25 regression | `StagingDlrmCommandHelperTest.generateErrorMigratedCaseSubmissionPayloadThrowsNpeParityWhenResponseStringIsNull` — pins the real call site (`StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload`'s `.add("errorMessage", responseString)`, `responseString` reachable as null on the error path per `docs/architecture/dlrm-flow-reference.md` §2.6 Path 3) | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=StagingDlrmCommandHelperTest` → `Tests run: 13, Failures: 0` (2026-09-04) |
 | BC-03 | high (coverage gap, not a live risk — see note) | Drools 7→10 allow/deny — `command-migrate-case-submission-api.drl`, 2 rules, previously only 1 covered | `AccessControlTest` — added `shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` / `shouldNotAllowSystemUserForErrorMigrateCaseSubmission` alongside the pre-existing pair for the first rule | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlTest` → `Tests run: 4, Failures: 0` (2026-09-04) |
 | BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | `AccessControlRuleCountTest` — loads `KieServices.get().getKieClasspathContainer().getKieBase("COMMAND_API").getKiePackages()` directly (a `StatelessKieSession` does not expose the `KieBase`) and asserts the exact 2-rule name set. Named to match the fleet-wide convention (confirmed in all 13 fleet PRs read for this story, e.g. `system-id-mapper`#27), rather than a bespoke BC-numbered name | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlRuleCountTest` → `Tests run: 1, Failures: 0` (2026-09-07) |
 | BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | `Bc12RestEasyPackagingParityTest` — reads `stagingdlrm-azure-functions/pom.xml` directly, asserts exactly 4 `org.jboss.resteasy` deps and no `<scope>` (i.e. compile); version is deliberately not pinned | 🟢 | `mvn -o test -pl stagingdlrm-azure-functions -Dtest=Bc12RestEasyPackagingParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
-| BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | `SchemaCatalogGenerationParityTest` (`stagingdlrm-domain-value-schema`) — asserts the generator's *contract* (schema-file-count == catalogue-entry-count), computed both ways at test time | 🟢 | `mvn -o test -pl stagingdlrm-domain/stagingdlrm-domain-value-schema -Dtest=SchemaCatalogGenerationParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
+| BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | None — see note below. (Authored and run green on J17 2026-09-04, then removed 2026-09-07 per decision — not "never written") | ⚪ | Not applicable — see note below |
 | BC-21 (messaging-client-generator-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — RAML-driven messaging client | `Bc21MessagingClientGenerationParityTest` (`stagingdlrm-command-api`) — asserts `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client, via reflection | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=Bc21MessagingClientGenerationParityTest` → `Tests run: 1, Failures: 0` (2026-09-04) |
 | BC-21 (pojo-generation-plugin) | medium | Codegen — POJO generation from JSON schema | Not instrumented — see note below | 🟡 | Not authored |
 | BC-21 (rest-client-generator-plugin) | medium | Codegen — RAML-driven REST client | Not instrumented — see note below | 🟡 | Not authored |
 | BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | None — a plain `Properties.load()` unit test was authored, then removed: it only reads the file's key set, which is true on both J17 and J25 and doesn't exercise Liquibase's own property-validation logic at all. Pinning the *real* risk (Liquibase 5 rejecting `liquibase.hub.mode`) needs Liquibase itself to run, which is IT-tier (needs Docker) — see the note below | ⚪ | Not applicable — see note below |
 | BC-08 | thin | Jackson `'Z'` → `ZoneOffset.UTC` — the repo's only `ZonedDateTime` is in an event-processor **test helper** (`ObjectBuilder.buildMetaData`), not product code | None — no code change of any kind, including a comment. `ObjectBuilder.java` is otherwise untouched by this story; adding a javadoc note there would be noise on unrelated code, not a pin. The finding is recorded here instead | 📝 | N/A — checked, not assumed: `StagingDlrmEventProcessorTest` only ever uses this `Metadata` as a Mockito stub return value, never serialized through Jackson and never asserted on. There is **no incidental J17 coverage of BC-08 anywhere in this repo** — an earlier version of this row, and a code comment briefly added then removed, both claimed otherwise; corrected 2026-09-07 |
+
+**BC-13 note — this repo's other primary item now has no test.** `Bc13SchemaValidationParityTest`
+(8 tests: required/enum/anyOf/type accept+reject on `case-details.json`, a 7-value numeric-literal table
+on `migrated-hearing.json`'s `durationMinutes`, one parse-vs-validation pair) and its `ClasspathSchemaClient`
+`$ref` resolver were authored and run green on J17 (2026-09-04: `Tests run: 8, Failures: 0`), then
+**removed 2026-09-07** on the same reasoning as BC-21's catalog-generation-plugin test below: the schema
+`.json` files and their content are not changing during the J25 upgrade, so there is no live scenario for
+an everit/`org.json`-strictness test to catch here either. **Unlike BC-21's catalog test, this was this
+story's declared primary item** — the parity-method ADR and both `00-input-brief.md`/`01-requirements.md`
+call BC-13 "primary," the highest-novelty item in this repo's Bucket A. Its removal means **this repo's
+regression gate has zero unit-level coverage of BC-13** going into the upgrade stage; DLRM-01 (the
+Function App's separate networknt/Jackson gate) remains the only primary item with a test. Recorded here
+explicitly so the upgrade story does not assume BC-13 coverage exists because the ADR calls it primary.
 
 **BC-11 note.** Unlike the earlier DD-43192 attempts, this pass's `00-input-brief.md` and
 `01-requirements.md` were authored *from the start* against the fleet-wide guide's corrected finding
@@ -68,9 +81,17 @@ recompilation silently flipping allow/deny) is **Refuted** — rules are unchang
 story's BC-03 row closes a genuine, pre-existing **coverage gap** (the second rule had never been tested
 on any JDK) that happens to share the ticket number; it does not mitigate a live J25 risk.
 
-**BC-21 note.** Two of the four generator plugin families that run in this repo are instrumented directly
-(🟢 above); two are not (🟡):
+**BC-21 note.** One of the four generator plugin families that run in this repo is instrumented directly
+(🟢 above); three are not (🟡):
 
+- `catalog-generation-plugin` (`stagingdlrm-domain-value-schema`) — a schema-file-count vs.
+  catalogue-entry-count test was authored, and investigated in depth: the plugin's actual file-discovery
+  class (`generator-io-utils`'s `FileTreeScanner`, decompiled to check) does genuinely bundle and call
+  `org.reflections.Reflections` (`ResourcesScanner`, `ConfigurationBuilder`), so BC-21's premise is not
+  unfounded. **Decision: not needed** — the schema `.json` files this catalogue is generated from will
+  still be present, under the same paths, through the J25 upgrade; there is no file-removal or
+  file-relocation scenario for the generator to silently mishandle here, so a count-parity test has
+  nothing live to guard against. Removed rather than kept as a speculative check.
 - `pojo-generation-plugin`'s `pojo-generation-schema` execution in `stagingdlrm-domain-event` scans the
   *entire test classpath* (`sourceDirectory: CLASSPATH`), including `common-core-domain` and
   `criminal-court-public-model` — third-party jars this repo doesn't own. A hard-coded count or manifest
@@ -114,6 +135,11 @@ verified fresh against the code on 2026-09-04, matched what both source document
 
 ## Notable J17 findings
 
+> **BC-13's half of these findings is no longer backed by an executing test** (see the BC-13 note
+> above — `Bc13SchemaValidationParityTest` was removed 2026-09-07). The observations below were
+> genuinely run and true on J17 when recorded (2026-09-04); kept here as historical context for
+> DLRM-01's still-live table, not as a current pin of BC-13's behaviour.
+
 - **BC-13's and DLRM-01's tables diverge sharply on the identical literals `007`/`01`/`.5`.** At the
   BC-13 tier, `org.json` 20231013 parses these leniently (`007`/`01` → `Integer`, within the schema's
   `maximum`, ACCEPT; `.5` → `BigDecimal`, REJECTed on type). At the DLRM-01 tier, Jackson's default
@@ -132,14 +158,16 @@ verified fresh against the code on 2026-09-04, matched what both source document
 
 ## Gaps
 
-- **BC-13's "format" constraint class has no binding site authored in this repo.** `case-details.json`
-  has no `"format"` keyword of its own; the only format-bearing definitions this schema set reaches are
-  inside `common-core-domain`'s `definitions.json` (date/uuid), which is framework-owned. Recorded as a
-  gap rather than asserted against a schema this repo doesn't own.
+- **BC-13 has no test at all** — see the dedicated BC-13 note above. This is this story's largest gap:
+  its own primary item, deliberately dropped, not merely narrowed (its "format"-constraint sub-case was
+  a gap even while the rest of the test existed; that distinction no longer matters now the whole test
+  is gone).
 - **`stagingdlrm-event-processor`'s `rest-client-generator-plugin` execution is not instrumented.**
   It depends on `pcfdlrm-command-api` and `progression-query-api` RAML-classified artifacts that
-  are not resolvable in this offline development environment. BC-21's contract is pinned for the
-  other 2 of 4 generator families that run in this repo; this is the acknowledged remainder.
+  are not resolvable in this offline development environment. BC-21's contract is pinned for only 1 of
+  the 4 generator families that run in this repo (`messaging-client-generator-plugin`); the other 3
+  (`catalog-generation-plugin`, `pojo-generation-plugin`, `rest-client-generator-plugin`) are each
+  unpinned for their own distinct reason — see the BC-21 note above.
 - **`mvn clean install -DskipITs` (AC2) could not be run for the full reactor in this environment,
   for the same reason** — `stagingdlrm-event-processor` (and its two dependents, `stagingdlrm-service`
   and `stagingdlrm-testharness`) need `uk.gov.moj.cpp.progression:progression-query-api:jar:raml:17.0.297`,
@@ -154,7 +182,8 @@ verified fresh against the code on 2026-09-04, matched what both source document
   itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
   model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
   is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
-- **Integration-tier items: none of this repo's Bucket A items land at the IT tier *as unit-executable
-  work*.** BC-07 is the one item whose only meaningful test is IT-tier; it is recorded as a check (⚪),
-  not a 🟡-authored-not-executed unit test, for the reason above. Every other item is 🟢 or 📝, except
-  the two BC-21 generator families explained above.
+- **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 6
+  (DLRM-01, BC-11, BC-03, BC-20, BC-12, BC-21 messaging-client-generator-plugin), 📝 1 (BC-08), ⚪ 3
+  (BC-13, BC-21 catalog-generation-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
+  rest-client-generator-plugin). No IT-tier item was authored-and-not-executed for environment reasons
+  alone — BC-07's ⚪ is because no unit-level test is possible, not because Docker was unavailable.

@@ -29,7 +29,7 @@ seams the Java 25 upgrade will move**
 
 ### Summary (JIRA summary line)
 
-`[Java 25] Pin stagingDLRM J17 behaviour: schema-validation strictness at both validator tiers, JsonObjectBuilder null-value parity, access-control rule coverage, codegen and deploy-time guards`
+`[Java 25] Pin stagingDLRM J17 behaviour: Function App schema-validation parse strictness, JsonObjectBuilder null-value parity, access-control rule coverage, codegen and deploy-time guards`
 
 ### User story
 
@@ -44,16 +44,15 @@ instead of a suite that keeps passing because none of the framework's own code r
 
 | Tier | Depth | Rationale |
 |---|---|---|
-| **Unit / component** | **Exhaustive** for the two primary items (BC-13, DLRM-01): every input class that the parser or validator treats differently, accept *and* reject. Sufficient-branch for the rest. | Fast, in `mvn test`, no environment. The right place for an input matrix. |
+| **Unit / component** | **Exhaustive** for DLRM-01 (this repo's remaining tested primary item): every input class the validator treats differently, accept *and* reject. Sufficient-branch for the rest. BC-13 was originally in this tier too; FR5 records why it no longer has a test. | Fast, in `mvn test`, no environment. The right place for an input matrix. |
 | **Build-time assertion** | **Single decisive check** per item (BC-11, BC-12, BC-21, BC-07). | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
 | **Integration** | **Authored, not executed.** Any IT-tier item is written and marked 🟡 until Docker and a WildFly image are available. | ITs need `CPP_DOCKER_DIR`; no WildFly 40 image existed as of the investigation report. Blocking this story on that would block the whole epic. |
 
 ## Scope
 
-- `stagingdlrm-domain/stagingdlrm-domain-value-schema` — the everit/`org.json` catalogue tier (BC-13). Zero
-  Java today (`docs/architecture/dlrm-flow-reference.md` isn't the source for this module's own schemas,
-  but confirms the *func-app's* flat copies at §6 are separate resources — this module's catalogue is the
-  one under source control at `src/main/resources/json/schema/**`)
+- `stagingdlrm-domain/stagingdlrm-domain-value-schema` — **out of scope.** BC-13's catalogue-tier test
+  was built here, ran green on J17, then removed per FR5's revision; the module has zero Java again and
+  no code change is expected in it for this story.
 - `stagingdlrm-azure-functions` — the networknt/Jackson gate (DLRM-01), plus BC-11 (corrected) and BC-12
   surface. `docs/architecture/dlrm-flow-reference.md` §2.3–§2.4 and §6 is the seam map: `JsonSchemaValidator`
   validates `case.json`/`manifest.json` against `stagingdlrm.case-submission.json` /
@@ -96,34 +95,31 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 
 ### B. The two primary items
 
-- **FR5 — BC-13: pin schema-validation strictness at the catalogue tier.** The `org.json`
-  20231013→20251224 and everit consolidation move underneath the runtime catalogue validator. Pin, for
-  the migrated-case-submission schema set (`docs/architecture/dlrm-flow-reference.md` §6 names the schema
-  files; `case-details.json`'s own required/enum/anyOf/type shape is the concrete binding site):
-  1. a **numeric-literal table** with named expected outcomes per input — at minimum `0`, `007`, `01`,
-     `.5`, `10.0`, `1e3`, `12345678901234567890` — as the fleet-wide guide's method specifies;
-  2. the **accept path** for a valid payload, and the **reject path** with its validation message, for
-     each constraint class the schema uses (type, enum, required, `anyOf`) that is actually authored in
-     this repo's own schemas — not one borrowed from a framework-owned `$ref` (see the design-stage note
-     on `format`);
-  3. the distinction between a **parse** failure and a **validation** failure as two different
-     outcomes. This is where BC-13's "uncaught exception becomes an HTTP 500" shape lands if it lands
-     anywhere, so it must be asserted, not inferred.
+- **FR5 — BC-13: record, do not author.** *(Revised 2026-09-07 — a unit test was authored, run green
+  on J17, and then deliberately removed; see `docs/j25-parity-checklist.md`'s BC-13 note.)* The `org.json`
+  20231013→20251224 and everit consolidation move underneath the runtime catalogue validator, and
+  `case-details.json`/`migrated-hearing.json` are real, code-verified binding sites
+  (`docs/architecture/dlrm-flow-reference.md` §6). The decision taken: the schema `.json` files and their
+  content are not changing during the J25 upgrade, so there is no live scenario for a
+  numeric-literal/accept-reject test to catch here — the same reasoning FR12 already applies to
+  `catalog-generation-plugin`. Record the seam, the fact that a test existed and passed on J17, and this
+  reasoning in the checklist; do not carry a numeric-literal table or `ClasspathSchemaClient`-style
+  `$ref` resolver for this item.
 - **FR6 — DLRM-01: pin parse behaviour at the Function App gate.** The gate's schema library
   (`com.networknt:json-schema-validator` 1.0.83) is hard-pinned and does **not** move; Jackson
   (2.12.7→2.21.4) does, behind `ObjectMapper.readTree` (`dlrm-flow-reference.md` §2.3 step 3d, §5's
   `JsonSchemaValidator` row). Pin the gate's observed J17 outcome for:
   malformed JSON; the **array-payload rejection** the validator performs before schema validation
-  (`JsonSchemaValidator.validate()`'s explicit `isArray()` guard); duplicate object keys; and the same
-  numeric-literal set as FR5, applied to a field with **different bounds** than BC-13's target (the
-  manifest schema's `documentType` has no configured `maximum`, unlike the catalogue tier's field) so the
-  two tables can genuinely diverge rather than coincidentally agree. Cover **both source systems** where
+  (`JsonSchemaValidator.validate()`'s explicit `isArray()` guard); duplicate object keys; and a
+  numeric-literal table on a field with **no configured `maximum`** (the manifest schema's
+  `documentType`). Cover **both source systems** where
   the gate is source-system-keyed — [the parity-method ADR](../adrs/DD-43191-j25-parity-method.md)
   decision 7 records that it is **not**, on this branch; pin the single gate as it stands.
-- **FR7 — FR5 and FR6 are separate tables over separate parsers.** They may additionally be asserted
-  to agree with each other, but a single shared table standing in for both is not acceptable: the two
-  tiers use different libraries with different upgrade exposure, and a shared table hides which one
-  moved.
+- **FR7 — DLRM-01's table stands alone.** *(Revised 2026-09-07 — originally required a matching BC-13
+  table asserted separately per FR5; FR5 now records rather than tests, so there is only one table.)*
+  When BC-13's table existed (2026-09-04 to 2026-09-07) it genuinely diverged from DLRM-01's on several
+  literals — recorded as historical context in the checklist's "Notable J17 findings," not as a live
+  requirement any more.
 
 ### C. The remaining items
 
@@ -209,9 +205,9 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   checklist row explaining why it is 📝, ⚪ or 🔴, with a named reason. No item is silently absent.
 - **AC2** — `mvn clean install -DskipITs` passes on `main` with JDK 17, with every new test executing
   (not skipped, not disabled).
-- **AC3** — The BC-13 and DLRM-01 numeric-literal tables each exist, are separate, cover the seven
-  named inputs at minimum, and each input has a **named expected outcome** rather than a
-  "does not throw" assertion.
+- **AC3** — DLRM-01's numeric-literal table exists, covers the seven named inputs at minimum, and each
+  input has a **named expected outcome** rather than a "does not throw" assertion. *(Revised
+  2026-09-07 — BC-13's own table is no longer required; see FR5.)*
 - **AC4** — Both rules in `command-migrate-case-submission-api.drl` have a passing allow case and a
   passing deny case, and the command-API knowledge base asserts a non-zero rule count.
 - **AC5** — BC-11's test pins the corrected `JsonObjectBuilder` null-value NPE parity at its real call
@@ -286,10 +282,13 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 
 ## Notes for the design stage
 
-1. **Decide where the BC-13 table lives.** `domain-value-schema` has zero Java today (ADR decision 7);
-   the catalogue-tier harness must be authored from scratch, not by extending a pre-existing helper.
-   Confirm it can express "named expected outcome per input" without needing the framework's full
-   runtime catalogue-resolution machinery.
+1. **BC-13: FR5 no longer requires a table — do not rebuild one by default.** *(Revised 2026-09-07.)*
+   A catalogue-tier harness was built (in `domain-value-schema`, zero Java before it), ran green on
+   J17, and was removed as a deliberate scope decision (see FR5). If a future pass reopens BC-13, the
+   prior implementation's approach is recorded in git history (a `ClasspathSchemaClient` resolving
+   `$ref`s via the module's own generated `META-INF/schema_catalog.json`) rather than needing
+   re-deriving from scratch — but building it back by default, without re-confirming the reasoning in
+   FR5 no longer holds, would silently re-widen scope this story deliberately narrowed.
 2. **Decide the DLRM-01 seam.** `JsonSchemaValidator` takes an `ExecutionContext`, so the gate is
    testable only as far as that mock allows. Establish whether the parse outcomes can be observed at
    the validator, or whether `TimerTriggerJava` is the necessary entry point — this determines whether
@@ -304,9 +303,10 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    stage 1 and stage 4; confirm `StagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload`
    still builds its payload via `JsonObjects.createObjectBuilder()` with a nullable value before writing
    the test.
-5. **Sequence the two primary items first.** BC-13 and DLRM-01 carry most of the value and all of the
-   novelty; the other seven are small and well understood. If the story has to be cut, it should be cut
-   from the back.
+5. **DLRM-01 is now this repo's only tested primary item.** BC-13 carried real novelty and no fleet
+   precedent existed for either (see the risks section), but only DLRM-01 has a test after FR5's
+   revision. Sequence it first if the story has to be cut further; there is no second primary item's
+   test left to protect by comparison.
 6. **Read `docs/architecture/dlrm-flow-reference.md` before scoping any Function App test.** It is the
    single most detailed map of exactly which class does what at each processing stage, including line
    citations, and prevents re-deriving facts (schema file names, retry/outcome-write branching) that are

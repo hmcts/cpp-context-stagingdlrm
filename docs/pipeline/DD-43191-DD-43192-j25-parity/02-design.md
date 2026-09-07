@@ -9,54 +9,20 @@
 
 ## Per-item design
 
-### BC-13 (primary) — schema-validation strictness at the catalogue tier
+### BC-13 — built, verified, then withdrawn (see FR5)
 
-**Module:** `stagingdlrm-domain/stagingdlrm-domain-value-schema` (zero Java today — confirmed:
-`src/main/resources/json/**` only, per the parity-method ADR decision 7). This is **not** the same
-schema set the Function App validates against — `dlrm-flow-reference.md` §6 lists the func-app's own
-flat, separately-maintained copies under `stagingdlrm-azure-functions/src/main/resources/`; DLRM-01
-(below) covers those.
+**Module:** `stagingdlrm-domain/stagingdlrm-domain-value-schema` (zero Java — confirmed:
+`src/main/resources/json/**` only, per the parity-method ADR decision 7, and true again now).
 
-**The seam.** `catalog-generation-plugin` generates `META-INF/schema_catalog.json` from this module's own
-`src/main/resources/json/schema/**` at `generate-sources` (verified: 2 groups — `json/schema/`
-baseLocation, 18 schemas; `json/schema/migrated/` baseLocation, 12 schemas; 30 total, matching the 30
-`.json` files on disk). Each catalog entry pairs a schema's **declared `id`** with its **`location`**
-relative to its group's `baseLocation` — and several ids do **not** match their file's own name
-(`http://.../prosecutor.json` → `pcf-prosecutor.json`; `.../week-commencing-date.json` →
-`migrated-week-commencing-date.json`; `.../listed-defendant.json` → `migrated-listed-defendant.json`).
-Any `$ref` resolver that guesses a classpath path from the URI's filename (rather than reading the
-catalogue) will silently fail to load `case-details.json` or `migrated-hearing.json` — both of which
-`$ref` a mismatched id.
-
-**Design: `ClasspathSchemaClient` reads the generated catalogue, not a hand-written URI map.**
-Implements everit's `SchemaClient` (`InputStream get(String url)`):
-
-1. On construction, reads `META-INF/schema_catalog.json` off the test classpath and builds
-   `id → classpath path` (`group.baseLocation + schema.location`) for every entry across every group.
-2. Adds one further entry by hand:
-   `http://justice.gov.uk/domain/core/common/definitions.json → json/schema/definitions.json` — bundled
-   inside the `common-core-domain` compile dependency (verified inside
-   `common-core-domain-17.104.4.jar`), not this module's own catalogue, but needed to fully resolve
-   `case-details.json`'s date `$ref`s.
-3. `get(url)` looks the id up and returns a classloader resource stream; a miss throws naming the
-   requesting id.
-
-**Test fixture: `case-details.json` (type, enum, required, anyOf) + `migrated-hearing.json` (the numeric
-table).** `case-details.json` covers required (`prosecutorCaseReference`, `originatingOrganisation`,
-`initiationCode`, `prosecutor`, `dateReceived`, `retrialIndicator`, `receiptType`, `receivingCourt`) —
-the exact required-field set `dlrm-flow-reference.md` §6 also lists — enum (`initiationCode` only
-accepts `"O"`), anyOf (`dateOfCommittal` or `dateOfSending`), type (`retrialIndicator` boolean).
-
-**Numeric-literal table — `migrated-hearing.json`'s `durationMinutes`** (`"type": "integer", "maximum":
-99999`, confirmed on disk): `0`, `007`, `01`, `.5`, `10.0`, `1e3`, `12345678901234567890`, each with a
-named expected outcome (FR5/AC3).
-
-**Parse vs. validation distinction (FR5.3):** a syntactically malformed document fails during `org.json`'s
-own parse, asserted as a distinct outcome from a well-formed payload failing a schema constraint.
-
-**Gap, recorded not fabricated:** `case-details.json` has no `"format"` keyword of its own; the only
-`format`-bearing definitions this schema set reaches are inside `common-core-domain`'s `definitions.json`
-(date/uuid), framework-owned.
+A full unit-level design was implemented and run green on J17 (2026-09-04): `ClasspathSchemaClient`
+(an everit `SchemaClient` resolving `$ref`s via the module's own generated `META-INF/schema_catalog.json`,
+since several schema ids don't match their file's own name — e.g. `prosecutor.json` → `pcf-prosecutor.json`)
+plus `Bc13SchemaValidationParityTest` (required/enum/anyOf/type on `case-details.json`, a numeric-literal
+table on `migrated-hearing.json`'s `durationMinutes`, one parse-vs-validation pair). **Removed 2026-09-07**
+per FR5's revision: the schema `.json` files and their content are not changing during the J25 upgrade,
+so there is nothing live for a strictness test to catch here. Both files are recoverable from git history
+(commit `a3fa641` on this branch) if a future story reopens BC-13 — see `01-requirements.md` design note 1
+before rebuilding rather than assuming the old design still applies.
 
 ### DLRM-01 (primary) — Jackson parse behaviour at the Function App gate
 
@@ -75,8 +41,10 @@ fixture. Four additions:
 3. **Duplicate object keys** → Jackson's `readTree` resolves to the **last** value silently — pinned via
    the manifest's `documentType` field.
 4. **Numeric-literal table on `stagingdlrm.manifest.json`'s `documentType`** (`"type": "integer"`, **no**
-   `maximum` — confirmed on disk, unlike BC-13's `durationMinutes`), same seven literals. Per FR7, this
-   table and BC-13's are asserted separately and are expected to diverge on several literals.
+   `maximum` configured), same seven literals. This table stands alone per FR7's revision — BC-13's
+   equivalent table existed briefly (2026-09-04 to 2026-09-07) and genuinely diverged from this one on
+   several literals; that comparison is recorded in the checklist's "Notable J17 findings" as history,
+   not carried forward as a live requirement.
 
 **Source-system keying:** per the parity-method ADR decision 7, the gate is not source-system-keyed on
 this branch — FR6's "both source systems" clause does not apply; a single gate is pinned once.
@@ -135,8 +103,13 @@ artifacts, all `4.3.0.Final`, no `<scope>` (compile, the default) — the Functi
 
 ### BC-21 — pin the generated-artefact inventory by contract, not manifest
 
-- **`catalog-generation-plugin`** — schema-file-count on disk == catalogue-entry-count, computed both
-  ways at test time.
+- **`catalog-generation-plugin`** — **not instrumented.** A schema-file-count vs. catalogue-entry-count
+  test was authored and investigated: the plugin's file-discovery class (`generator-io-utils`'s
+  `FileTreeScanner`, decompiled to check) genuinely bundles and calls `org.reflections.Reflections`, so
+  the premise isn't unfounded. Decided against keeping it: the schema `.json` files this catalogue is
+  generated from will still be present, under the same paths, through the J25 upgrade — there is no
+  file-removal/relocation scenario for the generator to silently mishandle here, so a count-parity test
+  has nothing live to guard against.
 - **`messaging-client-generator-plugin`** (`stagingdlrm-command-api`) — the generated
   `RemoteCommandApi2CommandHandlerMessageStagingdlrmStagingdlrmHandlerCommand` carries one `@Handles`
   method per JSON schema under `stagingdlrm-command-handler`'s own `src/raml/json/schema/**` (4 and 4,
@@ -177,13 +150,11 @@ would be noise on unrelated code rather than a pin. Record the finding and its r
 
 ## Cross-cutting
 
-- **No production code changes** — test, fixture, pom-test-dependency, or documentation only
-  (FR15/FR18/AC9).
-- **`stagingdlrm-domain-value-schema`'s and `stagingdlrm-viewstore-liquibase`'s `pom.xml`** each need
-  test-scope JUnit 5 added (both modules have zero Java today); `stagingdlrm-domain-value-schema` also
-  needs `com.github.everit-org.json-schema:org.everit.json.schema` — already proven resolvable offline
-  (`stagingdlrm-viewstore-persistence`'s `pom.xml` already declares the same coordinate, unused there,
-  with no local version pin, proving the parent BOM manages one).
+- **No production code changes** — test, fixture, or documentation only (FR15/FR18/AC9). Neither
+  `stagingdlrm-domain-value-schema` nor `stagingdlrm-viewstore-liquibase` carries a pom change any more
+  either: both were given test-scope JUnit 5 (the latter also `com.github.everit-org.json-schema`) for a
+  test that was subsequently removed from each, and the dependency additions were reverted along with it
+  — both modules are zero-Java, zero-test-dependency, exactly as they were before this story.
 - **`docs/j25-parity-checklist.md`** is written fresh against this design, including the BC-11
   correction, the BC-13 "format" gap, and the two uninstrumented BC-21 generator families.
 - **ADR decision 8** (parity-method ADR) is the standing record of the BC-11 correction, already

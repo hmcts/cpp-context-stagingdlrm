@@ -238,9 +238,8 @@ class JsonSchemaValidatorTest {
     // Pins the Jackson ObjectMapper.readTree parse behaviour (2.12.7->2.21.4) behind this gate - the
     // Function App's own hard-pinned com.networknt:json-schema-validator:1.0.83 does not move on J25;
     // its exposure is entirely in the Jackson parse step that runs before that validator ever sees the
-    // payload. This is a separate table over a separate parser from BC-13's everit/org.json tier
-    // (Bc13SchemaValidationParityTest, stagingdlrm-domain-value-schema) - per FR7, a shared table would
-    // hide which tier actually moved.
+    // payload. This table stands alone (see 01-requirements.md's FR7) - a corresponding everit/org.json
+    // table for BC-13 existed briefly but was withdrawn (see docs/j25-parity-checklist.md's BC-13 note).
 
     @Test
     void validateMalformedJsonPayloadFailsToParse() {
