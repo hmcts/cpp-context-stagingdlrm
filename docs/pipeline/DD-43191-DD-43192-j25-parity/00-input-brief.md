@@ -62,6 +62,36 @@ outcome-write logic (§2.4, §2.6) that BC-13/DLRM-01's parse-vs-validation dist
 read for bytes), which is why no BC in this story concerns material file content — only the metadata
 (`fileType`, `documentType`) schema-checked before forwarding.
 
+**A fifth source — not a document but the fleet's actual merged output.** Rather than trust the tracker
+and the guide's summaries alone, the 13 PRs they cite as "completed" were fetched and read directly
+(`gh pr view`/`gh pr diff`, 2026-09-07):
+
+| Context | PR | Files | What it actually contains |
+|---|---|---|---|
+| notification, notification-notify, system-id-mapper, system-scheduling, system-announcement, system-doc-generator, listing, work-management-proxy | [#38](https://github.com/hmcts/cpp-context-notification/pull/38), [#44](https://github.com/hmcts/cpp-context-notification-notify/pull/44), [#27](https://github.com/hmcts/cpp-context-system-id-mapper/pull/27), [#22](https://github.com/hmcts/cpp-context-system-scheduling/pull/22), [#14](https://github.com/hmcts/cpp-context-system-announcement/pull/14), [#590](https://github.com/hmcts/cpp-context-system-doc-generator/pull/590), [#106](https://github.com/hmcts/cpp-context-listing/pull/106), [#29](https://github.com/hmcts/cpp-context-work-management-proxy/pull/29) | 1–2 | **One file per kbase: `AccessControlRuleCountTest` (BC-20). Nothing else.** |
+| hearing | [#293](https://github.com/hmcts/cpp-context-hearing/pull/293) | 2 | Same shape — despite being "large JPA (37 `@Entity`)" per the tracker: every persistence BC came back parity-clean by code inspection, leaving only BC-20 actionable |
+| mi-reportdata, businessprocesses | [#587](https://github.com/hmcts/cpp-context-mi-reportdata/pull/587), [#77](https://github.com/hmcts/cpp-context-businessprocesses/pull/77) | 2–3 | Same shape, plus one unrelated local-dev fix each (an Azurite IT profile; an enforcer-driven interface-version bump) — not parity work |
+| resulting | [#123](https://github.com/hmcts/cpp-context-resulting/pull/123) | 6 | `AccessControlRuleCountTest` ×3 (3 kbases) + 2 golden-master `*QueryViewTest` (its BC-04/BC-11 characterization, later retired as framework invariants per the tracker) |
+| **users-groups (reference)** | **[#217](https://github.com/hmcts/cpp-context-users-groups/pull/217)** | **14** | The one genuinely deep PR: 5 `*RulesTest` additions (BC-03 branch gap), 7 `*RepositoryTest` (BC-01/02/05/06), 1 IT (BC-01 HTTP contract), 1 `UserRoleActivatedDateJacksonZoneParityTest` (BC-08). Its own `doc/j25-parity-checklist.md` classifies BC-07, BC-11, BC-12, BC-13, BC-21, BC-24 as **its own "Bucket B — cross-cutting / framework-level (verify once + light per-context check)"** — explicitly *not* a per-context test there |
+
+Two things this confirms, now from real merged code rather than a secondary summary:
+
+1. **The typical fleet parity PR is one ~26-line file: `AccessControlRuleCountTest`.** 11 of the 13
+   fetched PRs are exactly this and nothing more — even a 37-`@Entity` JPA context, once every
+   persistence BC comes back parity-clean. stagingdlrm's 9-item, 6-module scope is a real outlier against
+   that baseline, and the outlier is earned: this is the only tracked context with an Azure Functions
+   module (DLRM-01, BC-12), its own everit/`org.json` schema catalogue separate from the framework's
+   runtime validator (BC-13), and its own `liquibase.properties` (BC-07) — none of which the lean fleet
+   contexts carry. This is not a case for trimming scope; it is the evidence that stagingdlrm's scope is
+   correctly sized for what it actually has, verified against what "typical" looks like.
+2. **The canonical BC-20 class name across the fleet is `AccessControlRuleCountTest`**, not a
+   BC-numbered name — confirmed from `system-id-mapper`'s real merged file, using exactly the
+   `KieServices.get().getKieClasspathContainer().getKieBase(name).getKiePackages()` instrument the
+   parity-method ADR's reusable-lessons note already prescribes. **users-groups' own Bucket B
+   classification of BC-07/11/12/13/21 is a call specific to a full-JPA context whose persistence cluster
+   dominates its risk budget — it is not a precedent this repo can lean on**: stagingdlrm has zero
+   persistence code and, in exchange, real, code-verified exposure on exactly those five items.
+
 **Bucket A for this repo — 9 items** (full matrix and evidence in the parity-method ADR):
 
 | BC | Seam | Weight |
@@ -96,6 +126,8 @@ viewstore-repository tests for entities this repo does not have.
 | Copy the reference PR? | No — its shape is persistence-led and this repo has no persistence layer |
 | Which BC-11 to build against | The PDF's corrected finding (decision 8), not the investigation report's original hypothesis — the report was written before the 2026-08-26 correction and is not self-updating |
 | Checklist location | `docs/j25-parity-checklist.md` (reference used `doc/`; adjusted to this repo's convention) |
+| Is a leaner, `AccessControlRuleCountTest`-only scope defensible here, per 11 of 13 fleet PRs? | No — verified against this repo's own code, not the fleet baseline: the other 8 items each have a real, code-confirmed binding site this repo carries that the lean fleet contexts don't (own schema catalogue, own Azure Functions module, own `liquibase.properties`) |
+| BC-20 test class name | Align to the fleet's own convention, `AccessControlRuleCountTest`, confirmed from `system-id-mapper`'s real merged file — not a bespoke BC-numbered name |
 
 ## Scope boundaries
 
@@ -120,6 +152,12 @@ viewstore-repository tests for entities this repo does not have.
   DLRM-01 addendum.
 - **The report may be wrong in places, and a J17 run outranks it — BC-11 already was.** Expect at least
   one further correction here and record it (parity-method ADR decision 4).
+- **No fetched fleet PR attempts BC-13's or DLRM-01's numeric-literal-table depth.** Of the 13 completed
+  contexts' PRs read directly for this story, the deepest (`users-groups`#217) covers persistence,
+  access-control branch gaps and one Jackson-zone test — none of it a schema-validation numeric-literal
+  matrix. This story's two primary items therefore have no fleet implementation to check the design
+  against beyond the generic guide's own method description; the design stage should treat this as
+  genuinely novel work, not an adaptation of an existing pattern.
 - **ITs need Docker** (`CPP_DOCKER_DIR` → `cpp-developers-docker`). Any IT-tier parity test is
   authored-not-executed until that is available; mark it 🟡, not 🟢.
 - Owner is unassigned for stagingdlrm on the PEG-3296 tracker (confirmed against the 06 Aug 2026 tracker

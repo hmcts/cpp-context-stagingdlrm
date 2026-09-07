@@ -243,7 +243,20 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
 - **DLRM-01 has no precedent anywhere in the fleet.** No other CPP context has an Azure Functions
   module (confirmed against the 06 Aug 2026 tracker — `stagingdlrm` is the only Azure Functions line
   item), so no other parity story has pinned a networknt/Jackson gate. There is no reference
-  implementation to copy and no reviewer with prior experience of it.
+  implementation to copy and no reviewer with prior experience of it. Confirmed directly, not just
+  inferred from the tracker: reading the 13 fleet PRs it cites as completed
+  (`notification`#38, `notification-notify`#44, `system-id-mapper`#27, `system-scheduling`#22,
+  `system-announcement`#14, `system-doc-generator`#590, `hearing`#293, `listing`#106,
+  `mi-reportdata`#587, `work-management-proxy`#29, `businessprocesses`#77, `resulting`#123,
+  `users-groups`#217), none attempts a schema-validation numeric-literal matrix at any depth — the
+  deepest of them (`users-groups`#217) covers persistence, access-control branch gaps and one Jackson-zone
+  test. **This story's scope is a real outlier against the fleet baseline** (11 of the 13 PRs are a
+  single ~26-line `AccessControlRuleCountTest` and nothing else, even a 37-`@Entity` JPA context once its
+  persistence cluster comes back parity-clean) — and the outlier is earned: stagingdlrm is the only
+  tracked context with an Azure Functions module, its own everit/`org.json` schema catalogue, and its own
+  `liquibase.properties`, none of which the lean fleet contexts carry. `users-groups`#217's own checklist
+  puts BC-07/11/12/13/21 in its *own* "Bucket B — verify once, no per-context test" — a call specific to
+  a persistence-dominated context, not a precedent this repo can lean on.
 - **BC-11's assertion is about a real call site, which is easy to get wrong if copied from another
   repo without checking.** The parity-method ADR's decision 8 explicitly warns pcfdlrm's own story not
   to assume the same call-site shape applies there.
@@ -286,3 +299,12 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
    single most detailed map of exactly which class does what at each processing stage, including line
    citations, and prevents re-deriving facts (schema file names, retry/outcome-write branching) that are
    already documented.
+7. **Name the BC-20 test `AccessControlRuleCountTest`, not a BC-numbered name.** Every one of the 13
+   fleet PRs read for this story that includes a BC-20 guard uses this exact class name (confirmed from
+   `system-id-mapper`#27's real merged file), with a single
+   `kieBaseShouldCompileAtLeastOneRule()`-style test asserting
+   `KieServices.get().getKieClasspathContainer().getKieBase(name).getKiePackages()...sum() > 0`. This
+   requirements document does not prescribe class names as a rule (see the header note), but this one
+   naming choice is worth calling out explicitly: a reviewer familiar with the fleet's other ~12 parity
+   PRs will look for this exact name, and a differently-named class doing the same job reads as a
+   bespoke, unreviewed pattern rather than the fleet's own established one.
