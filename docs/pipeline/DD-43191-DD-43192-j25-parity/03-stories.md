@@ -36,8 +36,10 @@
   unit test - a meaningful pin needs Liquibase itself to run, which is IT-tier.
 - Acceptance: FR13 revised (see `01-requirements.md`), AC1.
 
-## T8 — `stagingdlrm-event-processor`: BC-08
-- Javadoc annotation on `ObjectBuilder.buildMetaData`; no new test.
+## T8 — BC-08: record only, no code touched
+- No change to `stagingdlrm-event-processor` at all - `ObjectBuilder.buildMetaData`'s `ZonedDateTime` is
+  never serialized through Jackson anywhere in this repo, so there's no incidental coverage to annotate
+  and no test to write. Recorded directly in `docs/j25-parity-checklist.md`.
 - Acceptance: FR14, AC1.
 
 ## T9 — ADR decision 8 (already present on this branch)

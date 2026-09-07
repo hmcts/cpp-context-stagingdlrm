@@ -173,10 +173,12 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   anything here needs Liquibase itself to run, which is IT-tier per this story's own depth model.
   Record the risk, the key set, and the reasoning in the checklist as a Bucket-B-style check; do not
   author a unit test that reads as a pin but doesn't function as one.
-- **FR14 — BC-08: annotate, do not author.** The repo's only `ZonedDateTime` is in an event-processor
-  **test helper**. Annotate the existing coverage as already pinning J17 behaviour (📝) and record why
-  no new test is warranted. Authoring a parity test around a test helper asserts the fixture, not the
-  product.
+- **FR14 — BC-08: record, do not author, and do not touch unrelated code to do it.** The repo's only
+  `ZonedDateTime` is in an event-processor **test helper**, and it is never serialized through Jackson
+  anywhere in this repo's own tests either — there is no incidental J17 coverage to annotate.
+  Authoring a parity test around a test helper would pin the fixture, not the product; adding an
+  in-code comment to a file this story otherwise makes no change to is noise on unrelated code, not a
+  pin. Record the finding (📝) and its reasoning in `docs/j25-parity-checklist.md` only.
 
 ### D. Recording, and boundaries
 

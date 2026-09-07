@@ -165,11 +165,15 @@ would mean anything here needs Liquibase itself to run against this properties f
 check (⚪), not authored-not-executed (🟡) — there is no unit-tier version of this pin worth writing in
 the meantime.
 
-### BC-08 — annotate, do not author
+### BC-08 — record, do not touch the code at all
 
 **Verified fresh:** the only `ZonedDateTime` in this repo is `stagingdlrm-event-processor`'s test helper
-`ObjectBuilder.buildMetaData` — test scope, no main-code carrier anywhere. Design: a javadoc annotation
-naming BC-08 and why no new test is warranted.
+`ObjectBuilder.buildMetaData` — test scope, no main-code carrier anywhere. Checked further: it is never
+serialized through Jackson in this repo's own tests either (`StagingDlrmEventProcessorTest` only ever
+uses it as a Mockito stub return value) — no incidental J17 coverage exists to annotate. Design: no code
+change of any kind. `ObjectBuilder.java` is otherwise untouched by this story, and a javadoc note there
+would be noise on unrelated code rather than a pin. Record the finding and its reasoning in
+`docs/j25-parity-checklist.md` only.
 
 ## Cross-cutting
 
