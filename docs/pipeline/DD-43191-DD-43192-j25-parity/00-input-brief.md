@@ -40,10 +40,10 @@ upgrade stage has a real regression gate rather than a suite that passes because
 
 Three sources of candidates, read together, not in isolation:
 
-1. [`j25-behavioural-change-investigation-report.md`](./j25-behavioural-change-investigation-report.md)
+1. [`j25-behavioural-change-investigation-report.md`](../../analysis/j25-upgrade/j25-behavioural-change-investigation-report.md)
    — 24 catalogued behavioural changes (17 Confirmed, 3 Refuted, 2 Mixed, 2 Inconclusive), the original
    per-context investigation.
-2. [`Parity+Testing+Java17+-_+Java25.pdf`](./Parity+Testing+Java17+-_+Java25.pdf) — the fleet-wide,
+2. [`Parity+Testing+Java17+-_+Java25.pdf`](../../analysis/j25-upgrade/Parity+Testing+Java17+-_+Java25.pdf) — the fleet-wide,
    **empirically corrected** generic guide, with an evidence log from ~14 completed contexts. **Where
    the two disagree, this one wins** — it is dated later and reflects real J17/J25 runs, not the
    original hypothesis. In particular its BC-11 entry ("CORRECTED 2026-08-26") replaces the original

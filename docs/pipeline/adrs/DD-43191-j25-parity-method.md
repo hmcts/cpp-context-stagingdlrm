@@ -239,7 +239,7 @@ wins where the two disagree, exactly as decision 7 established for its own corre
 **What changed.** Every BC-11 reference elsewhere in this ADR was written against the original
 investigation report's hypothesis: a JSON-P `ServiceLoader` provider collision (glassfish → Parsson),
 provable by a classpath-resource count. Fleet-wide empirical work across the ~14 contexts Platform
-Engineering has since completed (`docs/pipeline/DD-43191-DD-43192-j25-parity/Parity+Testing+Java17+-_+Java25.pdf`,
+Engineering has since completed (`docs/analysis/j25-upgrade/Parity+Testing+Java17+-_+Java25.pdf`,
 its BC-11 entry marked "CORRECTED 2026-08-26") replaces that hypothesis with a verified one:
 
 > Via the framework helper `uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder()`,

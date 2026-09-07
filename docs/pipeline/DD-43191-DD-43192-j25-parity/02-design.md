@@ -163,7 +163,7 @@ note). The upgrade-mechanics ADR's decision 5 is now the only safeguard against 
   `pcfdlrm-command-api` and `progression-query-api` RAML artifacts this offline sandbox has never
   resolved (confirmed via a clean `git stash`).
 
-### BC-07 — the Liquibase property set has no meaningful unit-level pin
+### BC-07 — no test: there is no viewstore to migrate
 
 **Verified fresh:** exactly three keys — `changelogFile`, `liquibase.hub.mode`, `liquibase.headless` — no
 `searchPath`. `liquibase/stagingdlrm.xml` (the changelog `changelogFile` points at) is **empty** — no
@@ -173,13 +173,16 @@ nonetheless genuinely deployed and executed: `docker/Dockerfile_stagingdlrm-serv
 `java -jar ... update` against a real Postgres database as part of container startup, aborting the whole
 init script on failure.
 
-**Design reconsidered:** a `java.util.Properties.load()` unit test asserting the key set was authored and
-then removed. It is true on both J17 and J25 regardless of Liquibase's own version — it proves the file
-has three keys, not that Liquibase 5 would reject one of them (BC-07's actual risk). The only test that
-would mean anything here needs Liquibase itself to run against this properties file, which is IT-tier
-(needs `CPP_DOCKER_DIR`) per this story's own depth model. Recorded in the checklist as a Bucket-B-style
-check (⚪), not authored-not-executed (🟡) — there is no unit-tier version of this pin worth writing in
-the meantime.
+**Design:** no test. **This repo has no viewstore** — `stagingdlrm-viewstore-persistence`,
+`stagingdlrm-event-listener` and `stagingdlrm-query-api` all contain zero Java files, `persistence.xml`
+declares no entity classes, and the changelog has no changesets. Nothing is created, persisted or
+queried, so there is no database whose migration configuration is worth pinning. A key-set pin was
+authored and run green (3 tests) on 2026-09-07 and then removed on that basis.
+
+The risk itself is recorded in the checklist rather than tested: the jar is still built, baked into the
+image and executed at container startup, and Liquibase 5 rejects `liquibase.hub.mode` at config-parse
+time whether or not the changelog is empty. **The remedy is deletion under FR18** — the property, or the
+whole module, since nothing depends on it.
 
 ### BC-08 — record, do not touch the code at all
 

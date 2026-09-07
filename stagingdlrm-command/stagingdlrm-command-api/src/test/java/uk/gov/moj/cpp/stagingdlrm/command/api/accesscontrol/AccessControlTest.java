@@ -55,13 +55,8 @@ public class AccessControlTest extends BaseDroolsAccessControlTest {
     }
 
     /**
-     * BC-03 parity test (see docs/j25-parity-checklist.md). {@code command-migrate-case-submission-api.drl}
-     * declares two rules; only "Command - Rule for Migrate Case Submission" (above) had ever been
-     * tested on any JDK. This closes that pre-existing coverage gap for "Command - Rule for Error
-     * Migrate Case Submission" - a genuine J17 coverage fix as well as a parity pin. Note: BC-03 itself
-     * (Drools 7-&gt;10 recompilation silently flipping allow/deny) is <b>Refuted</b> fleet-wide - this
-     * test closes a testing gap that happens to share the ticket number, it does not mitigate a live
-     * J25 risk.
+     * BC-20 zero-rule guard for the COMMAND_API kbase, and a coverage-gap fix for the DRL's second
+     * rule. Not BC-03 - that is Refuted. See docs/j25-parity-checklist.md (BC-20 and BC-03 rows).
      */
     @Test
     public void shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission() {

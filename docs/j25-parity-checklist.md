@@ -21,15 +21,15 @@
 | **BC-13** | primary (see note — no test) | JSON-schema validation strictness (`org.json` 20231013→20251224, everit) at the schema-catalogue tier — `stagingdlrm-domain-value-schema` | None — see note below | ⚪ | Not applicable — see note below |
 | **DLRM-01** | primary (see note — no test) | Jackson `ObjectMapper.readTree` parse behaviour (2.12.7→2.21.4) at the Function App gate — not in the 24-BC catalogue (parity-method ADR decision 6) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-11 | **corrected** (parity-method ADR decision 8); see note — no test | `JsonObjects.createObjectBuilder().add(key, null)` throws `NullPointerException` identically on J17 and J25 — a pre-existing latent-bug parity, not a J25 regression | None — see note below | ⚪ | Not applicable — see note below |
-| BC-03 | high (coverage gap, not a live risk — see note) | Drools 7→10 allow/deny — `command-migrate-case-submission-api.drl`, 2 rules, previously only 1 covered | `AccessControlTest` — added `shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` / `shouldNotAllowSystemUserForErrorMigrateCaseSubmission` alongside the pre-existing pair for the first rule | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlTest` → `Tests run: 4, Failures: 0` (2026-09-04) |
-| BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | None — see note below. (Authored and run green on J17 2026-09-07 as `AccessControlRuleCountTest`, then removed the same day — the test's own mechanism turned out not to guard the risk it was named for) | ⚪ | Not applicable — see note below |
+| BC-03 | **Refuted** — no parity claim | Drools 7→10 allow/deny — `command-migrate-case-submission-api.drl` | No BC-03 pin, because there is nothing to pin: the guide refutes BC-03 (rules unchanged, fail-closed) and attaches only the residual guard "keep `*RulesTest` green", which the pre-existing tests already satisfied. The `AccessControlTest` additions are booked under **BC-20** below (parity value) and as a standalone coverage-gap fix (their real justification) | 📝 | Refuted fleet-wide; see the BC-03 note below |
+| BC-20 | low (cheap) | Drools harness rule-count gate — guards the vacuous-deny failure mode a zero-rule `KieBase` would produce | `AccessControlTest`'s allow assertions, incl. `shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` added by this story. They run through `BaseDroolsAccessControlTest` — the code path BC-20's defect lives in — so COMMAND_API cannot silently drop to 0 rules (the mechanism the guide's own evidence log names). **COMMAND_API only**; the harness-level rule-count fix is framework-owned, and QUERY_API is a separate finding. A standalone `AccessControlRuleCountTest` was authored and run green 2026-09-07 then removed — it bypassed the harness, so it guarded nothing (see note) | 🟢 | `mvn -o test -pl stagingdlrm-command/stagingdlrm-command-api -Dtest=AccessControlTest` → `Tests run: 4, Failures: 0` (2026-09-07) |
 | BC-12 | medium | RESTEasy engine swap — the Function App's 4 compile-scope RESTEasy artifacts (no container to supply them) | None — see note below | ⚪ | Not applicable — see note below |
 | BC-21 (catalog-generation-plugin) | medium | Codegen (`reflections` 0.9.10→0.10.2) — schema catalogue generation | None — see note below. (Authored and run green on J17 2026-09-04, then removed 2026-09-07 per decision — not "never written") | ⚪ | Not applicable — see note below |
 | BC-21 (messaging-client-generator-plugin) | medium | Codegen — RAML-driven messaging client | None — see note below. (Authored and run green on J17 2026-09-04 as `Bc21MessagingClientGenerationParityTest`, asserting `stagingdlrm-command-handler`'s RAML-schema-count == `@Handles`-method-count on the generated remote client via reflection, then removed 2026-09-07 — the test's own stated `reflections` 0.9.10→0.10.2 premise turned out to be false for this generator) | ⚪ | Not applicable — see note below |
 | BC-21 (pojo-generation-plugin) | medium | Codegen — POJO generation from JSON schema | Not instrumented — see note below | 🟡 | Not authored |
 | BC-21 (rest-client-generator-plugin) | medium | Codegen — RAML-driven REST client | Not instrumented — see note below | 🟡 | Not authored |
-| BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `liquibase.properties` | None — a plain `Properties.load()` unit test was authored, then removed: it only reads the file's key set, which is true on both J17 and J25 and doesn't exercise Liquibase's own property-validation logic at all. Pinning the *real* risk (Liquibase 5 rejecting `liquibase.hub.mode`) needs Liquibase itself to run, which is IT-tier (needs Docker) — see the note below | ⚪ | Not applicable — see note below |
-| BC-08 | thin | Jackson `'Z'` → `ZoneOffset.UTC` — the repo's only `ZonedDateTime` is in an event-processor **test helper** (`ObjectBuilder.buildMetaData`), not product code | None — no code change of any kind, including a comment. `ObjectBuilder.java` is otherwise untouched by this story; adding a javadoc note there would be noise on unrelated code, not a pin. The finding is recorded here instead | 📝 | N/A — checked, not assumed: `StagingDlrmEventProcessorTest` only ever uses this `Metadata` as a Mockito stub return value, never serialized through Jackson and never asserted on. There is **no incidental J17 coverage of BC-08 anywhere in this repo** — an earlier version of this row, and a code comment briefly added then removed, both claimed otherwise; corrected 2026-09-07 |
+| BC-07 | low (deploy blocker) | Liquibase 4→5 removed properties — `stagingdlrm-viewstore-liquibase`'s `liquibase.properties` | **None, by decision — this repo has no viewstore.** A key-set pin was authored and run green (3 tests, 2026-09-07), then removed: testing the migration config of a database that does not exist is scaffolding, not coverage. See note below | ⚪ | Not applicable — see note below |
+| BC-08 | thin (seam exists, never fed) | Jackson `'Z'` → `ZoneOffset.UTC`. **Corrected 2026-09-07:** the repo's only main-code `ZonedDateTime` is `MigratedMaterial.receivedDateTime` (generated from `migrated-material.json`), carried onto the outbound pcfdlrm payload at `MigratedCaseConvertor.java:323`. Earlier revisions of this row claimed the only `ZonedDateTime` was an event-processor test helper — wrong | None. No J17 behaviour to pin: the Function App (`StagingDlrmCommandHelper`) is the sole producer of this payload and **never sets `receivedDateTime`** — optional in the schema, absent from every fixture — so the converter copies null to null and no `ZonedDateTime` ever crosses a Jackson boundary | 📝 | N/A — no value to serialize. See note below |
 
 **BC-13 note — this repo's other primary item had no test even before DLRM-01's removal, below.**
 `Bc13SchemaValidationParityTest` (8 tests: required/enum/anyOf/type accept+reject on `case-details.json`,
@@ -97,19 +97,61 @@ BC-07's actual risk — Liquibase 5 rejecting the unsupported `liquibase.hub.mod
 config-parse time, before Liquibase ever looks at whether the changelog has changesets. An empty
 changelog does not insulate this repo from that.
 
-A `Properties.load()` unit test asserting the file's key set was authored and then **removed**: it is
-true on both J17 and J25 regardless of Liquibase's own version, so it never actually exercised Liquibase's
-property-validation logic — it only proved the file has three keys, not that Liquibase 5 would reject one
-of them. A test that actually pins the J17-vs-J25 divergence needs Liquibase itself to run against this
-properties file, which is IT-tier (needs `CPP_DOCKER_DIR`) per this story's own depth model, not a unit
-test. Recorded here as a Bucket-B-style check (⚪) rather than authored-not-executed (🟡), since no
-context-level unit test is possible here — the only version of a test that means anything for this BC
-belongs at the IT tier, which this story does not execute (see the requirements' depth model).
+**There is no viewstore.** Verified on disk 2026-09-07, and this is the reason BC-07 carries no test:
+
+- `liquibase/stagingdlrm.xml` — a bare `<databaseChangeLog>` wrapper, **zero `<changeSet>` elements**
+- `stagingdlrm-viewstore-persistence` — **zero Java files**; its `persistence.xml` declares a
+  persistence unit with **no `<class>` entries**, i.e. no entities
+- `stagingdlrm-event-listener` — **zero Java files**
+- `stagingdlrm-query-api` — **zero Java files**
+
+The read side of this context is empty scaffolding inherited from the CPP context template. No table is
+ever created, nothing is persisted, nothing is queried. (Note that the architecture docs' description of
+the event listener "persisting to the view store" and the query API "reading from the view store"
+describes the template, not this repo's code.)
+
+**Decision: no Liquibase test.** A `Properties.load()` key-set pin was authored and run green (3 tests)
+on 2026-09-07, then removed. Pinning the migration configuration of a database that does not exist adds a
+test-scope dependency and a maintenance obligation to a module that packages two inert resource files.
+
+**Residual risk, recorded for the upgrade story.** The jar is still built and still executed:
+`docker/Dockerfile_stagingdlrm-service:21` bakes it into the image and `docker/scripts/liquibase.sh:35`
+runs `java -jar stagingdlrm-viewstore-liquibase.jar … update`, aborting the init script on failure (so
+line 42's `framework-system-liquibase` would not run either). Liquibase 5 rejects `liquibase.hub.mode` at
+config-parse time, before it opens the changelog — an empty changelog does not insulate against that.
+**The fix is deletion, not a test:** drop the property, or delete the module outright given nothing uses
+it. That is the upgrade story's FR18.
+
+**BC-08 note.** The seam is real but unfed, and that distinction matters for the upgrade story.
+
+- **It exists:** `MigratedMaterial.receivedDateTime` is a `ZonedDateTime` in generated main code, and
+  `MigratedCaseConvertor:323` copies it onto pcfdlrm's `MigratedMaterial` — structurally the same
+  outbound-payload seam the parity-method ADR rates as **pcfdlrm's primary BC-08 item**. That ADR's
+  side-by-side table records stagingDLRM as having "none (one test helper)"; that is wrong and should be
+  read against this row.
+- **It is never fed:** the Function App never populates `receivedDateTime`. It is optional in
+  `migrated-material.json` and appears in no fixture in this repo. Null in, null out.
+- **So the exposure is data-dependent, not structural.** If a LIBRA or XHIBIT extract begins supplying
+  `receivedDateTime`, BC-08 becomes live at this converter with nothing pinning it. The cheap guard, if
+  wanted later, is a round-trip assertion over `MigratedCaseConvertor.buildMaterials` with a populated
+  `ZonedDateTime` — the event-processor module already has the test dependencies for it.
+- The other nine `java.time` fields in generated POJOs are `LocalDate`, which carries no zone and cannot
+  drift. `MigratedCaseConvertor` uses `LocalDate.parse` in main code for the same reason.
 
 **BC-03 note.** Per both the investigation report and the fleet-wide guide, BC-03 itself (Drools
-recompilation silently flipping allow/deny) is **Refuted** — rules are unchanged and fail-closed. This
-story's BC-03 row closes a genuine, pre-existing **coverage gap** (the second rule had never been tested
-on any JDK) that happens to share the ticket number; it does not mitigate a live J25 risk.
+recompilation silently flipping allow/deny) is **Refuted** — rules are unchanged and fail-closed. There
+is therefore no BC-03 parity pin in this repo, and an earlier revision of this checklist was wrong to
+present the `AccessControlTest` additions as one (corrected 2026-09-07).
+
+Those two tests are still worth having, for two reasons that are not BC-03:
+
+1. **A pre-existing coverage gap.** `command-migrate-case-submission-api.drl` declares two rules and only
+   the first had ever been tested on any JDK. The second guards the live
+   `POST /receive-error-migrated-case-submission` endpoint. This is the tests' real justification and it
+   is JDK-independent.
+2. **BC-20's zero-rule guard** — see the BC-20 row above. This is the parity item they serve, and the
+   guide itself pairs it with BC-03's Refuted verdict ("keep `*RulesTest` green; pair with BC-20
+   rule-count assertion so a zero-rule load can't masquerade as a flip").
 
 **BC-20 note.** `AccessControlRuleCountTest` was built and ran green on J17 (`Tests run: 1, Failures: 0`,
 2026-09-07), then **removed the same day** on re-verification of its own premise — a different kind of
@@ -140,6 +182,15 @@ All 13 fleet PRs read for this story use this same direct-`getKieClasspathContai
 same class name — so this may be a fleet-wide blind spot, not one specific to this repo's test. That
 observation is recorded here for whoever next touches BC-20 fleet-wide; it is not this story's to fix
 (`access-control-test-utils` is a framework repository, out of scope per FR18).
+
+**`COMMAND_API` is incidentally guarded anyway.** The fleet-wide guide's own BC-20 evidence entry notes
+that "any `*RulesTest` with an allow assertion (`assertSuccessfulOutcome`) already fails on a 0-rule
+load". `AccessControlTest` has two such allow assertions — the pre-existing one and
+`shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission` added by this story's BC-03 row — both routed
+through `BaseDroolsAccessControlTest`, i.e. through the exact code path BC-20's defect would live in. So
+the kbase that carries this repo's rules cannot silently drop to zero without a red test, which is what
+BC-20 exists to guarantee. That, rather than the withdrawn `AccessControlRuleCountTest`, is what
+actually covers BC-20 here. **`QUERY_API` is a different story — see the next section.**
 
 **BC-21 note.** None of the four generator plugin families that run in this repo carries a test any
 more — each for its own distinct reason:
@@ -189,7 +240,7 @@ more — each for its own distinct reason:
 
 | Item(s) | Reason |
 |---|---|
-| BC-01, BC-02, BC-04, BC-05, BC-06, BC-24 | The persistence cluster. `stagingdlrm-viewstore-persistence` contains **zero Java files** (confirmed 2026-09-04) — no `@Entity`, no repository, only `persistence.xml` and `beans.xml`. Nothing to bind a Hibernate/JPA parity test to. |
+| BC-01, BC-02, BC-04, BC-05, BC-06, BC-24 | The persistence cluster. **This repo has no viewstore at all** (confirmed 2026-09-07): `stagingdlrm-viewstore-persistence`, `stagingdlrm-event-listener` and `stagingdlrm-query-api` each contain **zero Java files**; `persistence.xml` declares a persistence unit with **no `<class>` entries**; the Liquibase changelog has **no changesets**. No `@Entity`, no repository, no query handler, no table. Nothing to bind a Hibernate/JPA parity test to. |
 | BC-09, BC-10 | No Activiti in this repo (confirmed against `docs/architecture/dlrm-flow-reference.md`'s module map — no workflow-engine dependency). |
 | BC-18 | No `ActiveMQConnectionFactory` usage in this repo. |
 | BC-19 | SJP-specific; this repo has no SJP code path. |
@@ -198,10 +249,12 @@ more — each for its own distinct reason:
 
 ## Corrections to source documents
 
-**BC-11** — both `docs/analysis/j25-upgrade/j25-behavioural-change-investigation-report.md` and the
-story-directory copy at `docs/pipeline/DD-43191-DD-43192-j25-parity/j25-behavioural-change-investigation-report.md`
-(itself byte-identical to the analysis copy except for one added provenance note) still carry the
-original, uncorrected provider-collision hypothesis for BC-11. The fleet-wide
+**BC-11** — `docs/analysis/j25-upgrade/j25-behavioural-change-investigation-report.md` still carries the
+original, uncorrected provider-collision hypothesis for BC-11. (An earlier revision of this row also
+named a story-directory copy at
+`docs/pipeline/DD-43191-DD-43192-j25-parity/j25-behavioural-change-investigation-report.md`; no such
+copy exists — both source documents live only under `docs/analysis/j25-upgrade/`. Corrected
+2026-09-07.) The fleet-wide
 `Parity+Testing+Java17+-_+Java25.pdf`'s 2026-08-26 correction is what this story's BC-11 row is built
 against; per instruction, the investigation report is left as-is, not edited.
 
@@ -231,6 +284,42 @@ verified fresh against the code on 2026-09-04, matched what both source document
   parse successfully as non-integral node/value types at each tier (everit: `BigDecimal`; Jackson:
   `DoubleNode`) and both tiers' `"type": "integer"` check inspects the parsed type rather than whether
   the numeric value happens to be whole.
+
+## Zero-rule kbase — `QUERY_API` (finding, not a parity assertion)
+
+**Recorded 2026-09-07.** `stagingdlrm-query/stagingdlrm-query-api/src/main/resources/META-INF/kmodule.xml`
+declares:
+
+```xml
+<kbase name="QUERY_API" packages="rules" default="true">
+    <ksession name="QUERY_API_SESSION" default="true" type="stateless"/>
+</kbase>
+```
+
+The module ships **no `.drl` file at all** (the repo's only DRL is the command-api one), and **no
+access-control test**. `getKieBase("QUERY_API")` therefore resolves to **zero rules**, and nothing
+asserts otherwise.
+
+This is very close to the gotcha the fleet-wide guide records against `cpp-context-system-doc-generator`,
+where a `packages="rules"` attribute naming the *resource folder* rather than the DRL *package
+namespace* produced a 0-rule kbase. Here the mismatch is more basic — there is no DRL to name.
+
+**Disposition — follow the guide, which is explicit about this case:** treat a both-branches-0 kbase as
+a finding, *not* a parity assertion. Specifically:
+
+- **Do not** commit a `> 0` rule-count guard for this kbase — it would be red on the J17 source of
+  truth, which is not what a parity pin means.
+- **Do not** "fix" the kmodule on the J25 branch only — that would manufacture a J17→J25 divergence.
+- It is **parity-neutral**: identical on both runtimes, so it is not a J25 regression and not this
+  story's to fix (FR15/FR18 — pin existing behaviour, don't change it).
+
+**Which of the two possible causes it is, settled:** the kbase declaration is **dead configuration**,
+not a missing guard. `stagingdlrm-query-api` contains **zero Java files** — there is no query handler to
+guard, and no viewstore behind it to read (see the BC-07 note). The `kmodule.xml` is template scaffolding
+that came with the context, like the rest of this repo's read side. Nothing is unprotected.
+
+Handed to the owners as a separate, non-parity tidy-up to be applied to **both** branches, at whatever
+point the empty read-side modules are dealt with as a whole.
 
 ## Gaps
 
@@ -273,23 +362,22 @@ verified fresh against the code on 2026-09-04, matched what both source document
   → `BUILD SUCCESS`, all 22 remaining reactor modules, every new and pre-existing test executing and
   none skipped (2026-09-04). Verified via a clean `git stash` that this artifact-resolution failure is
   pre-existing on `team/25.104.x` and not introduced by this story.
-- **BC-07's only meaningful pin is IT-tier, and this story does not execute IT-tier items.** A
-  context-level unit test would only prove the properties file has three keys — true regardless of
-  Liquibase's version, so it cannot actually catch the J17→J25 divergence. The real check needs Liquibase
-  itself to run against `liquibase.properties`, which needs `CPP_DOCKER_DIR` (per this story's depth
-  model, same reason no other IT-tier item is executed here). Recorded as ⚪ rather than 🟡, since there
-  is no unit-level version of this test worth authoring in the meantime — see the BC-07 note above.
+- **BC-07 carries no test, and the residual risk is a deletion, not a gap in coverage.** This repo has
+  no viewstore (no entities, no changesets, no listener or query code), so there is nothing for the
+  Liquibase config to migrate. The jar is nonetheless still built and executed at container startup, and
+  Liquibase 5 would reject `liquibase.hub.mode` at config-parse time — the upgrade story removes the
+  property or the module under FR18. See the BC-07 note above.
 - **Final status distribution across the 9 Bucket A items (12 rows, BC-21 split four ways):** 🟢 1
-  (BC-03), 📝 1 (BC-08), ⚪ 8 (BC-13, DLRM-01, BC-11, BC-12, BC-21 catalog-generation-plugin,
-  BC-21 messaging-client-generator-plugin, BC-20, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
-  rest-client-generator-plugin). Of the eight ⚪ rows, five (BC-13, BC-21 catalog-generation-plugin,
-  BC-21 messaging-client-generator-plugin, BC-07, and — on the specific grounds that its finding is
-  "Refuted / parity," never a J25 candidate — BC-11) were removed because no live upgrade risk was found
-  to pin (messaging-client-generator-plugin's case is distinct again within that group: its stated risk
-  was checked and found never to have applied to this generator at all, not merely judged unimportant);
-  **BC-12 and DLRM-01 are the exceptions** — real, verified-or-plausible risks, removed by explicit
-  decision rather than because the risk was absent; **BC-20 is a fourth, distinct flavour again** — its
-  risk is real fleet-wide, but its own test's mechanism cannot detect it in this repo, whether or not the
-  underlying dependency is ever bumped (see its dedicated note above). With this removal, **BC-03's two
-  added tests in `AccessControlTest` are the only 🟢 this story leaves behind anywhere in the repo** —
-  every other Bucket A item is either 📝, ⚪, or 🟡.
+  (BC-20), 📝 2 (BC-03, BC-08), ⚪ 7 (BC-13, DLRM-01, BC-11, BC-12, BC-21 catalog-generation-plugin,
+  BC-21 messaging-client-generator-plugin, BC-07), 🟡 2 (BC-21 pojo-generation-plugin,
+  rest-client-generator-plugin).
+
+  One test class survives: the `AccessControlTest` additions (2 tests, booked under **BC-20** — not
+  BC-03, which is Refuted and has nothing to pin).
+
+  Of the seven ⚪ rows, five (BC-13, BC-21 catalog-generation-plugin, BC-21 messaging-client-generator-plugin,
+  and — on the specific grounds that its finding is "Refuted / parity," never a J25 candidate — BC-11)
+  were removed because no live upgrade risk was found to pin (messaging-client-generator-plugin's case is
+  distinct again within that group: its stated risk was checked and found never to have applied to this
+  generator at all, not merely judged unimportant); **BC-12 and DLRM-01 are the exceptions** — real,
+  verified-or-plausible risks, removed by explicit decision rather than because the risk was absent.

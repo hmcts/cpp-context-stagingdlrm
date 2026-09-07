@@ -45,7 +45,7 @@ instead of a suite that keeps passing because none of the framework's own code r
 | Tier | Depth | Rationale |
 |---|---|---|
 | **Unit / component** | Originally **exhaustive** for both primary items (BC-13, DLRM-01): every input class the validator treats differently, accept *and* reject. Both tables were built, run green, and withdrawn (FR5, FR6) — neither primary item has a test any more. Sufficient-branch coverage for the rest still stands. | Fast, in `mvn test`, no environment. The right place for an input matrix, when one exists. |
-| **Build-time assertion** | Originally **a single decisive check** per item (BC-11, BC-12, BC-21's `messaging-client-generator-plugin` sub-item). All three were built and run green, then withdrawn — BC-07 never had one to begin with. No item in this tier carries a test any more; see FR8/FR11/FR12/FR13, each withdrawn for its own distinct reason. | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
+| **Build-time assertion** | Originally **a single decisive check** per item (BC-07, BC-11, BC-12, BC-21's `messaging-client-generator-plugin` sub-item). All four were built and run green, then withdrawn — see FR8/FR11/FR12/FR13, each for its own distinct reason (BC-07's: there is no viewstore to migrate). No item in this tier carries a test. | These are packaging and code-generation facts, not runtime behaviour; a test that boots a container to observe them is the wrong instrument. |
 | **Integration** | **Authored, not executed.** Any IT-tier item is written and marked 🟡 until Docker and a WildFly image are available. | ITs need `CPP_DOCKER_DIR`; no WildFly 40 image existed as of the investigation report. Blocking this story on that would block the whole epic. |
 
 ## Scope
@@ -181,25 +181,26 @@ Out of the module scope entirely: `stagingdlrm-testharness`, `stagingdlrm-perfor
   `catalog-generation-plugin`'s file-discovery mechanism — confirmed by decompilation, not assumed
   uniform across all four. No sub-item of BC-21 carries a test any more; each is unpinned for its own
   distinct, recorded reason.
-- **FR13 — BC-07: record the Liquibase property-set risk; do not author a unit test that doesn't
-  actually pin it.** Liquibase 4→5 rejects properties it removed, as a pre-install migration-job
-  failure — a deploy blocker, not a behaviour change, and genuinely live here: `liquibase.properties`
-  is bundled into `stagingdlrm-viewstore-liquibase.jar` and executed by `docker/scripts/liquibase.sh` at
-  container startup. A plain `Properties.load()`-based unit test only proves the file's key set, which
-  is identical on J17 and J25 regardless of Liquibase's own version — it does not exercise Liquibase's
-  property-validation logic, so it cannot actually catch the divergence. The only test that would mean
-  anything here needs Liquibase itself to run, which is IT-tier per this story's own depth model.
-  Record the risk, the key set, and the reasoning in the checklist as a Bucket-B-style check; do not
-  author a unit test that reads as a pin but doesn't function as one.
-- **FR14 — BC-08: record, do not author, and do not touch unrelated code to do it.** The repo's only
-  `ZonedDateTime` is in an event-processor **test helper**, and it is never serialized through Jackson
-  anywhere in this repo's own tests either — there is no incidental J17 coverage to annotate.
-  Authoring a parity test around a test helper would pin the fixture, not the product; adding an
-  in-code comment to a file this story otherwise makes no change to is noise on unrelated code, not a
-  pin. Record the finding (📝) and its reasoning in `docs/j25-parity-checklist.md` only.
-
-### D. Recording, and boundaries
-
+- **FR13 — BC-07: record the Liquibase property-set risk; author no test.** **This repo has no
+  viewstore** — `stagingdlrm-viewstore-persistence`, `stagingdlrm-event-listener` and
+  `stagingdlrm-query-api` all contain zero Java files, `persistence.xml` declares no entity classes, and
+  the changelog has no changesets. There is no database for Liquibase to migrate, so a test over its
+  migration configuration is scaffolding, not coverage. *(Revised 2026-09-07 — a key-set pin was
+  authored and run green, then removed on this basis.)* The risk is nonetheless real and recorded: the
+  jar is still baked into the image and run by `docker/scripts/liquibase.sh` at container startup, and
+  Liquibase 5 rejects `liquibase.hub.mode` at config-parse time regardless of the empty changelog. **The
+  remedy is deletion under the upgrade story's FR18** — remove the property, or the module, since
+  nothing uses it. Record the risk, the key set and this reasoning in the checklist.
+- **FR14 — BC-08: record, do not author.** *(Corrected 2026-09-07.)* This repo's only main-code
+  `ZonedDateTime` is `MigratedMaterial.receivedDateTime`, generated from `migrated-material.json` and
+  copied onto the outbound pcfdlrm payload at `MigratedCaseConvertor.java:323` — structurally the same
+  seam this epic rates as pcfdlrm's *primary* BC-08 item. Earlier revisions of this FR (and the
+  parity-method ADR's side-by-side table) said the only `ZonedDateTime` was an event-processor test
+  helper; that is wrong. **No test is authored anyway, for a different reason:** the Function App is the
+  sole producer of the payload and never sets `receivedDateTime` (optional in the schema, absent from
+  every fixture), so no `ZonedDateTime` value crosses a Jackson boundary and there is no J17 behaviour to
+  pin. Record the seam, the reason it is unfed, and the fact that the exposure is data-dependent rather
+  than structural.
 - **FR15 — A live J17 defect is raised, not fixed here.** If a parity test reveals a defect on the
   current stack, the test pins the **observed** behaviour, the defect is recorded in the checklist and
   raised as its own ticket, and this PR does not fix it. Rationale: the parity PR's value is that it is

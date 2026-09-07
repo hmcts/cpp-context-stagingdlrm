@@ -56,13 +56,14 @@
   `docs/j25-parity-checklist.md`'s BC-21 note.
 - Acceptance: FR12 (revised), AC1.
 
-## T7 — `stagingdlrm-viewstore-liquibase`: BC-07 — no unit-level pin, recorded as a check
-- A `Properties.load()` unit test was authored, then removed - it doesn't exercise Liquibase's own
-  property-validation logic, only that the file has 3 keys (true on both J17 and J25 regardless of
-  Liquibase's version). The changelog it points at is also empty (a separate, pre-existing fact).
-  Recorded in `docs/j25-parity-checklist.md` as a Bucket-B-style check (⚪) with the reasoning, not a
-  unit test - a meaningful pin needs Liquibase itself to run, which is IT-tier.
-- Acceptance: FR13 revised (see `01-requirements.md`), AC1.
+## T7 — `stagingdlrm-viewstore-liquibase`: BC-07 — no test, no viewstore
+- No test and no pom change. This repo has no viewstore: zero Java files in
+  `stagingdlrm-viewstore-persistence`, `stagingdlrm-event-listener` and `stagingdlrm-query-api`, no
+  entity classes in `persistence.xml`, no changesets in the changelog. A key-set pin was authored and
+  run green, then removed - there is no database to migrate.
+- Risk recorded in `docs/j25-parity-checklist.md` instead: the jar still runs at container startup and
+  Liquibase 5 rejects `liquibase.hub.mode` at config-parse time. Remedy is deletion under FR18.
+- Acceptance: FR13, AC1.
 
 ## T8 — BC-08: record only, no code touched
 - No change to `stagingdlrm-event-processor` at all - `ObjectBuilder.buildMetaData`'s `ZonedDateTime` is
