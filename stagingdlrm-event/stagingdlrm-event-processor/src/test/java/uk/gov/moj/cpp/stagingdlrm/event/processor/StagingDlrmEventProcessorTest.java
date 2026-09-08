@@ -187,6 +187,23 @@ class StagingDlrmEventProcessorTest {
         assertEquals(DESCRIPTION, outcome.description());
 
         verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionReceivedCounter, never()).increment();
+    }
+
+    @Test
+    void shouldIncrementBothCountersWhenErrorSubmissionFailedSchemaValidationInFunctionApp() {
+        final String description = "JSON schema validation has failed: $.migratedCase.caseDetails: "
+                + "required property 'prosecutorCaseReference' not found";
+        final ErrorMigratedCaseSubmissionReceived errorMigratedCaseSubmissionReceived = buildErrorMigratedCaseSubmissionReceived(description);
+        when(errorMigratedCaseSubmissionReceivedEnvelope.payload()).thenReturn(errorMigratedCaseSubmissionReceived);
+        doNothing().when(eventGridService).sendEventToEventGrid(outcomeEventArgumentCaptor.capture());
+
+        eventProcessor.handleErrorMigratedCaseSubmissionReceived(errorMigratedCaseSubmissionReceivedEnvelope);
+
+        verify(eventGridService).sendEventToEventGrid(any());
+        verify(migratedCaseSubmissionReceivedCounter).increment();
+        verify(errorMigratedCaseSubmissionReceivedCounter).increment();
+        verify(migratedCaseSubmissionProcessedCounter, never()).increment();
     }
 
     @Test

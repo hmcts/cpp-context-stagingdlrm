@@ -111,6 +111,8 @@ public class StagingDlrmTestHelper {
                     }
                 }
             }
+
+            System.out.println("caseUrn : " + caseUrn);
         }
     }
 
@@ -191,6 +193,8 @@ public class StagingDlrmTestHelper {
                 saveAzureLocation(resourcePath, azureLocation);
 
             }
+
+            System.out.println("caseUrn : " + caseUrn);
         }
     }
 

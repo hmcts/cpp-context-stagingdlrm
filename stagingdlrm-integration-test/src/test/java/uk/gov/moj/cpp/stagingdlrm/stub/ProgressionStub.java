@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static java.util.UUID.randomUUID;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
 import static uk.gov.justice.services.common.http.HeaderConstants.ID;
 import static uk.gov.moj.cpp.stagingdlrm.helper.WiremockTestHelper.waitForStubToBeReady;
@@ -29,5 +30,24 @@ public class ProgressionStub {
                         .withHeader(CONTENT_TYPE, "application/vnd." + PROSECUTION_CASE_ACTION + "+json")
                         .withBody("{\"_metadata\":{\"id\":\"" + randomUUID() + "\",\"name\":\"" + PROSECUTION_CASE_ACTION + "\"},"
                                 + "\"prosecutionCase\":{\"caseStatus\":\"" + caseStatus + "\"}}")));
+    }
+
+    public static void stubProgressionProsecutionCaseNotFound(final UUID caseId) {
+        InternalEndpointMockUtils.stubPingFor("progression-service");
+
+        stubFor(get(urlPathEqualTo(PROGRESSION_PROSECUTION_CASE + caseId))
+                .willReturn(aResponse()
+                        .withStatus(SC_NOT_FOUND)));
+    }
+
+    public static void stubProgressionProsecutionCaseEmpty(final UUID caseId) {
+        InternalEndpointMockUtils.stubPingFor("progression-service");
+
+        stubFor(get(urlPathEqualTo(PROGRESSION_PROSECUTION_CASE + caseId))
+                .willReturn(aResponse()
+                        .withStatus(SC_OK)
+                        .withHeader(ID, randomUUID().toString())
+                        .withHeader(CONTENT_TYPE, "application/vnd." + PROSECUTION_CASE_ACTION + "+json")
+                        .withBody("{}")));
     }
 }

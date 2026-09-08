@@ -1,0 +1,142 @@
+{
+  "migratedCase": {
+    "caseDetails": {
+      "originatingOrganisation": "G94DV00",
+      "initiationCode": "O",
+      "dateReceived": "2024-01-15",
+      "sendingCourt": "C01BL00",
+      "receivingCourt": "C01BL00",
+      "dateOfSending": "2024-08-23",
+      "dateOfCommittal": "2024-01-15",
+      "receiptType": "Either way case",
+      "retrialIndicator": false,
+      "prosecutorCaseReference": "C50EX04",
+      "prosecutor": {
+        "prosecutingAuthority": "GAEAA01"
+      }
+    },
+    "hearings": [
+      {
+        "courtHearingLocation": "C01LY01",
+        "dateOfHearing": "2024-11-10",
+        "timeOfHearing": "11:10:01",
+        "durationMinutes": 60,
+        "courtRoomId": 60,
+        "hearingType": "",
+        "listedDefendants": [
+          {
+            "prosecutorDefendantId": "XHIBIT-defendant-id-1",
+            "listedOffences": [
+              "XHIBIT-offence-id-1"
+            ]
+          },
+          {
+            "prosecutorDefendantId": "XHIBIT-defendant-id-2",
+            "listedOffences": [
+              "XHIBIT-offence-id-2"
+            ]
+          }
+        ]
+      }
+    ],
+    "defendants": [
+      {
+        "prosecutorDefendantId": "XHBIT-defendant-id-1",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "custodyStatus": "C",
+          "custodyTimeLimit": "2018-09-10",
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {
+              "primaryEmail": "vegaoic@test.dom",
+              "mobile": "0117911911"
+            }
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 2
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "XHIBIT-offence-id-1",
+            "offenceCode": "CA03013",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      },
+      {
+        "prosecutorDefendantId":"XHIBIT-defendant-id-2",
+        "documentationLanguage": "W",
+        "hearingLanguage": "W",
+        "individual": {
+          "personalInformation": {
+            "title": "Baron",
+            "forename": "John",
+            "surname": "Smith",
+            "address": {
+              "address1": "armagaddon house",
+              "postcode": "M60 1NW"
+            },
+            "contactDetails": {}
+          },
+          "selfDefinedInformation": {
+            "ethnicity": "W1",
+            "gender": 1
+          }
+        },
+        "offences": [
+          {
+            "prosecutorOffenceId": "XHIBIT-offence-id-2",
+            "offenceCode": "DA03014",
+            "offenceSequenceNumber": 1,
+            "offenceCommittedDate": "2018-09-10",
+            "offenceDateCode": 1,
+            "offenceLocation": "Croydon",
+            "offenceWording": "TV Licence not paid",
+            "chargeDate": "2015-04-04"
+          }
+        ]
+      }
+    ],
+    "migrationSourceSystem" :{
+      "migrationSourceSystemName" : "XHIBIT",
+      "migrationSourceSystemCaseIdentifier" : "This is from XHIBIT"
+    }
+  },
+  "materials": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "azureLocation": "http://inazure/secrets/1",
+      "fileName": "Audio Recording one",
+      "fileType": ".wav",
+      "documentType": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "azureLocation": "http://inazure/secrets/2",
+      "fileName": "Audio Recording two",
+      "fileType": ".wav",
+      "documentType": 3
+    }
+  ],
+  "metadata": {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "numberOfMaterials": 2
+  },
+  "submissionId": "SUBMISSION_ID",
+  "azureLocation": "C50EX04"
+}
