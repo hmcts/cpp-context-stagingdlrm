@@ -1,0 +1,26 @@
+{
+  "enabledPlugins": {
+    "hmcts-sdlc-orchestrator@agentic-plugins-marketplace": true
+  },
+  "extraKnownMarketplaces": {
+    "agentic-plugins-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "hmcts/agentic-plugins-marketplace"
+      },
+      "autoUpdate": true
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ ! -d \"$HOME/.claude/plugins/cache/agentic-plugins-marketplace/hmcts-sdlc-orchestrator\" ]; then echo '{\"systemMessage\": \"This repo expects the hmcts-sdlc-orchestrator plugin (SDLC pipeline agents/skills). It is not installed on this machine yet. Run: /plugin marketplace add hmcts/agentic-plugins-marketplace, then /plugin install hmcts-sdlc-orchestrator@agentic-plugins-marketplace\"}'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -240,12 +240,16 @@ public class ObjectBuilder {
     }
 
     public static ErrorMigratedCaseSubmissionReceived buildErrorMigratedCaseSubmissionReceived() {
+        return buildErrorMigratedCaseSubmissionReceived(DESCRIPTION);
+    }
+
+    public static ErrorMigratedCaseSubmissionReceived buildErrorMigratedCaseSubmissionReceived(final String errorMessage) {
         return ErrorMigratedCaseSubmissionReceived.errorMigratedCaseSubmissionReceived()
                 .withErrorMigratedCaseSubmission(ErrorMigratedCaseSubmission
                         .errorMigratedCaseSubmission()
                         .withPayload("{}")
                         .withSubmissionId(SUBMISSION_ID)
-                        .withErrorMessage(DESCRIPTION)
+                        .withErrorMessage(errorMessage)
                         .withCaseUrn(CASE_URN)
                         .withAzureLocation(AZURE_LOCATION)
                         .build())

@@ -4,15 +4,18 @@ package uk.gov.moj.cpp.stagingdlrm.azure;
 import static uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.justice.services.test.utils.common.reflection.ReflectionUtils.setField;
 import static uk.gov.moj.cpp.stagingdlrm.azure.TimerTriggerJava.ERROR_MIGRATED_CASE_SUBMISSION_PATH;
+import static uk.gov.moj.cpp.stagingdlrm.azure.TimerTriggerJava.JSON_SCHEMA_VALIDATION_FAILED;
 import static uk.gov.moj.cpp.stagingdlrm.azure.TimerTriggerJava.MIGRATED_CASE_SUBMISSION_PATH;
 
 import uk.gov.moj.cpp.stagingdlrm.azure.event.QueueMessage;
@@ -34,6 +37,7 @@ import javax.json.JsonObjectBuilder;
 import javax.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
+import com.networknt.schema.ValidationMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -256,6 +260,55 @@ class TimerTriggerJavaTest {
         assertNotNull(messageMap);
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
 
+    }
+
+    @Test
+    void shouldPrefixSchemaValidationFailureMarkerWhenCaseSchemaValidationFails() {
+        final String submissionId = UUID.randomUUID().toString();
+        final String queueMessage = "XHIBIT/2026-05-20/28DI10000175/" + submissionId;
+        final String caseJsonPayload = getCaseJsonPayload();
+        final JsonObject metaDataJsonObject = getMetaJsonObject();
+        final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
+
+        final String timerInfo = "timerInfo";
+
+        final ValidationMessage validationMessage = mock(ValidationMessage.class);
+        when(validationMessage.getMessage()).thenReturn("$.migratedCase.caseDetails: required property 'prosecutorCaseReference' not found");
+
+        final List<String> listBlobNames = List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf", queueMessage + "/case.json", queueMessage + "/manifest.json");
+        final Map<String, QueueMessage> messageMap = new HashMap<>();
+        messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        final ArgumentCaptor<String> errorMessageCaptor = ArgumentCaptor.forClass(String.class);
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/" + "case.json")).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/" + "manifest.json")).thenReturn(metaDataJsonObject.toString());
+        when(caseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of(validationMessage));
+        when(manifestJsonSchemaValidator.validate(submissionId, metaDataJsonObject.toString())).thenReturn(Set.of());
+        when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
+                eq(caseJsonPayload),
+                eq(submissionId),
+                eq(""),
+                eq(queueMessage),
+                errorMessageCaptor.capture()))
+                .thenReturn(errorMigratedCaseSubmissionJsonObject);
+        when(stagingDlrmCommandHelper.sendPostCommandApi(
+                "http://localhost:8080" + ERROR_MIGRATED_CASE_SUBMISSION_PATH,
+                errorMigratedCaseSubmissionJsonObject,
+                "application/vnd.stagingdlrm.receive-error-migrated-case-submission+json",
+                stagingDlrmUserId,
+                submissionId))
+                .thenReturn(Response.accepted().entity("").build());
+
+        timerTrigger.run(timerInfo, context);
+
+        final String capturedErrorMessage = errorMessageCaptor.getValue();
+        assertTrue(capturedErrorMessage.contains(JSON_SCHEMA_VALIDATION_FAILED));
+        assertTrue(capturedErrorMessage.contains("prosecutorCaseReference"));
+        verify(stagingDlrmCommandHelper, never()).generateMigratedCaseSubmissionPayload(any(), anyList(), any(), anyString(), anyString());
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
     }
 
     @Test
