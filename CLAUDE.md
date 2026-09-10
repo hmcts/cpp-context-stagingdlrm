@@ -37,7 +37,7 @@ mvn verify -P stagingdlrm-integration-test -pl stagingdlrm-integration-test -Dit
 
 ## Local Development Setup
 
-Requires WildFly 10, PostgreSQL, and ActiveMQ running locally.
+Requires WildFly 40, PostgreSQL, and ActiveMQ running locally.
 
 **WildFly:** Start with the custom server config:
 ```bash
@@ -149,7 +149,7 @@ Azure Pipelines (`azure-pipelines.yaml`) triggers on `main` and `team/*` branche
 - **PR builds** → `context-verify.yaml` (SonarQube analysis)
 - **Merge builds** → `context-validation.yaml` (full validation + IT)
 
-Build agents require `centos8-j17` capability (Java 17).
+Build agents require `ubuntu-j25` capability (Java 25).
 
 ### Key Dependencies (from parent POM)
 
