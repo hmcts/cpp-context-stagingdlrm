@@ -47,7 +47,7 @@ public class TimerTriggerJava {
 
     private static final String DESCRIPTION = "description";
 
-    private static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
+    public static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
 
     private static final int DEFAULT_RETRY = 3;
 

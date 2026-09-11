@@ -22,6 +22,7 @@ public class SystemMapperService {
 
     public static final String CONTEXT_SYSTEM_USER_ID_IS_NOT_PRESENT = "Context System User Id is not present";
     private static final String UNABLE_TO_CREATE_MAPPING = "Unable to creating mapping for input String %s to a uuid";
+    private static final String UNABLE_TO_REMAP = "Unable to remap existing system-id-mapper entry for input String %s";
     private static final String SOURCE_TYPE = "OU_URN";
     private static final String TARGET_TYPE = "CASE_FILE_ID";
     private static final String EJECTED = "EJECTED";
@@ -48,21 +49,23 @@ public class SystemMapperService {
                     .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_CREATE_MAPPING, ptiUrn)));
 
             final Optional<String> status = getCaseStatus(caseId);
-            status.ifPresent(s -> LOGGER.info("Case {} exists in progression with status: {}", ptiUrn, s));
+            if (status.isEmpty()) {
+                // A case still in flight (pcfdlrm has it, Progression hasn't caught up) also reads as empty here.
+                LOGGER.info("Case {} not found in progression despite existing system-id-mapper entry", ptiUrn);
+                return new CaseIdLookupResult(caseId, false);
+            }
+            LOGGER.info("Case {} exists in progression with status: {}", ptiUrn, status.get());
 
             if (status.filter(EJECTED::equals).isPresent()) {
-                systemIdMapperClient.remap(ptiUrn + EJECTED_SUFFIX, existingMapping.get().getMappingId(), systemUserId);
-                final UUID newCaseId = attemptAddMapping(randomUUID(), ptiUrn)
-                        .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_CREATE_MAPPING, ptiUrn)));
-                return new CaseIdLookupResult(newCaseId, false);
+                systemIdMapperClient.remap(ptiUrn + EJECTED_SUFFIX, existingMapping.get().getMappingId(), systemUserId)
+                        .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_REMAP, ptiUrn)));
+                return createNewMapping(ptiUrn);
             }
 
             return new CaseIdLookupResult(caseId, true);
         }
 
-        final UUID newCaseId = attemptAddMapping(randomUUID(), ptiUrn)
-                .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_CREATE_MAPPING, ptiUrn)));
-        return new CaseIdLookupResult(newCaseId, false);
+        return createNewMapping(ptiUrn);
     }
 
     public static class CaseIdLookupResult {
@@ -87,6 +90,12 @@ public class SystemMapperService {
         return progressionService.getProsecutionCaseDetails(caseId)
                 .filter(caseDetails -> caseDetails.containsKey("prosecutionCase"))
                 .map(caseDetails -> caseDetails.getJsonObject("prosecutionCase").getString("caseStatus", "UNKNOWN"));
+    }
+
+    private CaseIdLookupResult createNewMapping(final String ptiUrn) {
+        final UUID newCaseId = attemptAddMapping(randomUUID(), ptiUrn)
+                .orElseThrow(() -> new IllegalStateException(format(UNABLE_TO_CREATE_MAPPING, ptiUrn)));
+        return new CaseIdLookupResult(newCaseId, false);
     }
 
     private Optional<UUID> attemptAddMapping(final UUID newCaseId, final String ptiUrn) {
