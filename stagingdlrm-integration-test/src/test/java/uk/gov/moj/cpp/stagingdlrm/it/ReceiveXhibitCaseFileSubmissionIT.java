@@ -17,6 +17,8 @@ import static uk.gov.moj.cpp.stagingdlrm.helper.WiremockTestHelper.createCommonM
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileBody;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileNotRequestedFor;
 import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequested;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequestedWithCaseId;
+import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.verifyReceiveCaseFileRequestedWithCaseIdOtherThan;
 
 import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
 import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
@@ -64,6 +66,7 @@ class ReceiveXhibitCaseFileSubmissionIT extends AbstractTestHelper {
     public static final String EMAIL_ADDRESS_1_STRING_INVALID_EMAIL_DOES_NOT_MATCH_PATTERN = "emailAddress1: string [INVALID_EMAIL] does not match pattern";
     public static final String POSTCODE_STRING_INVALID_POSTCODE_DOES_NOT_MATCH_PATTERN = "postcode: string [KJ3 4RF] does not match pattern";
     public static final String DEFENDANTS_EXPECTED_MINIMUM_ITEM_COUNT = "defendants: expected minimum item count: 1, found: 0";
+    public static final String PERSONAL_INFORMATION_ADDRESS_REQUIRED = "required key [address] not found";
     public static final String DUPLICATE_SUBMISSION_ID = "Duplicate Submission ID";
     private static final String XHIBIT_UNMAPPED_SYSTEM_ID_MAPPER_FIXTURE = "xhibit/stagingdlrm.receive-migrated-case-submission-from-xhibit-unmapped-system-id-mapper.json";
 
@@ -148,6 +151,18 @@ class ReceiveXhibitCaseFileSubmissionIT extends AbstractTestHelper {
                 makePostCall(getWriteUrl("/receive-migrated-case-submission"),
                         "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
                         payload, 400, DEFENDANTS_EXPECTED_MINIMUM_ITEM_COUNT)
+        );
+    }
+
+    @Test
+    void shouldRaiseBadRequestWhenAddressMissingInPersonalInformation() {
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-missing-address.json")
+                .replace("SUBMISSION_ID", submissionId);
+        Assertions.assertDoesNotThrow(() ->
+                makePostCall(getWriteUrl("/receive-migrated-case-submission"),
+                        "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                        payload, 400, PERSONAL_INFORMATION_ADDRESS_REQUIRED)
         );
     }
 
@@ -589,6 +604,47 @@ class ReceiveXhibitCaseFileSubmissionIT extends AbstractTestHelper {
 
         assertTrue(retrieveMessageBody(consumerClient).isPresent());
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        verifyReceiveCaseFileRequestedWithCaseIdOtherThan(submissionId, existingCaseId.toString());
+    }
+
+    @Test
+    void shouldForwardToPcfdlrmWhenCaseHasNoRecordInProgression() {
+        final UUID existingCaseId = UUID.fromString("d4e5f6a7-b8c9-0123-defa-234567890123");
+        SystemIdMapperStub.stubGetCaseIdByURN("C50EX04", existingCaseId);
+        ProgressionStub.stubProgressionProsecutionCaseNotFound(existingCaseId);
+
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-not-in-progression.json")
+                .replace("SUBMISSION_ID", submissionId);
+
+        makePostCall(
+                getWriteUrl("/receive-migrated-case-submission"),
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                payload);
+
+        assertTrue(retrieveMessageBody(consumerClient).isPresent());
+        verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        verifyReceiveCaseFileRequestedWithCaseId(submissionId, existingCaseId.toString());
+    }
+
+    @Test
+    void shouldForwardToPcfdlrmWhenProgressionReturnsEmptyResponse() {
+        final UUID existingCaseId = UUID.fromString("e5f6a7b8-c9d0-1234-efab-345678901234");
+        SystemIdMapperStub.stubGetCaseIdByURN("C50EX05", existingCaseId);
+        ProgressionStub.stubProgressionProsecutionCaseEmpty(existingCaseId);
+
+        final String submissionId = UUID.randomUUID().toString();
+        final String payload = getStringFromResource("stagingdlrm.receive-migrated-case-submission-from-xhibit-empty-progression-response.json")
+                .replace("SUBMISSION_ID", submissionId);
+
+        makePostCall(
+                getWriteUrl("/receive-migrated-case-submission"),
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                payload);
+
+        assertTrue(retrieveMessageBody(consumerClient).isPresent());
+        verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "XHIBIT"));
+        verifyReceiveCaseFileRequestedWithCaseId(submissionId, existingCaseId.toString());
     }
 
     private List<Defendant> getDefendantList(final JsonArray jsonValues) {

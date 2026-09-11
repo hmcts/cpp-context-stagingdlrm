@@ -239,18 +239,4 @@ public class ObjectBuilder {
                 .build();
     }
 
-    public static ErrorMigratedCaseSubmissionReceived buildErrorMigratedCaseSubmissionReceived() {
-        return ErrorMigratedCaseSubmissionReceived.errorMigratedCaseSubmissionReceived()
-                .withErrorMigratedCaseSubmission(ErrorMigratedCaseSubmission
-                        .errorMigratedCaseSubmission()
-                        .withPayload("{}")
-                        .withSubmissionId(SUBMISSION_ID)
-                        .withErrorMessage(DESCRIPTION)
-                        .withCaseUrn(CASE_URN)
-                        .withAzureLocation(AZURE_LOCATION)
-                        .build())
-                .build();
-
-    }
-
 }
