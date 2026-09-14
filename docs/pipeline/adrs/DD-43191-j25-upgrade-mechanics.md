@@ -141,10 +141,13 @@ re-planning the story.
 ## Decision 5 — BC-12's fleet fix is carved out for the Function App *(stagingDLRM only)*
 
 The fleet-wide BC-12 fix marks bundled RESTEasy artifacts `provided` and adds `packagingExcludes`,
-because a WAR gets them from the container. **The Function App is not a WAR.** Its four compile-scope
-RESTEasy artifacts — `resteasy-client`, `-jaxb-provider`, `-jackson2-provider`, `-multipart-provider` —
-**must stay bundled**. Marking them `provided` compiles cleanly and then fails at runtime in Azure with
-`NoClassDefFoundError`, because nothing there supplies them.
+because a WAR gets them from the container. **The Function App is not a WAR.** Its compile-scope
+RESTEasy artifact — `resteasy-client` — **must stay bundled**. Marking it `provided` compiles cleanly
+and then fails at runtime in Azure with `NoClassDefFoundError`, because nothing there supplies it.
+(The module originally also carried `-jaxb-provider`, `-jackson2-provider`, and `-multipart-provider`
+compile-scope; a stagingDLRM PR review found the module only ever sends/reads plain `String` entities —
+no XML, POJO, or multipart marshalling — so those three were dropped as unused. `resteasy-client` alone
+is what this carve-out protects now.)
 
 Exclude the module by name from the `provided` + `packagingExcludes` change, **and say so in the PR
 description**, so a later fleet-wide sweep does not "correct" it. The parity story pins this as a
