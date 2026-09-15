@@ -208,13 +208,16 @@ renumbering them, so earlier references stay valid.*
   module is a standalone JAR with no WildFly coupling. Its jakarta and parsson changes still land
   regardless, being correctness fixes independent of the JDK. **If the fallback is taken it must be
   recorded in `02-design.md` and raised as a follow-up**, not left as an undocumented inconsistency.
-- **FR17 — BC-12's fleet fix must not be applied to the Function App.** Its four compile-scope
-  RESTEasy artifacts (`-client`, `-jaxb-provider`, `-jackson2-provider`, `-multipart-provider`) **must
-  stay bundled**. Marking them `provided` compiles and then fails at runtime in Azure with
-  `NoClassDefFoundError`, because nothing there supplies them. Exclude the module by name from the
-  `provided` + `packagingExcludes` change **and say so in the PR description**, so a later fleet-wide
-  sweep does not "correct" it (the upgrade-mechanics ADR decision 5). The parity story's
-  `Bc12RestEasyPackagingParityTest` (or equivalent) pins this carve-out as a build-time assertion —
+- **FR17 — BC-12's fleet fix must not be applied to the Function App.** Its compile-scope RESTEasy
+  artifact (`resteasy-client`) **must stay bundled**. Marking it `provided` compiles and then fails at
+  runtime in Azure with `NoClassDefFoundError`, because nothing there supplies it. (The module originally
+  also carried `-jaxb-provider`, `-jackson2-provider`, and `-multipart-provider` compile-scope, but a PR
+  review found the module only ever sends/reads plain `String` entities — no XML, POJO, or multipart
+  marshalling — so those three were dropped as unused; `resteasy-client` alone is what this carve-out now
+  protects.) Exclude the module by name from the `provided` + `packagingExcludes` change **and say so in
+  the PR description**, so a later fleet-wide sweep does not "correct" it (the upgrade-mechanics ADR
+  decision 5). The parity story's `Bc12RestEasyPackagingParityTest` (or equivalent) pins this carve-out
+  as a build-time assertion —
   keep it green rather than "fixing" it to match the fleet pattern.
 
 ### F. Known defects to fix in this story
