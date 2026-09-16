@@ -71,3 +71,4 @@ stagingdlrm-testharness/src/test/resources/config-nft.properties
 
 # Claude Code — personal/machine-specific overrides, never shared (see .claude/settings.json for team-shared config)
 .claude/settings.[l]ocal.json
+stagingdlrm-testharness/src/test/resources/config-nft.properties

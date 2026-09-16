@@ -3,9 +3,29 @@
     "caseDetails": {
       "originatingOrganisation": "B01NM00",
       "cpsOrganisation": "A30AB00",
+      "otherPartyOfficerInCase": {
+        "personalInformation": {
+          "address": {
+            "address1": "101",
+            "address2": "56Police House",
+            "address3": "Letsby Avenue",
+            "address4": "Avon",
+            "postcode": "HA1 2ER"
+          },
+          "contactDetails": {
+            "primaryEmail": "vegaoic@test.dom",
+            "work": "0117911911"
+          },
+          "foreame": "Cecile",
+          "surname": "Corwin",
+          "title": "Baron"
+        },
+        "policeOfficerRank": "Constable"
+      },
       "initiationCode": "O",
       "prosecutorCaseReference": "CASE-URN",
       "prosecutor": {
+        "informant": "informant",
         "prosecutingAuthority": "G94DV00"
       },
       "sendingCourt": "C01BL00",
@@ -13,14 +33,15 @@
       "receivingCourt": "C01BL00",
       "dateOfSending": "2024-08-23",
       "dateOfCommittal": "2024-01-15",
-      "receiptType": "Either way case",
+      "receiptType": "Commital after breach",
       "retrialIndicator": false
     },
     "hearings": [
       {
         "courtHearingLocation": "C01BL01",
-        "courtRoomId": 235,
+        "courtRoom": "Courtroom 01",
         "durationMinutes": 120,
+        "duration": "2h",
         "weekCommencingDate": {
           "startDate": "2025-11-10",
           "duration": 3
@@ -39,14 +60,18 @@
     "defendants": [
       {
         "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+        "prosecutorDefendantReference": "DEFENDANT_REFERENCE1",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
+        "numPreviousConvictions": 3,
         "individual": {
           "custodyStatus": "B",
           "personalInformation": {
             "title": "Baron",
             "forename": "DEFENDANT_FIRST_NAME",
             "surname": "DEFENDANT_LAST_NAME",
+            "occupation": "Software Developer",
+            "occupationCode": 43,
             "address": {
               "address1": "No 1 Exeter Test Street",
               "address2": "line 2",
@@ -67,7 +92,8 @@
             "ethnicity": "M3",
             "gender": 1,
             "dateOfBirth": "2000-01-01",
-            "nationality": "SVK"
+            "nationality": "SVK",
+            "additionalNationality": "HUN"
           },
           "bailConditions": "test"
         },
@@ -82,9 +108,15 @@
             "offenceLocation": "Croydon",
             "offenceWording": "offenceWording",
             "chargeDate": "2025-06-16",
-            "arrestDate": "2025-06-16"
+            "appliedCompensation": 200,
+            "arrestDate": "2025-06-16",
+            "vehicleRelatedOffence": {
+              "vehicleCode": "O",
+              "vehicleRegistrationMark": "AA11 ABC"
+            }
           }
         ],
+        "postingDate": "2025-06-16",
         "pncIdentifier": "pncID98833",
         "croNumber": "croNO81292"
       }

@@ -16,59 +16,57 @@
             "primaryEmail": "vegaoic@test.dom",
             "work": "0117911911"
           },
-          "foreame": "Cecile",
-          "surname": "Corwin",
+          "forename": "Patricia",
+          "surname": "Mueller",
           "title": "Baron"
         },
         "policeOfficerRank": "Constable"
       },
-      "initiationCode": "O",
+      "caseId": "CASE_ID",
+      "initiationCode": "C",
       "prosecutorCaseReference": "CASE-URN",
       "prosecutor": {
         "informant": "informant",
-        "prosecutingAuthority": "G94DV00"
-      },
-      "sendingCourt": "C01BL00",
-      "dateReceived": "2024-01-15",
-      "receivingCourt": "C01BL00",
-      "dateOfSending": "2024-08-23",
-      "dateOfCommittal": "2024-01-15",
-      "receiptType": "Commital after breach",
-      "retrialIndicator": false
+        "prosecutingAuthority": "0300000"
+      }
     },
     "hearings": [
       {
-        "courtHearingLocation": "C01BL01",
-        "courtRoom": "Courtroom 01",
+        "courtHearingLocation": "C50EX01",
+        "courtRoom": "01",
+        "dateOfHearing": "2024-11-20",
+        "timeOfHearing": "10:05:01",
         "durationMinutes": 120,
+        "duration": "2h",
+        "weekCommencingDate": "",
         "hearingType": "FHG",
         "listedDefendants": [
-          {
-            "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
-            "listedOffences": [
-              "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4"
-            ]
-          }
+          "a9860e1a-8695-4fd4-8046-c1c4fe6c7f80"
         ]
       }
     ],
     "defendants": [
       {
-        "prosecutorDefendantId": "b0fb3cc8-a4d1-4714-8715-e63266f77540",
+        "id": "c61c7df2-f413-4edb-9b57-8a9d1c00c2b9",
         "prosecutorDefendantReference": "DEFENDANT_REFERENCE1",
         "documentationLanguage": "W",
         "hearingLanguage": "W",
+        "custodyStatus": "B",
         "numPreviousConvictions": 3,
+        "initialHearing": {
+          "courtHearingLocation": "B01LY01",
+          "dateOfHearing": "2024-10-28",
+          "timeOfHearing": "10:05:01"
+        },
         "individual": {
-          "custodyStatus": "B",
           "personalInformation": {
             "title": "Baron",
-            "forename": "DEFENDANT_FIRST_NAME",
-            "surname": "DEFENDANT_LAST_NAME",
+            "forename": "Marcelene",
+            "surname": "Fay",
             "occupation": "Software Developer",
             "occupationCode": 43,
             "address": {
-              "address1": "No 1 Exeter Test Street",
+              "address1": "No 0 Exeter Test Street",
               "address2": "line 2",
               "address3": "line 3",
               "address4": "line 4",
@@ -89,31 +87,33 @@
             "dateOfBirth": "2000-01-01",
             "nationality": "SVK",
             "additionalNationality": "HUN"
-          },
-          "bailConditions": "test"
+          }
         },
         "offences": [
           {
-            "offenceCode": "RT88333",
-            "prosecutorOffenceId": "d59dde1e-3c69-4891-9aed-2cc49e2f4cf4",
+            "offenceCode": "TH68023",
+            "offenceId": "4f07b0e9-e236-41ee-a7ee-fda3863485e7",
             "offenceSequenceNumber": 1,
-            "offenceCommittedDate": "2025-06-13",
-            "offenceCommittedEndDate": "2025-06-16",
+            "offenceCommittedDate": "2024-09-30",
+            "offenceCommittedEndDate": "2024-10-03",
             "offenceDateCode": 1,
             "offenceLocation": "Croydon",
             "offenceWording": "offenceWording",
-            "chargeDate": "2025-06-16",
+            "chargeDate": "2024-10-03",
             "appliedCompensation": 200,
-            "arrestDate": "2025-06-16",
+            "alcoholRelatedOffence": {
+              "alcoholLevelMethod": "A",
+              "alcoholLevelAmount": 100
+            },
             "vehicleRelatedOffence": {
               "vehicleCode": "O",
               "vehicleRegistrationMark": "AA11 ABC"
             }
           }
         ],
-        "postingDate": "2025-06-16",
-        "pncIdentifier": "pncID98833",
-        "croNumber": "croNO81292"
+        "postingDate": "2024-10-03",
+        "pncIdentifier": "pncID8654",
+        "croNumber": "croNO405"
       }
     ]
   }
