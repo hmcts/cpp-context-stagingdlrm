@@ -21,6 +21,7 @@ import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedDe
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedHearing;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedOffence;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedPlea;
+import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedTypeOfList;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedVerdict;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedWeekCommencingDate;
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigrationSourceSystem;
@@ -32,6 +33,7 @@ import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Hearing;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Offence;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.TypeOfList;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.WeekCommencingDate;
 
 import java.io.Serializable;
@@ -232,7 +234,16 @@ public class MigratedCaseConvertor implements Serializable {
                 .withDurationMinutes(e.getDurationMinutes())
                 .withWeekCommencingDate(buildWeekCommencing(e.getWeekCommencingDate()))
                 .withHearingType(e.getHearingType())
+                .withTypeOfList(buildTypeOfList(e.getTypeOfList()))
                 .withListedDefendants(buildListedDefendants(e.getListedDefendants()))
+                .build();
+    }
+
+    public static MigratedTypeOfList buildTypeOfList(final TypeOfList typeOfList) {
+        if (isNull(typeOfList)) return null;
+        return MigratedTypeOfList.migratedTypeOfList()
+                .withId(typeOfList.getId())
+                .withDescription(typeOfList.getDescription())
                 .build();
     }
 

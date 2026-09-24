@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://cpp.moj.gov.uk/stagingdlrm/migrated/json/schemas/type-of-list.json",
+  "description": "Type of list for an unscheduled hearing, e.g. 'Date and time to be fixed' or 'Bench Warrant'",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Result definition id of the unscheduled listing reason",
+      "$ref": "http://justice.gov.uk/domain/core/common/definitions.json#/definitions/uuid"
+    },
+    "description": {
+      "description": "Unscheduled listing reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "description"
+  ],
+  "additionalProperties": false
+}
