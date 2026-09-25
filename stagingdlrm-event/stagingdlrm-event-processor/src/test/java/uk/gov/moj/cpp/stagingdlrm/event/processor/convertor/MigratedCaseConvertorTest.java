@@ -9,14 +9,18 @@ import static uk.gov.moj.cpp.stagingdlrm.event.processor.ObjectBuilder.buildMigr
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.XHIBIT;
 
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedCaseDetails;
+import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedHearing;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.CaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Individual;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.ParentGuardianInformation;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.SelfDefinedInformation;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Hearing;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.ListedDefendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Offence;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.TypeOfList;
 
 import java.util.List;
 import java.util.UUID;
@@ -195,5 +199,39 @@ class MigratedCaseConvertorTest {
         final MigratedCaseDetails migratedCaseDetails = migratedCaseConvertor.buildMigratedCasedetails(newMigratedCase, caseId);
 
         assertNull(migratedCaseDetails.getCaseDetails().getSendingCourt());
+    }
+
+    @Test
+    void shouldConvertHearingTypeOfList() {
+        final UUID typeOfListId = UUID.randomUUID();
+        final Hearing hearing = hearing()
+                .withTypeOfList(TypeOfList.typeOfList()
+                        .withId(typeOfListId)
+                        .withDescription("Bench Warrant")
+                        .build())
+                .build();
+
+        final List<MigratedHearing> migratedHearings = MigratedCaseConvertor.buildMigratedHearings(List.of(hearing));
+
+        assertEquals(typeOfListId, migratedHearings.get(0).getTypeOfList().getId());
+        assertEquals("Bench Warrant", migratedHearings.get(0).getTypeOfList().getDescription());
+    }
+
+    @Test
+    void shouldLeaveTypeOfListEmptyWhenHearingHasNone() {
+        final List<MigratedHearing> migratedHearings = MigratedCaseConvertor.buildMigratedHearings(List.of(hearing().build()));
+
+        assertNull(migratedHearings.get(0).getTypeOfList());
+    }
+
+    private static Hearing.Builder hearing() {
+        return Hearing.hearing()
+                .withCourtHearingLocation("C50EX02")
+                .withHearingType("SIT")
+                .withDurationMinutes(30)
+                .withListedDefendants(List.of(ListedDefendant.listedDefendant()
+                        .withProsecutorDefendantId("DEF-001")
+                        .withListedOffences(List.of())
+                        .build()));
     }
 }
