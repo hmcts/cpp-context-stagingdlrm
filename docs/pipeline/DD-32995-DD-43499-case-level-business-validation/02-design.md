@@ -9,6 +9,8 @@
 
 ## Summary
 
+> **Changed at PR review:** C-1/C-2 (S-1, S-2) are dropped — the shared schema must not change, as it would affect XHIBIT. Only S-3 (informant on LIBRA Summons) is delivered; rows for C-1/C-2 below are kept for the record.
+
 Two constraints on the shared API-level schema (S-1, S-2) and one LIBRA rule-engine rule (S-3) using
 one new rule type. No new event, endpoint or schema file.
 

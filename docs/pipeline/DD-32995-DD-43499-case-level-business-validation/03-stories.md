@@ -10,6 +10,8 @@
 | Repo | `cpp-context-stagingdlrm` |
 | Other half | pcfdlrm — `cpp-context-prosecution-casefile-dlrm` PR #38 |
 
+> **Changed at PR review:** C-1/C-2 (S-1, S-2) are dropped — the shared schema must not change, as it would affect XHIBIT. Only S-3 (informant on LIBRA Summons) is delivered; rows for C-1/C-2 below are kept for the record.
+
 One story, one change set: two schema constraints and one LIBRA rule. Azure Functions intake is out
 of scope.
 
@@ -56,9 +58,9 @@ Not touched: Azure Functions, the XHIBIT rule list, the format checks on `cpsOrg
 
 ### Acceptance criteria
 
-- [ ] AC1: a case whose `prosecutorCaseReference` has a character other than a letter, digit or
+- [ ] ~~AC1~~ (dropped): a case whose `prosecutorCaseReference` has a character other than a letter, digit or
   hyphen is rejected with HTTP 400 (LIBRA and XHIBIT).
-- [ ] AC2: a case whose source-system case number (`migrationSourceSystemCaseIdentifier`) is over 100 characters is rejected with
+- [ ] ~~AC2~~ (dropped): a case whose source-system case number (`migrationSourceSystemCaseIdentifier`) is over 100 characters is rejected with
   HTTP 400 (LIBRA and XHIBIT).
 - [ ] AC3: a LIBRA case with initiation code `S` and no `informant` is rejected with one validation
   error at `$.migratedCase.caseDetails.informant` and is not forwarded to pcfdlrm.

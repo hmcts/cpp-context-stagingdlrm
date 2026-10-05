@@ -2,7 +2,6 @@ package uk.gov.moj.cpp.stagingdlrm.it;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.justice.services.integrationtest.utils.jms.JmsMessageConsumerClientProvider.newPrivateJmsMessageConsumerClientProvider;
@@ -129,21 +128,6 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "LIBRA"));
     }
 
-    @Test
-    void shouldRaiseBadRequestForBadlyFormedLibraCaseReferenceAndCaseIdentifier() {
-        final String payload = setMigrationSourceSystemField(
-                setCaseDetailsField(getStringFromResource(LIBRA_BASE), "prosecutorCaseReference", "LIBRA_55117D"),
-                "migrationSourceSystemCaseIdentifier", "A".repeat(101))
-                .replace("SUBMISSION_ID", UUID.randomUUID().toString());
-
-        assertDoesNotThrow(() -> makePostCall(
-                getWriteUrl("/receive-migrated-case-submission"),
-                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
-                payload, 400,
-                "prosecutorCaseReference: string [LIBRA_55117D] does not match pattern",
-                "migrationSourceSystemCaseIdentifier: expected maxLength: 100, actual: 101"));
-    }
-
     private static Function<String, String> mutator(final Function<String, String> function) {
         return function;
     }
@@ -160,13 +144,6 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         final JsonObject migratedCase = root.getJsonObject("migratedCase");
         final JsonObject caseDetails = put(migratedCase.getJsonObject("caseDetails"), field, value);
         return put(root, "migratedCase", put(migratedCase, "caseDetails", caseDetails)).toString();
-    }
-
-    private static String setMigrationSourceSystemField(final String payload, final String field, final String value) {
-        final JsonObject root = readJson(payload);
-        final JsonObject migratedCase = root.getJsonObject("migratedCase");
-        final JsonObject migrationSourceSystem = put(migratedCase.getJsonObject("migrationSourceSystem"), field, value);
-        return put(root, "migratedCase", put(migratedCase, "migrationSourceSystem", migrationSourceSystem)).toString();
     }
 
     private static String removeFirstHearingField(final String payload, final String field) {
