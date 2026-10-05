@@ -85,7 +85,10 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
                         "$.migratedCase.hearings[*].dateOfHearing"),
                 arguments("LIBRA missing hearing timeOfHearing", LIBRA_BASE, LIBRA_URN,
                         mutator(payload -> removeFirstHearingField(payload, "timeOfHearing")),
-                        "$.migratedCase.hearings[*].timeOfHearing"));
+                        "$.migratedCase.hearings[*].timeOfHearing"),
+                arguments("LIBRA Summons missing informant", LIBRA_BASE, LIBRA_URN,
+                        mutator(payload -> setCaseDetailsField(payload, "initiationCode", "S")),
+                        "$.migratedCase.caseDetails.informant"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -136,6 +139,13 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         return put(root, "migratedCase", put(migratedCase, "caseDetails", caseDetails)).toString();
     }
 
+    private static String setCaseDetailsField(final String payload, final String field, final String value) {
+        final JsonObject root = readJson(payload);
+        final JsonObject migratedCase = root.getJsonObject("migratedCase");
+        final JsonObject caseDetails = put(migratedCase.getJsonObject("caseDetails"), field, value);
+        return put(root, "migratedCase", put(migratedCase, "caseDetails", caseDetails)).toString();
+    }
+
     private static String removeFirstHearingField(final String payload, final String field) {
         final JsonObject root = readJson(payload);
         final JsonObject migratedCase = root.getJsonObject("migratedCase");
@@ -174,6 +184,17 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
     }
 
     private static JsonObject put(final JsonObject object, final String key, final JsonArray value) {
+        final JsonObjectBuilder builder = Json.createObjectBuilder();
+        object.forEach((existingKey, existingValue) -> {
+            if (!existingKey.equals(key)) {
+                builder.add(existingKey, existingValue);
+            }
+        });
+        builder.add(key, value);
+        return builder.build();
+    }
+
+    private static JsonObject put(final JsonObject object, final String key, final String value) {
         final JsonObjectBuilder builder = Json.createObjectBuilder();
         object.forEach((existingKey, existingValue) -> {
             if (!existingKey.equals(key)) {
