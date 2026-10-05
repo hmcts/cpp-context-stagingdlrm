@@ -2,6 +2,7 @@ package uk.gov.moj.cpp.stagingdlrm.it;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.justice.services.integrationtest.utils.jms.JmsMessageConsumerClientProvider.newPrivateJmsMessageConsumerClientProvider;
@@ -135,12 +136,12 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
                 "migrationSourceSystemCaseIdentifier", "A".repeat(101))
                 .replace("SUBMISSION_ID", UUID.randomUUID().toString());
 
-        makePostCall(
+        assertDoesNotThrow(() -> makePostCall(
                 getWriteUrl("/receive-migrated-case-submission"),
                 "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
                 payload, 400,
                 "prosecutorCaseReference: string [LIBRA_55117D] does not match pattern",
-                "migrationSourceSystemCaseIdentifier: expected maxLength: 100, actual: 101");
+                "migrationSourceSystemCaseIdentifier: expected maxLength: 100, actual: 101"));
     }
 
     private static Function<String, String> mutator(final Function<String, String> function) {
