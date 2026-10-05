@@ -85,7 +85,10 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
                         "$.migratedCase.hearings[*].dateOfHearing"),
                 arguments("LIBRA missing hearing timeOfHearing", LIBRA_BASE, LIBRA_URN,
                         mutator(payload -> removeFirstHearingField(payload, "timeOfHearing")),
-                        "$.migratedCase.hearings[*].timeOfHearing"));
+                        "$.migratedCase.hearings[*].timeOfHearing"),
+                arguments("LIBRA Summons missing informant", LIBRA_BASE, LIBRA_URN,
+                        mutator(payload -> setCaseDetailsField(payload, "initiationCode", "S")),
+                        "$.migratedCase.caseDetails.informant"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -125,6 +128,21 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         verifyReceiveCaseFileRequested(List.of(submissionId, "DLRM_MIGRATION", "LIBRA"));
     }
 
+    @Test
+    void shouldRaiseBadRequestForBadlyFormedLibraCaseReferenceAndCaseIdentifier() {
+        final String payload = setMigrationSourceSystemField(
+                setCaseDetailsField(getStringFromResource(LIBRA_BASE), "prosecutorCaseReference", "LIBRA_55117D"),
+                "migrationSourceSystemCaseIdentifier", "A".repeat(101))
+                .replace("SUBMISSION_ID", UUID.randomUUID().toString());
+
+        makePostCall(
+                getWriteUrl("/receive-migrated-case-submission"),
+                "application/vnd.stagingdlrm.receive-migrated-case-submission+json",
+                payload, 400,
+                "prosecutorCaseReference: string [LIBRA_55117D] does not match pattern",
+                "migrationSourceSystemCaseIdentifier: expected maxLength: 100, actual: 101");
+    }
+
     private static Function<String, String> mutator(final Function<String, String> function) {
         return function;
     }
@@ -134,6 +152,20 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         final JsonObject migratedCase = root.getJsonObject("migratedCase");
         final JsonObject caseDetails = copyWithout(migratedCase.getJsonObject("caseDetails"), Set.of(fields));
         return put(root, "migratedCase", put(migratedCase, "caseDetails", caseDetails)).toString();
+    }
+
+    private static String setCaseDetailsField(final String payload, final String field, final String value) {
+        final JsonObject root = readJson(payload);
+        final JsonObject migratedCase = root.getJsonObject("migratedCase");
+        final JsonObject caseDetails = put(migratedCase.getJsonObject("caseDetails"), field, value);
+        return put(root, "migratedCase", put(migratedCase, "caseDetails", caseDetails)).toString();
+    }
+
+    private static String setMigrationSourceSystemField(final String payload, final String field, final String value) {
+        final JsonObject root = readJson(payload);
+        final JsonObject migratedCase = root.getJsonObject("migratedCase");
+        final JsonObject migrationSourceSystem = put(migratedCase.getJsonObject("migrationSourceSystem"), field, value);
+        return put(root, "migratedCase", put(migratedCase, "migrationSourceSystem", migrationSourceSystem)).toString();
     }
 
     private static String removeFirstHearingField(final String payload, final String field) {
@@ -174,6 +206,17 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
     }
 
     private static JsonObject put(final JsonObject object, final String key, final JsonArray value) {
+        final JsonObjectBuilder builder = Json.createObjectBuilder();
+        object.forEach((existingKey, existingValue) -> {
+            if (!existingKey.equals(key)) {
+                builder.add(existingKey, existingValue);
+            }
+        });
+        builder.add(key, value);
+        return builder.build();
+    }
+
+    private static JsonObject put(final JsonObject object, final String key, final String value) {
         final JsonObjectBuilder builder = Json.createObjectBuilder();
         object.forEach((existingKey, existingValue) -> {
             if (!existingKey.equals(key)) {

@@ -37,6 +37,9 @@ public class MigratedCaseValidationRuleEngine {
                             submission -> presentOnEvery(hearings(submission), Hearing::getDateOfHearing)),
                     RequiredFieldRule.of("$.migratedCase.hearings[*].timeOfHearing",
                             submission -> presentOnEvery(hearings(submission), Hearing::getTimeOfHearing)),
+                    RequiredWhenRule.of("$.migratedCase.caseDetails.informant",
+                            submission -> "S".equals(initiationCode(submission)),
+                            submission -> caseDetails(submission).getInformant()),
                     InitiationCodeValidationRule.withAllowedValues(
                             MigratedCaseValidationRuleEngine::initiationCode, "C", "Q", "J", "R", "S")));
 

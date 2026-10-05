@@ -8,7 +8,8 @@
       "$ref": "http://cpp.moj.gov.uk/stagingdlrm/json/schemas/migrationSourceSystemName.json"
     },
     "migrationSourceSystemCaseIdentifier": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 100
     }
   },
   "required": [

@@ -61,7 +61,11 @@ class MigratedCaseSubmissionSchemaContractTest {
                 Arguments.of("caseDetails with dateOfSending only is accepted (XHIBIT)",
                         mutation(r -> caseDetails(r).remove("dateOfCommittal"))),
                 Arguments.of("hearings[*].durationMinutes present is accepted (XHIBIT)", identity()),
-                Arguments.of("offences[*].prosecutorOffenceId present is accepted (XHIBIT)", identity()));
+                Arguments.of("offences[*].prosecutorOffenceId present is accepted (XHIBIT)", identity()),
+                Arguments.of("DD-43499 caseDetails.prosecutorCaseReference letters, numbers and hyphens is accepted",
+                        mutation(r -> caseDetails(r).put("prosecutorCaseReference", "AB-12cd"))),
+                Arguments.of("DD-43499 migrationSourceSystem.migrationSourceSystemCaseIdentifier at maxLength 100 is accepted",
+                        mutation(r -> migrationSourceSystem(r).put("migrationSourceSystemCaseIdentifier", "A".repeat(100)))));
     }
 
     static Stream<Arguments> rejectScenarios() {
@@ -98,7 +102,13 @@ class MigratedCaseSubmissionSchemaContractTest {
                         "#/migratedCase/defendants/0: required key [prosecutorDefendantId] not found"),
                 Arguments.of("DEFENSIVE migrated-defendant.offences required — not a DD-43081 relax target, stays enforced (XHIBIT)",
                         mutation(r -> defendant0(r).remove("offences")),
-                        "#/migratedCase/defendants/0: required key [offences] not found"));
+                        "#/migratedCase/defendants/0: required key [offences] not found"),
+                Arguments.of("DD-43499 caseDetails.prosecutorCaseReference pattern — reject characters other than letters, numbers and hyphens",
+                        mutation(r -> caseDetails(r).put("prosecutorCaseReference", "AB_12")),
+                        "#/migratedCase/caseDetails/prosecutorCaseReference: string [AB_12] does not match pattern ^[A-Za-z0-9-]+$"),
+                Arguments.of("DD-43499 migrationSourceSystem.migrationSourceSystemCaseIdentifier maxLength 100 — reject 101",
+                        mutation(r -> migrationSourceSystem(r).put("migrationSourceSystemCaseIdentifier", "A".repeat(101))),
+                        "#/migratedCase/migrationSourceSystem/migrationSourceSystemCaseIdentifier: expected maxLength: 100, actual: 101"));
     }
 
     private static JSONObject payload(final Consumer<JSONObject> mutation) {
@@ -129,6 +139,10 @@ class MigratedCaseSubmissionSchemaContractTest {
 
     private static JSONObject caseDetails(final JSONObject root) {
         return root.getJSONObject("migratedCase").getJSONObject("caseDetails");
+    }
+
+    private static JSONObject migrationSourceSystem(final JSONObject root) {
+        return root.getJSONObject("migratedCase").getJSONObject("migrationSourceSystem");
     }
 
     private static JSONObject hearing0(final JSONObject root) {

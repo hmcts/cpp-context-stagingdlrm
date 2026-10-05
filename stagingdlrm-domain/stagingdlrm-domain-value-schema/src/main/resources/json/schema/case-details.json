@@ -6,7 +6,8 @@
   "properties": {
     "prosecutorCaseReference": {
       "type": "string",
-      "maxLength": 36
+      "maxLength": 36,
+      "pattern": "^[A-Za-z0-9-]+$"
     },
     "originatingOrganisation": {
       "type": "string",
