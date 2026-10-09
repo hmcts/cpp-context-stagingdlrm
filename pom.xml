@@ -36,7 +36,7 @@
         <jmeter-lightning-maven-plugin>0.1.1</jmeter-lightning-maven-plugin>
         <stream-transformation-tool-api.version>7.0.0</stream-transformation-tool-api.version>
         <coredomain.version>17.104.4</coredomain.version>
-        <pcfdlrm.version>17.104.22</pcfdlrm.version>
+        <pcfdlrm.version>17.104.35-LIBRA1-SNAPSHOT</pcfdlrm.version>
         <system.id-mapper.version>17.103.5</system.id-mapper.version>
         <progression.version>17.104.299</progression.version>
     </properties>

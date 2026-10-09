@@ -22,7 +22,7 @@
         "courtRoomId": 235,
         "durationMinutes": 120,
         "weekCommencingDate": {
-          "startDate": "2025-11-10",
+          "startDate": "2026-12-10",
           "duration": 3
         },
         "hearingType": "FHG",
@@ -61,7 +61,8 @@
               "mobile": "07572222943",
               "primaryEmail": "scrooge.mcduck@mail.com",
               "secondaryEmail": "scrooge.mcduck2@mail.com"
-            }
+            },
+            "observedEthnicity": 0
           },
           "selfDefinedInformation": {
             "ethnicity": "M3",
@@ -69,7 +70,24 @@
             "dateOfBirth": "2000-01-01",
             "nationality": "SVK"
           },
-          "bailConditions": "test"
+          "bailConditions": "test",
+          "parentGuardianInformation": {
+            "selfDefinedEthnicity": "W1",
+            "gender": 1,
+            "dateOfBirth": "2015-04-04",
+            "personalInformation": {
+              "surname": "Brown",
+              "observedEthnicity": 1,
+              "address": {
+                "address1": "No 1 Exeter Test Street",
+                "address2": "line 2",
+                "address3": "line 3",
+                "address4": "line 4",
+                "address5": "line 5",
+                "postcode": "M62 1NW"
+              }
+            }
+          }
         },
         "offences": [
           {
