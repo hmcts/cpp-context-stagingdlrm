@@ -7,6 +7,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.LIBRA;
 import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.XHIBIT;
 import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
@@ -25,6 +26,8 @@ import javax.json.Json;
 import javax.json.JsonObject;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class MigratedCaseValidationRuleEngineTest {
 
@@ -62,6 +65,22 @@ class MigratedCaseValidationRuleEngineTest {
         assertThat(engine.validate(LIBRA,
                         load("json/aggregate/libra/submission-valid-initiation-code-s.json", LIBRA)),
                 is(empty()));
+    }
+
+    @Test
+    void aLibraSummonsSubmissionMissingInformantIsRejectedAndXhibitIsUnaffected() {
+        assertLibraRejectedXhibitUnaffected(
+                "json/aggregate/libra/submission-summons-missing-informant.json",
+                "$.migratedCase.caseDetails.informant");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"C", "Q", "J", "R"})
+    void aLibraNonSummonsSubmissionWithoutInformantIsAccepted(final String initiationCode) {
+        final MigratedCaseSubmission submission = loadLibraWithInitiationCode(LIBRA_VALID, initiationCode);
+
+        assertThat(submission.getMigratedCase().getCaseDetails().getInformant(), is(nullValue()));
+        assertThat(engine.validate(LIBRA, submission), is(empty()));
     }
 
     @Test
@@ -143,6 +162,16 @@ class MigratedCaseValidationRuleEngineTest {
                 .map(ValidationError::jsonPath)
                 .toList();
         assertThat(xhibitPaths, not(hasItem(expectedJsonPath)));
+    }
+
+    private static MigratedCaseSubmission loadLibraWithInitiationCode(final String fixtureName, final String initiationCode) {
+        final String json = fixture(fixtureName, of("SOURCE_SYSTEM", LIBRA.name()))
+                .replace("\"initiationCode\": \"C\"", "\"initiationCode\": \"" + initiationCode + "\"");
+        final JsonObject jsonObject =
+                Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))).readObject();
+        final MigratedCaseSubmission submission = CONVERTER.convert(jsonObject, MigratedCaseSubmission.class);
+        assertThat(submission.getMigratedCase().getCaseDetails().getInitiationCode().name(), is(initiationCode));
+        return submission;
     }
 
     private static MigratedCaseSubmission load(final String fixtureName, final MigrationSourceSystemName sourceSystem) {
