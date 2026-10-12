@@ -20,9 +20,13 @@ import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Offence;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -175,6 +179,32 @@ class MigratedCaseConvertorTest {
 
         assertEquals("Walter", personalInformation.getGivenName2());
         assertEquals("John", personalInformation.getGivenName3());
+    }
+
+    @ParameterizedTest
+    @MethodSource("namesAndExpectedNames")
+    void shouldTruncatePersonalInformationNamesToThirtyFiveCharacters(final String name, final String expectedName) {
+        final var personalInformation = MigratedCaseConvertor.buildPersonalInformation(PersonalInformation.personalInformation()
+                .withForename(name)
+                .withMiddleName(name)
+                .withMiddleName2(name)
+                .withSurname(name)
+                .build());
+
+        assertEquals(expectedName, personalInformation.getFirstName());
+        assertEquals(expectedName, personalInformation.getGivenName2());
+        assertEquals(expectedName, personalInformation.getGivenName3());
+        assertEquals(expectedName, personalInformation.getLastName());
+    }
+
+    private static Stream<Arguments> namesAndExpectedNames() {
+        final String thirtyFiveCharacters = "A".repeat(35);
+        return Stream.of(
+                Arguments.of(null, null),
+                Arguments.of("Brown", "Brown"),
+                Arguments.of(thirtyFiveCharacters, thirtyFiveCharacters),
+                Arguments.of(thirtyFiveCharacters + "B", thirtyFiveCharacters),
+                Arguments.of("A".repeat(255), thirtyFiveCharacters));
     }
 
     @Test

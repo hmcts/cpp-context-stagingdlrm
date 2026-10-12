@@ -41,6 +41,8 @@ import java.util.UUID;
 
 public class MigratedCaseConvertor implements Serializable {
 
+    private static final int MAX_NAME_LENGTH = 35;
+
     public MigratedCaseDetails buildMigratedCasedetails(final MigratedCase migratedCase, final UUID caseId) {
         return MigratedCaseDetails.migratedCaseDetails()
                 .withMigrationSourceSystem(buildMigrationSourceSystem(migratedCase.getMigrationSourceSystem()))
@@ -296,16 +298,20 @@ public class MigratedCaseConvertor implements Serializable {
         if (isNull(personalInformation)) return null;
         return uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.PersonalInformation.personalInformation()
                 .withTitle(personalInformation.getTitle())
-                .withFirstName(personalInformation.getForename())
-                .withLastName(personalInformation.getSurname())
-                .withGivenName2(personalInformation.getMiddleName())
-                .withGivenName3(personalInformation.getMiddleName2())
+                .withFirstName(truncateName(personalInformation.getForename()))
+                .withLastName(truncateName(personalInformation.getSurname()))
+                .withGivenName2(truncateName(personalInformation.getMiddleName()))
+                .withGivenName3(truncateName(personalInformation.getMiddleName2()))
                 .withObservedEthnicity(personalInformation.getObservedEthnicity())
                 .withContactDetails(buildContactDetails(personalInformation.getContactDetails()))
                 .withAddress(buildAddress(personalInformation.getAddress()))
                 .withOccupation(personalInformation.getOccupation())
                 .withOccupationCode(personalInformation.getDefendantOccupationCode())
                 .build();
+    }
+
+    private static String truncateName(final String name) {
+        return isNull(name) || name.length() <= MAX_NAME_LENGTH ? name : name.substring(0, MAX_NAME_LENGTH);
     }
 
     public static uk.gov.moj.cpp.prosecution.casefile.dlrm.json.schemas.Address buildAddress(final uk.gov.moj.cpp.stagingdlrm.json.schemas.Address address) {

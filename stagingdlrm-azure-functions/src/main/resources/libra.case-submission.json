@@ -479,10 +479,14 @@
             },
             "companyTelephoneNumber": {
               "$ref": "#/definitions/phone"
+            },
+            "address": {
+              "$ref": "#/definitions/address"
             }
           },
           "required": [
-            "organisationName"
+            "organisationName",
+            "address"
           ],
           "additionalProperties": false
         }

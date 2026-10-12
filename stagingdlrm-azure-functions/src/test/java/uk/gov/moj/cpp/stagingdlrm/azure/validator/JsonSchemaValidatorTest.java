@@ -392,6 +392,40 @@ class JsonSchemaValidatorTest {
         assertEquals(Set.of(), messages, () -> messages.toString());
     }
 
+    @Test
+    @DisplayName("DD-43501 an organisation parent guardian with an address is accepted (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithAnOrganisationParentGuardianWithAddress() throws Exception {
+        final Set<ValidationMessage> messages = validateLibraCase(libraCaseWithOrganisationParentGuardian(true));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("DD-43501 an organisation parent guardian without an address is rejected — address is required (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithAnOrganisationParentGuardianMissingAddress() throws Exception {
+        final Set<ValidationMessage> messages = validateLibraCase(libraCaseWithOrganisationParentGuardian(false));
+
+        assertFalse(messages.isEmpty(), "an organisation parent guardian without an address must be rejected");
+        assertTrue(messages.stream().anyMatch(message -> message.getMessage().contains("address")), () -> messages.toString());
+    }
+
+    private static String libraCaseWithOrganisationParentGuardian(final boolean withAddress) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = defendant.putObject("individual");
+        final ObjectNode personalInformation = individual.putObject("personalInformation");
+        personalInformation.put("surname", "Example");
+        personalInformation.putObject("address").put("address1", "1 Test Street");
+        individual.putObject("selfDefinedInformation").put("gender", 1);
+        final ObjectNode parentGuardian = individual.putObject("parentGuardianInformation");
+        parentGuardian.put("organisationName", "Example Care Trust");
+        if (withAddress) {
+            parentGuardian.putObject("address").put("address1", "2 Care Street").put("postcode", "SW1A 1AA");
+        }
+        ((ObjectNode) payload.get("migratedCase")).putArray("defendants").add(defendant);
+        return MAPPER.writeValueAsString(payload);
+    }
+
     @ParameterizedTest(name = "LIBRA02 defendant.{0} is required, matching the LIBRA workbook's defendant "
             + "definition (LIBRA)")
     @ValueSource(strings = {"prosecutorDefendantId", "documentationLanguage", "hearingLanguage",
