@@ -4,7 +4,7 @@
     <parent>
         <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
         <artifactId>stagingdlrm-parent</artifactId>
-        <version>17.104.0-CIVIL-T3-SNAPSHOT</version>
+        <version>17.104.1-CIVIL-T3-SNAPSHOT</version>
     </parent>
 
     <artifactId>stagingdlrm-testharness</artifactId>
