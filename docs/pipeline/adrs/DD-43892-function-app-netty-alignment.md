@@ -51,12 +51,17 @@ It used `netty-bom` 4.2.10.Final, the only 4.2 BOM in the local cache, as a stan
 not 4.1.119. The module-level import therefore wins for the whole family. The pom was restored after
 the spike.
 
+Re-run 2026-10-30 with the real `netty-bom` 4.2.17.Final (on top of the committed 25.104.5 parent): all
+23 netty jars in the Function App resolve to 4.2.17, `tcnative` to 2.0.81, and `mvn clean package` on the
+module (including its unit tests) passes. The WARs are unaffected. The pom was restored with
+`git checkout` afterwards.
+
 ## Alternatives considered
 
-- **Bump only `netty-handler`/`netty-common` to 4.2.17 (ticket literal).** Rejected at Stage 1: keeps the
-  unsupported mix and leaves the 4.1.119 modules in the Function App unexamined.
+- **Bump only `netty-handler`/`netty-common` to 4.2.17 (ticket literal).** **Adopted**: the story follows
+  the ticket as written (`01-requirements.md` D1). Keeps the existing 4.2/4.1 mix, recorded as N1.
 - **Remove the pin and let the Function App follow `common-bom` (4.1.x).** Rejected for now: whether the
-  4.1 line is affected by these CVEs is unconfirmed (01-requirements OQ3), and the ticket's stated fix
+  4.1 line is affected by these CVEs is unconfirmed (01-requirements N3), and the ticket's stated fix
   is 4.2.17. Becomes viable if `common-bom` moves to a patched version that the vulnerability check
   accepts. Worth revisiting then, because it would remove a local override.
 - **Explicit `<dependencyManagement>` entries per netty artefact.** Works (explicit entries always win)
