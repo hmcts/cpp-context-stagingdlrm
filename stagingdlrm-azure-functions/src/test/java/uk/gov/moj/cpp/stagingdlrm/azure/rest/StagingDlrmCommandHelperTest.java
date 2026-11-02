@@ -316,6 +316,30 @@ class StagingDlrmCommandHelperTest {
         assertNull(migratedCaseJsonObject.getJsonArray("hearings"));
     }
 
+    /**
+     * Regression test for {@code StagingDlrmCommandHelper.buildMigratedCaseJsonBuilder}: {@code hearings}
+     * and {@code defendants} are optional in a gate-valid migrated case (only {@code caseDetails} is
+     * unconditionally required), but both used to be handed to {@code JsonObjectBuilder.add} without the
+     * {@code nonNull} guard {@code migrationSourceSystem} gets. A case omitting either threw
+     * {@code NullPointerException}; now the assembler simply omits the absent keys.
+     */
+    @Test
+    void shouldGenerateMigratedCaseSubmissionPayloadWhenHearingsAndDefendantsAreAbsent() {
+
+        final String submissionId = UUID.randomUUID().toString();
+
+        final JsonObject jsonObject = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
+                buildMigratedCaseSubmissionPayloadWithoutHearingsAndDefendants(),
+                List.of(),
+                buildDefaultMetaDataPayload(), submissionId, "TEST-LOCATION");
+
+        final JsonObject migratedCaseJsonObject = jsonObject.getJsonObject("migratedCase");
+
+        assertNotNull(migratedCaseJsonObject.getJsonObject("caseDetails"));
+        assertNull(migratedCaseJsonObject.getJsonArray("hearings"));
+        assertNull(migratedCaseJsonObject.getJsonArray("defendants"));
+    }
+
     @Test
     void shouldGenerateErrorMigratedCaseSubmissionPayloadSuccessfully() {
         final String submissionId = UUID.randomUUID().toString();
@@ -522,6 +546,29 @@ class StagingDlrmCommandHelperTest {
     private JsonObject buildMigratedCaseSubmissionPayloadEmpty() {
         String caseSubmissionJson = """
                 {}
+                """;
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(caseSubmissionJson.getBytes());
+        final JsonReader reader = JsonObjects.createReader(byteArrayInputStream);
+        return reader.readObject();
+    }
+
+    private JsonObject buildMigratedCaseSubmissionPayloadWithoutHearingsAndDefendants() {
+        String caseSubmissionJson = """
+                {
+                  "migratedCase": {
+                    "caseDetails": {
+                      "originatingOrganisation": "cps",
+                      "summonsCode": "summonsCode",
+                      "caseId": "51cac7fb-387c-4d19-9c80-8963fa8cf222",
+                      "initiationCode": "H",
+                      "prosecutorCaseReference": "TESTREF001",
+                      "prosecutor": {
+                        "prosecutingAuthority": "GAEAA01"
+                      }
+                    }
+                  }
+                }
                 """;
 
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(caseSubmissionJson.getBytes());

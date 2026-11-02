@@ -40,6 +40,8 @@ public class TimerTriggerJava {
 
     public static final String ERROR_MIGRATED_CASE_SUBMISSION_PATH = "/stagingdlrm-command-api/command/api/rest/stagingdlrm/receive-error-migrated-case-submission";
 
+    public static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
+
     private static final String CASE_URN = "caseUrn";
 
     private static final String DESCRIPTION = "description";
@@ -222,7 +224,7 @@ public class TimerTriggerJava {
     private void processClientError(final QueueMessage message, final Set<ValidationMessage> validationMessages, final List<String> baseUriArray, final String jsonContent, final String submissionId) {
         final Set<String> manifestValidationMessage = validationMessages.stream().map(ValidationMessage::getMessage).collect(Collectors.toSet());
 
-        final String errorMessage = String.join(", ", manifestValidationMessage);
+        final String errorMessage = JSON_SCHEMA_VALIDATION_FAILED + ": " + String.join(", ", manifestValidationMessage);
 
         loggerHelper.logInfo(context, submissionId, "Validation error messages: "+ errorMessage);
 
