@@ -176,8 +176,16 @@ public class StagingDlrmCommandHelper {
 
         if (nonNull(migratedCaseJsonObject)) {
             migratedCaseJsonBuilder.add("caseDetails", migratedCaseJsonObject.getJsonObject("caseDetails"));
-            migratedCaseJsonBuilder.add("hearings", migratedCaseJsonObject.getJsonArray("hearings"));
-            migratedCaseJsonBuilder.add("defendants", migratedCaseJsonObject.getJsonArray("defendants"));
+
+            final JsonArray hearings = migratedCaseJsonObject.getJsonArray("hearings");
+            if (nonNull(hearings)) {
+                migratedCaseJsonBuilder.add("hearings", hearings);
+            }
+
+            final JsonArray defendants = migratedCaseJsonObject.getJsonArray("defendants");
+            if (nonNull(defendants)) {
+                migratedCaseJsonBuilder.add("defendants", defendants);
+            }
         }
 
         if (nonNull(migrationSourceSystem)) {
