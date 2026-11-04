@@ -131,7 +131,7 @@ Azure Pipelines (`azure-pipelines.yaml`) triggers on `main` and `team/*` branche
 - **PR builds** → `context-verify.yaml` (SonarQube analysis)
 - **Merge builds** → `context-validation.yaml` (full validation + IT)
 
-Build agents require `centos8-j17` capability (Java 17).
+Build agents require `ubuntu24-j17` capability (Ubuntu 24, Java 17).
 
 ### Reconciliation Tooling
 
