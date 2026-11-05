@@ -20,8 +20,8 @@ import java.io.StringReader;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import javax.json.Json;
-import javax.json.JsonObject;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import org.junit.jupiter.api.BeforeEach;

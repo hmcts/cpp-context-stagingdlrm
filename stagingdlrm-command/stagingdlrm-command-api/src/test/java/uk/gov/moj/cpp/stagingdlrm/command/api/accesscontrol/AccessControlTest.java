@@ -54,6 +54,34 @@ public class AccessControlTest extends BaseDroolsAccessControlTest {
         verify(userAndGroupProvider).isSystemUser(action);
     }
 
+    /**
+     * BC-20 zero-rule guard for the COMMAND_API kbase, and a coverage-gap fix for the DRL's second
+     * rule. Not BC-03 - that is Refuted. See docs/j25-parity-checklist.md (BC-20 and BC-03 rows).
+     */
+    @Test
+    public void shouldOnlyAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(true);
+        final ExecutionResults results = executeRulesWith(action);
+        assertSuccessfulOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
+    @Test
+    public void shouldNotAllowSystemUserForErrorMigrateCaseSubmission() {
+        final Map<String, String> metadata = new HashMap<>();
+        metadata.putIfAbsent("id", UUID.randomUUID().toString());
+        metadata.putIfAbsent("name", "stagingdlrm.receive-error-migrated-case-submission");
+        Action action = createActionFor(metadata);
+        given(this.userAndGroupProvider.isSystemUser(action)).willReturn(false);
+        final ExecutionResults results = executeRulesWith(action);
+        assertFailureOutcome(results);
+        verify(userAndGroupProvider).isSystemUser(action);
+    }
+
     @Override
     protected Map<Class<?>, Object> getProviderMocks() {
         return singletonMap(UserAndGroupProvider.class, userAndGroupProvider);
