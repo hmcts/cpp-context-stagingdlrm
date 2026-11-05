@@ -32,9 +32,9 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.networknt.schema.ValidationMessage;
