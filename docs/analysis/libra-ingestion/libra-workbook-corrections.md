@@ -60,6 +60,7 @@ shifted by two or three from the original.
 > | **`caseMarkers` is optional (`default:[]`)** | The LIBRA *presence* rule for `caseDetails.caseMarkers` was dropped — T5 ships **4** LIBRA rules, not 5. Item 10's `markerTypeCode`-within-a-marker is unaffected (still required when a marker is sent) |
 > | **`defendant.address` is now optional** | The defendant-level address requirement was dropped in the gate (`libra.case-submission.json`), the LIBRA rule engine and the 0.13.1 contract. The **workbook still marks `defendant/address1` (row 82) `M`**, which is what makes `defendant.address` required when regenerated — the generated `dlrm-libra-0.13.json`/provenance were **left unregenerated** and still show it required. To reconcile, set row 82's four case-type columns to `O` and re-run `regenerate.sh`; this also drops `address1` from the shared `address.required` (intersected away across officer/parent-guardian), the same pattern as `personalInformation.address` — enforce it in validation rules if still wanted there |
 > | **`personalInformation.address` is now mandatory (both source systems)** | The individual's address is required in the shared canonical `personal-information.json` (`required: ["surname","address"]`), so it is enforced for **LIBRA and XHIBIT** at the command layer, and mirrored in the LIBRA gate and the 0.13.1 contract. This is the direct-schema route the provenance sidecar's `personalInformation.address` deviation anticipated ("enforce it in the LIBRA validation rules") — no rule was needed. The generated `dlrm-libra-0.13.json` still shows it intersected away and is unregenerated |
+> | **Defendant `forename` is now mandatory (LIBRA only, DD-43852)** | A LIBRA person defendant must have a non-blank `individual.personalInformation.forename`; one defendant without it rejects the submission. Enforced by a LIBRA rule in `MigratedCaseValidationRuleEngine` and mirrored in the gate and the 0.13.1 contract through a defendant-only `defendantPersonalInformation` definition, so the parent guardian's forename stays optional. This closes the defendant half of the "enforced nowhere" gap below. XHIBIT and the shared canonical `personal-information.json` are unchanged. The generated `dlrm-libra-0.13.json` is unregenerated |
 >
 > **Declared-field count:** the 35 this document accounts for becomes **14** under 0.13.1 — Group A's
 > 11, plus `numPreviousConvictions`, `informant` and `prosecutorCosts`. The dropped 21 are the officer
@@ -473,6 +474,8 @@ defendant but optional for a parent guardian, and `address` mandatory for a pare
 defendant has none — so both are now optional in the schema, matching the live contract's own
 `required: ["surname"]`. **Two of the sheet's mandatory marks are therefore enforced nowhere** and need
 to become LIBRA validation rules. They are listed in the provenance sidecar's `deviations`.
+*Update (DD-43852): the defendant `forename` is now enforced — a LIBRA rule plus a defendant-only
+definition in the gate and the 0.13.1 contract. The parent guardian's forename stays optional.*
 
 ---
 

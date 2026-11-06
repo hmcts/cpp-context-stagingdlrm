@@ -389,7 +389,7 @@
           "maxLength": 2500
         },
         "personalInformation": {
-          "$ref": "#/definitions/personalInformation"
+          "$ref": "#/definitions/defendantPersonalInformation"
         },
         "selfDefinedInformation": {
           "$ref": "#/definitions/selfDefinedInformation"
@@ -485,6 +485,24 @@
             "organisationName"
           ],
           "additionalProperties": false
+        }
+      ]
+    },
+    "defendantPersonalInformation": {
+      "description": "A defendant's personal information: forename is mandatory and must not be blank",
+      "allOf": [
+        {
+          "$ref": "#/definitions/personalInformation"
+        },
+        {
+          "required": [
+            "forename"
+          ],
+          "properties": {
+            "forename": {
+              "pattern": "\\S"
+            }
+          }
         }
       ]
     },
