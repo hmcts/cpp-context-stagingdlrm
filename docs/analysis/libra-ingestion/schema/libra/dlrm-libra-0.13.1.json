@@ -500,6 +500,24 @@
         "gender"
       ]
     },
+    "defendantPersonalInformation": {
+      "description": "A defendant's personal information: forename is mandatory and must not be blank",
+      "allOf": [
+        {
+          "$ref": "#/definitions/personalInformation"
+        },
+        {
+          "required": [
+            "forename"
+          ],
+          "properties": {
+            "forename": {
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
     "personalInformation": {
       "type": "object",
       "description": "Personal Information",
@@ -611,7 +629,7 @@
           "$ref": "#/definitions/selfDefinedInformation"
         },
         "personalInformation": {
-          "$ref": "#/definitions/personalInformation"
+          "$ref": "#/definitions/defendantPersonalInformation"
         },
         "parentGuardianInformation": {
           "$ref": "#/definitions/parentGuardianInformation"

@@ -5,6 +5,8 @@ import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.
 
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.CaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Hearing;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 
@@ -37,6 +39,8 @@ public class MigratedCaseValidationRuleEngine {
                             submission -> presentOnEvery(hearings(submission), Hearing::getDateOfHearing)),
                     RequiredFieldRule.of("$.migratedCase.hearings[*].timeOfHearing",
                             submission -> presentOnEvery(hearings(submission), Hearing::getTimeOfHearing)),
+                    RequiredFieldRule.of("$.migratedCase.defendants[*].individual.personalInformation.forename",
+                            submission -> presentOnEvery(personDefendants(submission), MigratedCaseValidationRuleEngine::nonBlankForename)),
                     RequiredWhenRule.of("$.migratedCase.caseDetails.informant",
                             submission -> "S".equals(initiationCode(submission)),
                             submission -> caseDetails(submission).getInformant()),
@@ -65,6 +69,25 @@ public class MigratedCaseValidationRuleEngine {
 
     private static List<Hearing> hearings(final MigratedCaseSubmission submission) {
         return submission.getMigratedCase().getHearings();
+    }
+
+    private static List<Defendant> personDefendants(final MigratedCaseSubmission submission) {
+        final List<Defendant> defendants = submission.getMigratedCase().getDefendants();
+        if (defendants == null) {
+            return null;
+        }
+        return defendants.stream()
+                .filter(defendant -> defendant.getIndividual() != null)
+                .toList();
+    }
+
+    private static Object nonBlankForename(final Defendant defendant) {
+        final PersonalInformation personalInformation = defendant.getIndividual().getPersonalInformation();
+        if (personalInformation == null || personalInformation.getForename() == null
+                || personalInformation.getForename().isBlank()) {
+            return null;
+        }
+        return personalInformation.getForename();
     }
 
     /**

@@ -15,18 +15,25 @@ import static uk.gov.moj.cpp.stagingdlrm.test.FixtureLoader.fixture;
 import uk.gov.justice.services.common.converter.JsonObjectToObjectConverter;
 import uk.gov.justice.services.common.converter.jackson.ObjectMapperProducer;
 
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.Individual;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCaseSubmission;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.UnaryOperator;
 
 import javax.json.Json;
 import javax.json.JsonObject;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class MigratedCaseValidationRuleEngineTest {
@@ -36,6 +43,8 @@ class MigratedCaseValidationRuleEngineTest {
     private static final String MISSING_DATE_RECEIVED = "json/aggregate/xhibit/submission-missing-date-received.json";
 
     private static final String LIBRA_VALID = "json/aggregate/libra/submission-valid.json";
+
+    private static final String DEFENDANT_FORENAME = "$.migratedCase.defendants[*].individual.personalInformation.forename";
 
     private static final JsonObjectToObjectConverter CONVERTER =
             new JsonObjectToObjectConverter(new ObjectMapperProducer().objectMapper());
@@ -151,6 +160,40 @@ class MigratedCaseValidationRuleEngineTest {
                 hasItem("$.migratedCase.caseDetails.initiationCode"));
     }
 
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void aLibraDefendantWithoutAForenameIsRejectedAndXhibitIsUnaffected(final String forename) {
+        final MigratedCaseSubmission submission = withDefendants(withForename(forename));
+
+        final List<ValidationError> libraErrors = engine.validate(LIBRA, submission);
+        assertThat(libraErrors, hasSize(1));
+        assertThat(libraErrors.get(0).jsonPath(), is(DEFENDANT_FORENAME));
+        assertThat(engine.validate(XHIBIT, submission).stream().map(ValidationError::jsonPath).toList(),
+                not(hasItem(DEFENDANT_FORENAME)));
+    }
+
+    @Test
+    void aLibraCaseIsRejectedWhenAnyDefendantHasNoForename() {
+        final List<ValidationError> errors =
+                engine.validate(LIBRA, withDefendants(withForename("John"), withForename(null)));
+
+        assertThat(errors, hasSize(1));
+        assertThat(errors.get(0).jsonPath(), is(DEFENDANT_FORENAME));
+    }
+
+    @Test
+    void aLibraCaseIsAcceptedWhenEveryPersonDefendantHasAForename() {
+        assertThat(engine.validate(LIBRA, withDefendants(withForename("John"), withForename("Jane"))), is(empty()));
+    }
+
+    @Test
+    void aLibraOrganisationDefendantIsNotCheckedForAForename() {
+        assertThat(engine.validate(LIBRA, withDefendants(
+                        defendant -> Defendant.defendant().withValuesFrom(defendant).withIndividual(null).withOrganisationName("Org Ltd").build())),
+                is(empty()));
+    }
+
     private void assertLibraRejectedXhibitUnaffected(final String fixtureName, final String expectedJsonPath) {
         final MigratedCaseSubmission submission = load(fixtureName, LIBRA);
 
@@ -172,6 +215,32 @@ class MigratedCaseValidationRuleEngineTest {
         final MigratedCaseSubmission submission = CONVERTER.convert(jsonObject, MigratedCaseSubmission.class);
         assertThat(submission.getMigratedCase().getCaseDetails().getInitiationCode().name(), is(initiationCode));
         return submission;
+    }
+
+    private static UnaryOperator<Defendant> withForename(final String forename) {
+        return defendant -> Defendant.defendant()
+                .withValuesFrom(defendant)
+                .withIndividual(Individual.individual()
+                        .withValuesFrom(defendant.getIndividual())
+                        .withPersonalInformation(PersonalInformation.personalInformation()
+                                .withValuesFrom(defendant.getIndividual().getPersonalInformation())
+                                .withForename(forename)
+                                .build())
+                        .build())
+                .build();
+    }
+
+    @SafeVarargs
+    private static MigratedCaseSubmission withDefendants(final UnaryOperator<Defendant>... defendantUpdates) {
+        final MigratedCaseSubmission submission = load(LIBRA_VALID, LIBRA);
+        final Defendant baseDefendant = submission.getMigratedCase().getDefendants().get(0);
+        return MigratedCaseSubmission.migratedCaseSubmission()
+                .withValuesFrom(submission)
+                .withMigratedCase(MigratedCase.migratedCase()
+                        .withValuesFrom(submission.getMigratedCase())
+                        .withDefendants(Arrays.stream(defendantUpdates).map(update -> update.apply(baseDefendant)).toList())
+                        .build())
+                .build();
     }
 
     private static MigratedCaseSubmission load(final String fixtureName, final MigrationSourceSystemName sourceSystem) {
