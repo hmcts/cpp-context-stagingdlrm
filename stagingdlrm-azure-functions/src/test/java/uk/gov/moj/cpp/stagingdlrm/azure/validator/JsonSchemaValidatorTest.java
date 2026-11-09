@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -634,6 +635,48 @@ class JsonSchemaValidatorTest {
         assertTrue(messages.iterator().next().getMessage().contains("address"), () -> messages.toString());
     }
 
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    @DisplayName("individual.personalInformation requires a non-blank forename (LIBRA)")
+    void shouldRejectLibraCaseSubmissionWithDefendantMissingForename(final String forename) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        final ObjectNode personalInformation = (ObjectNode) individual.get("personalInformation");
+        if (forename == null) {
+            personalInformation.remove("forename");
+        } else {
+            personalInformation.put("forename", forename);
+        }
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(1, messages.size(), () -> messages.toString());
+        assertTrue(messages.iterator().next().getMessage().contains("forename"), () -> messages.toString());
+    }
+
+    @Test
+    @DisplayName("a person parent/guardian without a forename is accepted (LIBRA)")
+    void shouldAcceptLibraCaseSubmissionWithParentGuardianMissingForename() throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
+        final ObjectNode defendant = validDefendant();
+        final ObjectNode individual = validIndividual();
+        final ObjectNode parentGuardian = individual.putObject("parentGuardianInformation").put("gender", 0);
+        parentGuardian.putObject("personalInformation").put("surname", "Brown")
+                .putObject("address").put("address1", "1 Test Street");
+        defendant.set("individual", individual);
+        migratedCase.putArray("defendants").add(defendant);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(Set.of(), messages, () -> messages.toString());
+    }
+
     @Test
     @DisplayName("DD-43180 individual.selfDefinedInformation requires gender (LIBRA)")
     void shouldRejectLibraCaseSubmissionWithSelfDefinedInformationMissingGender() throws Exception {
@@ -810,7 +853,7 @@ class JsonSchemaValidatorTest {
         final ObjectNode migratedCase = (ObjectNode) payload.get("migratedCase");
         final ObjectNode defendant = validDefendant();
         final ObjectNode individual = MAPPER.createObjectNode();
-        individual.putObject("personalInformation").put("surname", "Brown")
+        individual.putObject("personalInformation").put("forename", "John").put("surname", "Brown")
                 .putObject("address").put("address1", "1 Test Street");
         defendant.set("individual", individual);
         migratedCase.putArray("defendants").add(defendant);
@@ -825,6 +868,7 @@ class JsonSchemaValidatorTest {
     private static ObjectNode validIndividual() {
         final ObjectNode individual = MAPPER.createObjectNode();
         final ObjectNode personalInformation = individual.putObject("personalInformation");
+        personalInformation.put("forename", "John");
         personalInformation.put("surname", "Brown");
         personalInformation.putObject("address").put("address1", "1 Test Street");
         individual.putObject("selfDefinedInformation").put("gender", 0);

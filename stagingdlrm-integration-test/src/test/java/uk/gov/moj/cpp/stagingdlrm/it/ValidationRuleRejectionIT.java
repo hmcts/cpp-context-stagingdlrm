@@ -88,7 +88,10 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
                         "$.migratedCase.hearings[*].timeOfHearing"),
                 arguments("LIBRA Summons missing informant", LIBRA_BASE, LIBRA_URN,
                         mutator(payload -> setCaseDetailsField(payload, "initiationCode", "S")),
-                        "$.migratedCase.caseDetails.informant"));
+                        "$.migratedCase.caseDetails.informant"),
+                arguments("LIBRA defendant missing forename", LIBRA_BASE, LIBRA_URN,
+                        mutator(ValidationRuleRejectionIT::removeFirstDefendantForename),
+                        "$.migratedCase.defendants[*].individual.personalInformation.forename"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -153,9 +156,24 @@ class ValidationRuleRejectionIT extends AbstractTestHelper {
         return put(root, "migratedCase", put(migratedCase, "hearings", hearings)).toString();
     }
 
+    private static String removeFirstDefendantForename(final String payload) {
+        final JsonObject root = readJson(payload);
+        final JsonObject migratedCase = root.getJsonObject("migratedCase");
+        final JsonArray defendants = migratedCase.getJsonArray("defendants");
+        final JsonObject defendant = defendants.getJsonObject(0);
+        final JsonObject individual = defendant.getJsonObject("individual");
+        final JsonObject personalInformation = copyWithout(individual.getJsonObject("personalInformation"), Set.of("forename"));
+        final JsonObject updatedDefendant = put(defendant, "individual", put(individual, "personalInformation", personalInformation));
+        return put(root, "migratedCase", put(migratedCase, "defendants", withFirstElement(defendants, updatedDefendant))).toString();
+    }
+
     private static JsonArray withoutFieldOnFirstElement(final JsonArray array, final String field) {
+        return withFirstElement(array, copyWithout(array.getJsonObject(0), Set.of(field)));
+    }
+
+    private static JsonArray withFirstElement(final JsonArray array, final JsonObject first) {
         final JsonArrayBuilder builder = Json.createArrayBuilder();
-        builder.add(copyWithout(array.getJsonObject(0), Set.of(field)));
+        builder.add(first);
         for (int i = 1; i < array.size(); i++) {
             builder.add(array.getJsonObject(i));
         }
