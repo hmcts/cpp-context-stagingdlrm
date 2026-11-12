@@ -11,8 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;
 
-import javax.json.Json;
-import javax.json.JsonWriter;
+import jakarta.json.Json;
+import jakarta.json.JsonWriter;
 
 import com.microsoft.azure.functions.ExecutionContext;
 

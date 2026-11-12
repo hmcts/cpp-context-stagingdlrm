@@ -10,11 +10,9 @@
     <artifactId>stagingdlrm-testharness</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <azure.functions.maven.plugin.version>1.24.0</azure.functions.maven.plugin.version>
-        <azure.functions.java.library.version>3.1.0</azure.functions.java.library.version>
+        <azure.functions.maven.plugin.version>1.42.0</azure.functions.maven.plugin.version>
+        <azure.functions.java.library.version>3.3.0</azure.functions.java.library.version>
     </properties>
 
     <dependencyManagement>
@@ -23,11 +21,6 @@
                 <groupId>com.microsoft.azure.functions</groupId>
                 <artifactId>azure-functions-java-library</artifactId>
                 <version>${azure.functions.java.library.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>javax</groupId>
-                <artifactId>javaee-api</artifactId>
-                <version>8.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -48,8 +41,8 @@
             <version>1.23.0</version>
         </dependency>
         <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
         </dependency>
     </dependencies>
 
