@@ -1187,7 +1187,11 @@ class JsonSchemaValidatorTest {
                 arguments("FR9 a manifest carrying files is accepted (XHIBIT)",
                         FIXTURES + "manifest-with-files.json", 0),
                 arguments("FR9 a manifest with no files is accepted (XHIBIT)",
-                        FIXTURES + "manifest-without-files.json", 0));
+                        FIXTURES + "manifest-without-files.json", 0),
+                arguments("a manifest whose files carry an ISO-8601 uploadedDateTime is accepted (XHIBIT)",
+                        FIXTURES + "manifest-with-upload-dates.json", 0),
+                arguments("a manifest whose first file has a non-ISO-8601 uploadedDateTime is rejected (XHIBIT)",
+                        FIXTURES + "manifest-with-invalid-upload-date.json", 1));
     }
 
     @DisplayName("FR1 every fixture in this class binds its source system explicitly")

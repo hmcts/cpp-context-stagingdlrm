@@ -28,9 +28,13 @@ import uk.gov.moj.cpp.stagingdlrm.azure.rest.EventGridMonitorHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
+import uk.gov.moj.cpp.stagingdlrm.azure.validator.ManifestUploadDateValidator;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.SourceSystemValidators;
 
 import java.io.ByteArrayInputStream;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -648,6 +652,58 @@ class TimerTriggerJavaTest {
 
         verify(eventGridMonitorHelper).processEvent(expectedOutcome, "LIBRA", "outcome/outcome-" + submissionId + ".json");
         verify(eventGridMonitorHelper).processEvent(expectedOutcome, queueMessage, "outcome.json");
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
+        verify(storageCloudClient).sendMessageToTheLogQueue(queueMessage);
+    }
+
+    @Test
+    @DisplayName("a manifest file with a future uploadedDateTime rejects the submission as an error "
+            + "submission and nothing is sent to receive-migrated-case-submission")
+    void shouldRejectSubmissionWhenManifestUploadedDateTimeIsInTheFuture() {
+        final String timerInfo = "timerInfo";
+        final String submissionId = "submission1";
+        final String queueMessage = "LIBRA/batch1/CASEREF-0001/" + submissionId;
+
+        final String caseJsonPayload = casePayload(CASE_REFERENCE);
+        final String manifestJsonPayload = createObjectBuilder()
+                .add("files", JsonObjects.createArrayBuilder().add(createObjectBuilder()
+                        .add("fileName", "WitnessStatementDocument_1.pdf")
+                        .add("fileType", "8")
+                        .add("documentType", 1)
+                        .add("uploadedDateTime", "2026-11-11T14:04:07.108Z")))
+                .build().toString();
+        final String errorMessage = "Manifest validation has failed: files[0].uploadedDateTime is in the future";
+        final String errorEntity = fixture(FIXTURES + "error-response.json");
+        final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
+
+        setField(timerTrigger, "manifestUploadDateValidator",
+                new ManifestUploadDateValidator(Clock.fixed(Instant.parse("2026-11-11T14:04:07.107Z"), ZoneOffset.UTC)));
+
+        final List<String> listBlobNames = List.of(queueMessage + "/case.json", queueMessage + "/manifest.json",
+                queueMessage + "/WitnessStatementDocument_1.pdf");
+        final Map<String, QueueMessage> messageMap = Map.of(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/case.json")).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/manifest.json")).thenReturn(manifestJsonPayload);
+        when(libraCaseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of());
+        when(manifestJsonSchemaValidator.validate(submissionId, manifestJsonPayload)).thenReturn(Set.of());
+        when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
+                eq(manifestJsonPayload), eq(submissionId), eq(CASE_REFERENCE), eq(queueMessage), eq(errorMessage)))
+                .thenReturn(errorMigratedCaseSubmissionJsonObject);
+        when(stagingDlrmCommandHelper.sendPostCommandApi(
+                "http://localhost:8080" + ERROR_MIGRATED_CASE_SUBMISSION_PATH,
+                errorMigratedCaseSubmissionJsonObject,
+                "application/vnd.stagingdlrm.receive-error-migrated-case-submission+json",
+                stagingDlrmUserId,
+                submissionId))
+                .thenReturn(Response.status(400).entity(errorEntity).build());
+
+        timerTrigger.run(timerInfo, context);
+
+        verify(stagingDlrmCommandHelper, never()).generateMigratedCaseSubmissionPayload(any(), anyList(), any(), anyString(), anyString());
+        verify(stagingDlrmCommandHelper, never()).sendPostCommandApi(eq("http://localhost:8080" + MIGRATED_CASE_SUBMISSION_PATH), any(), anyString(), anyString(), anyString());
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
         verify(storageCloudClient).sendMessageToTheLogQueue(queueMessage);
     }

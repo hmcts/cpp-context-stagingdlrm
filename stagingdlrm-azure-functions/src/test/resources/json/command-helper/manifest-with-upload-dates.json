@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "fileName": "test.pdf",
+      "fileType": "1",
+      "documentType": 5,
+      "uploadedDateTime": "2026-11-11T14:04:07.107Z"
+    },
+    {
+      "fileName": "test1.pdf",
+      "fileType": "2",
+      "documentType": 1
+    }
+  ],
+  "migrationSourceSystem": {
+    "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+    "migrationSourceSystemCaseIdentifier": "{{SOURCE_SYSTEM}}-1234567890"
+  }
+}

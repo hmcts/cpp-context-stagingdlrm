@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "fileName": "WitnessStatementDocument_1.pdf",
+      "fileType": "8",
+      "documentType": 1,
+      "uploadedDateTime": "2026-11-11T14:04:07.107Z"
+    },
+    {
+      "fileName": "WitnessStatementDocument_2.pdf",
+      "fileType": "8",
+      "documentType": 1,
+      "uploadedDateTime": "2026-11-10T09:15:00.000Z"
+    }
+  ],
+  "migrationSourceSystem": {
+    "migrationSourceSystemName": "{{SOURCE_SYSTEM}}",
+    "migrationSourceSystemCaseIdentifier": "{{SOURCE_SYSTEM}}-HEARINGS"
+  }
+}

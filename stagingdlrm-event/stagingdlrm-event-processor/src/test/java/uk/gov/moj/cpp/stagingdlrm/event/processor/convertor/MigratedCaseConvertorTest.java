@@ -16,8 +16,10 @@ import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.SelfDefinedInformation;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Defendant;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedCase;
+import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.MigratedMaterial;
 import uk.gov.moj.cpp.stagingdlrm.migrated.json.schemas.Offence;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -195,5 +197,30 @@ class MigratedCaseConvertorTest {
         final MigratedCaseDetails migratedCaseDetails = migratedCaseConvertor.buildMigratedCasedetails(newMigratedCase, caseId);
 
         assertNull(migratedCaseDetails.getCaseDetails().getSendingCourt());
+    }
+
+    @Test
+    void shouldPassMaterialReceivedDateTimeThroughToPcfdlrm() {
+        final UUID caseId = UUID.randomUUID();
+        final ZonedDateTime receivedDateTime = ZonedDateTime.parse("2026-11-11T14:04:07.107Z");
+        final MigratedMaterial withDate = MigratedMaterial.migratedMaterial()
+                .withId(UUID.randomUUID())
+                .withFileName("WitnessStatementDocument_1.pdf")
+                .withFileType("8")
+                .withDocumentType(1)
+                .withAzureLocation("LIBRA/batch1/CASEREF-0001/submission1/WitnessStatementDocument_1.pdf")
+                .withReceivedDateTime(receivedDateTime)
+                .build();
+        final MigratedMaterial withoutDate = MigratedMaterial.migratedMaterial()
+                .withValuesFrom(withDate)
+                .withId(UUID.randomUUID())
+                .withReceivedDateTime(null)
+                .build();
+
+        final List<uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedMaterial> materials =
+                MigratedCaseConvertor.buildMaterials(List.of(withDate, withoutDate), caseId);
+
+        assertEquals(receivedDateTime, materials.get(0).getReceivedDateTime());
+        assertNull(materials.get(1).getReceivedDateTime());
     }
 }

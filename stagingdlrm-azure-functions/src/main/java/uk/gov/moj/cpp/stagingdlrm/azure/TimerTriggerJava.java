@@ -12,10 +12,12 @@ import uk.gov.moj.cpp.stagingdlrm.azure.rest.LoggerHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.rest.StagingDlrmCommandHelper;
 import uk.gov.moj.cpp.stagingdlrm.azure.storage.StorageCloudClient;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.JsonSchemaValidator;
+import uk.gov.moj.cpp.stagingdlrm.azure.validator.ManifestUploadDateValidator;
 import uk.gov.moj.cpp.stagingdlrm.azure.validator.SourceSystemValidators;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -49,6 +51,8 @@ public class TimerTriggerJava {
 
     public static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
 
+    public static final String MANIFEST_VALIDATION_FAILED = "Manifest validation has failed";
+
     private static final int DEFAULT_RETRY = 3;
 
     private Boolean caseProcessingEnabled;
@@ -68,6 +72,8 @@ public class TimerTriggerJava {
     private String stagingDlrmBaseUri;
 
     private Map<String, SourceSystemValidators> validatorsBySourceSystem;
+
+    private ManifestUploadDateValidator manifestUploadDateValidator;
 
     private EventGridMonitorHelper eventGridMonitorHelper;
 
@@ -166,6 +172,14 @@ public class TimerTriggerJava {
 
             final String caseUrn = caseDetailsJsonObject.getString("prosecutorCaseReference");
             loggerHelper.logInfo(context, submissionId, "Case URN: {0}", caseUrn);
+
+            final List<String> uploadDateMessages = manifestUploadDateValidator.validate(manifestJsonInput);
+            if (!uploadDateMessages.isEmpty()) {
+                final String errorMessage = MANIFEST_VALIDATION_FAILED + ": " + String.join(", ", uploadDateMessages);
+                loggerHelper.logInfo(context, submissionId, "Validation error messages: " + errorMessage);
+                processClientError(message, baseUriArray, errorMessage, manifestJsonContent, submissionId, caseUrn);
+                return;
+            }
 
             final JsonObject migratedCaseSubmissionJsonObject = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
                     caseJsonInput, materialFiles, manifestJsonInput, submissionId, message.queueName());
@@ -410,6 +424,12 @@ public class TimerTriggerJava {
         }
     }
 
+    private void setManifestUploadDateValidator() {
+        if (isNull(this.manifestUploadDateValidator)) {
+            this.manifestUploadDateValidator = new ManifestUploadDateValidator(Clock.systemUTC());
+        }
+    }
+
     private void setTimerTriggerJavaProperties() {
         setCaseProcessingEnabled();
         setStorageCloudClient();
@@ -419,6 +439,7 @@ public class TimerTriggerJava {
         setStagingDlrmMigratedCaseSubmissionContentType();
         setStagingDlrmErrorMigratedCaseSubmissionContentType();
         setJsonSchemaValidator();
+        setManifestUploadDateValidator();
         setRetryCount();
         setLoggerHelper();
     }
