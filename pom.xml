@@ -10,7 +10,7 @@
 
     <groupId>uk.gov.moj.cpp.stagingdlrm</groupId>
     <artifactId>stagingdlrm-parent</artifactId>
-    <version>17.104.30-SNAPSHOT</version>
+    <version>25.104.30-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>stagingdlrm Context - Parent Module</name>
@@ -36,7 +36,7 @@
         <jmeter-lightning-maven-plugin>0.1.1</jmeter-lightning-maven-plugin>
         <stream-transformation-tool-api.version>7.0.0</stream-transformation-tool-api.version>
         <coredomain.version>25.104.7</coredomain.version>
-        <pcfdlrm.version>17.104.21</pcfdlrm.version>
+        <pcfdlrm.version>25.104.28</pcfdlrm.version>
         <system.id-mapper.version>25.104.0</system.id-mapper.version>
         <progression.version>17.104.308</progression.version>
     </properties>
