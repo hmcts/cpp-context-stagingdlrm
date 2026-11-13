@@ -139,6 +139,24 @@ class StagingDlrmCommandHelperTest {
                         "materials[1].id")));
     }
 
+    // A manifest entry's uploadedDateTime becomes that material's receivedDateTime; an entry without one
+    // gets no receivedDateTime.
+    @Test
+    void shouldCopyManifestUploadedDateTimeToMaterialReceivedDateTime() {
+
+        final JsonObject payload = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
+                caseInput(),
+                List.of(LOCATION + "/test.pdf", LOCATION + "/test1.pdf"),
+                manifest("manifest-with-upload-dates.json"),
+                FIXED_SUBMISSION_ID, LOCATION);
+
+        assertThat(asString(payload), matchesWholePayload(
+                expected("expected-with-upload-dates.json"),
+                List.of("metadata.id",
+                        "materials[0].id",
+                        "materials[1].id")));
+    }
+
     @Test
     void shouldGenerateMigratedCaseSubmissionPayloadSuccessfullyWhenNoMaterialsAreAttached() {
 

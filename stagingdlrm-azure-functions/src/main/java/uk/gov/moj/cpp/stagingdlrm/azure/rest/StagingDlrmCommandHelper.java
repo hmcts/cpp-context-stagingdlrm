@@ -37,6 +37,8 @@ public class StagingDlrmCommandHelper {
 
     private static final String FILE_TYPE = "fileType";
     private static final String DOCUMENT_TYPE = "documentType";
+    private static final String UPLOADED_DATE_TIME = "uploadedDateTime";
+    private static final String RECEIVED_DATE_TIME = "receivedDateTime";
     public static final String AZURE_LOCATION = "azureLocation";
 
     private final LoggerHelper loggerHelper;
@@ -115,6 +117,10 @@ public class StagingDlrmCommandHelper {
 
                 if(nonNull(metadataInputJsonArrayJsonObject.get(DOCUMENT_TYPE))) {
                     materialJsonBuilder.add(DOCUMENT_TYPE, metadataInputJsonArrayJsonObject.getInt(DOCUMENT_TYPE));
+                }
+
+                if(nonNull(metadataInputJsonArrayJsonObject.get(UPLOADED_DATE_TIME))) {
+                    materialJsonBuilder.add(RECEIVED_DATE_TIME, metadataInputJsonArrayJsonObject.getString(UPLOADED_DATE_TIME));
                 }
 
                 addMaterialFileDetails(materialJsonBuilder, materialFile);
