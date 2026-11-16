@@ -9,6 +9,12 @@
     },
     "migrationSourceSystemCaseIdentifier": {
       "type": "string"
+    },
+    "firstCourtHearingLocation": {
+      "type": "string",
+      "description": "OU code of the court to which the case was originally sent by the prosecuting authority",
+      "minLength": 7,
+      "maxLength": 7
     }
   },
   "required": [
