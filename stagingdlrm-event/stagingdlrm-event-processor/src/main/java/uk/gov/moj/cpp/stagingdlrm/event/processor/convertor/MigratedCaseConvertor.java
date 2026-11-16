@@ -261,6 +261,7 @@ public class MigratedCaseConvertor implements Serializable {
         return MigrationSourceSystem.migrationSourceSystem()
                 .withMigrationSourceSystemCaseIdentifier(migrationSourceSystem.getMigrationSourceSystemCaseIdentifier())
                 .withMigrationSourceSystemName(migrationSourceSystem.getMigrationSourceSystemName().name())
+                .withFirstCourtHearingLocation(migrationSourceSystem.getFirstCourtHearingLocation())
                 .build();
     }
 

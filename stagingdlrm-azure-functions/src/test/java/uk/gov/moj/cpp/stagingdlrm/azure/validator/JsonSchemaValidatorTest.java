@@ -1191,7 +1191,13 @@ class JsonSchemaValidatorTest {
                 arguments("a manifest whose files carry an ISO-8601 uploadedDateTime is accepted (XHIBIT)",
                         FIXTURES + "manifest-with-upload-dates.json", 0),
                 arguments("a manifest whose first file has a non-ISO-8601 uploadedDateTime is rejected (XHIBIT)",
-                        FIXTURES + "manifest-with-invalid-upload-date.json", 1));
+                        FIXTURES + "manifest-with-invalid-upload-date.json", 1),
+                arguments("a 7-character migrationSourceSystem.firstCourtHearingLocation is accepted (XHIBIT)",
+                        FIXTURES + "manifest-with-first-court-hearing-location.json", 0),
+                arguments("a 6-character migrationSourceSystem.firstCourtHearingLocation is rejected (XHIBIT)",
+                        FIXTURES + "manifest-with-short-first-court-hearing-location.json", 1),
+                arguments("an 8-character migrationSourceSystem.firstCourtHearingLocation is rejected (XHIBIT)",
+                        FIXTURES + "manifest-with-long-first-court-hearing-location.json", 1));
     }
 
     @DisplayName("FR1 every fixture in this class binds its source system explicitly")

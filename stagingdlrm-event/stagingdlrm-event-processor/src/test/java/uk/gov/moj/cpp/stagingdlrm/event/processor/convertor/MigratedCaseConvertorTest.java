@@ -11,6 +11,8 @@ import static uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName.
 import uk.gov.moj.cpp.prosecution.casefile.dlrm.migrated.json.schemas.MigratedCaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.CaseDetails;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.Individual;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystem;
+import uk.gov.moj.cpp.stagingdlrm.json.schemas.MigrationSourceSystemName;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.ParentGuardianInformation;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.PersonalInformation;
 import uk.gov.moj.cpp.stagingdlrm.json.schemas.SelfDefinedInformation;
@@ -222,5 +224,22 @@ class MigratedCaseConvertorTest {
 
         assertEquals(receivedDateTime, materials.get(0).getReceivedDateTime());
         assertNull(materials.get(1).getReceivedDateTime());
+    }
+
+    @Test
+    void shouldPassFirstCourtHearingLocationThroughToPcfdlrm() {
+        final MigrationSourceSystem withLocation = MigrationSourceSystem.migrationSourceSystem()
+                .withMigrationSourceSystemName(MigrationSourceSystemName.LIBRA)
+                .withMigrationSourceSystemCaseIdentifier("LIBRA-123")
+                .withFirstCourtHearingLocation("B01LY00")
+                .build();
+        final MigrationSourceSystem withoutLocation = MigrationSourceSystem.migrationSourceSystem()
+                .withValuesFrom(withLocation)
+                .withFirstCourtHearingLocation(null)
+                .build();
+
+        assertEquals("B01LY00", MigratedCaseConvertor.buildMigrationSourceSystem(withLocation).getFirstCourtHearingLocation());
+        assertEquals("LIBRA", MigratedCaseConvertor.buildMigrationSourceSystem(withLocation).getMigrationSourceSystemName());
+        assertNull(MigratedCaseConvertor.buildMigrationSourceSystem(withoutLocation).getFirstCourtHearingLocation());
     }
 }
