@@ -29,14 +29,21 @@ by the prosecuting authority.
 **Requirement change (developer, 2026-11-13):** the field goes **inside `migrationSourceSystem`**, not
 on `caseDetails`.
 
-## Current behaviour (code, `team/libra4`)
+**Requirement change (business, 2026-11-25):** LIBRA sends the field on **`caseDetails` in `case.json`**.
+The Function App moves it from `caseDetails` into `migrationSourceSystem`, so from the canonical schema
+onwards (stagingdlrm, pcfdlrm, core-domain, Progression) nothing changes from the 2026-11-13 version.
+The manifest `migrationSourceSystem` no longer accepts it.
+
+## Current behaviour (code, `team/libra4` before the 2026-11-25 change)
 
 - **Where `migrationSourceSystem` comes from:** `manifest.json`, not `case.json` (the LIBRA case
   schema rejects it in `case.json`). `StagingDlrmCommandHelper` (`:179`, `:198`) copies the
   manifest's `migrationSourceSystem` object unchanged into `migratedCase.migrationSourceSystem`.
 - **Function App `migrationSourceSystem.json`:** closed; `migrationSourceSystemName` and
-  `migrationSourceSystemCaseIdentifier`, both required. Shared by XHIBIT and LIBRA via the one
-  manifest validator.
+  `migrationSourceSystemCaseIdentifier`, both required, plus optional `firstCourtHearingLocation`
+  (length 7) from the 2026-11-13 version. Shared by XHIBIT and LIBRA via the one manifest validator.
+- **LIBRA `caseDetails` (`libra.case-submission.json`):** closed, LIBRA only. Canonical `caseDetails`
+  is also closed, so a field left on `caseDetails` would be rejected by stagingdlrm.
 - **Canonical `migrationSourceSystem.json`:** closed; the same two fields.
 - **`MigratedCaseConvertor.buildMigrationSourceSystem` (`:259`):** copies the two fields by name to
   pcfdlrm. Anything else is dropped.

@@ -9,11 +9,6 @@
   },
   "migrationSourceSystemCaseIdentifier": {
     "type": "string"
-  },
-  "firstCourtHearingLocation": {
-    "type": "string",
-    "minLength": 7,
-    "maxLength": 7
   }
   },
   "required": [
