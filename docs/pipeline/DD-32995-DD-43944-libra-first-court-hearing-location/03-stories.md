@@ -3,13 +3,13 @@
 ## DD-43944 — LIBRA first court hearing location (stagingdlrm)
 
 **As** the DLRM migration service
-**I want** to accept a LIBRA case's first court hearing location in `migrationSourceSystem` and pass it to pcfdlrm
+**I want** to accept a LIBRA case's first court hearing location on `caseDetails` and pass it to pcfdlrm in `migrationSourceSystem`
 **So that** the court the prosecutor first sent the case to is kept, even when no hearings were migrated.
 
 ### Scope
 
 - One repo: `cpp-context-stagingdlrm`, base `team/libra4`.
-- `02-design.md` C-1 – C-3.
+- `02-design.md` C-1 – C-4.
 - Pairs with the pcfdlrm story (same directory name in that repo), which merges first.
 
 ### Definition of done

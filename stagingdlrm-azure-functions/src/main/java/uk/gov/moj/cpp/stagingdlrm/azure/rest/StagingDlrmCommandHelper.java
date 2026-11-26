@@ -19,6 +19,7 @@ import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.JsonValue;
 import javax.json.JsonWriter;
 import javax.net.ssl.SSLContext;
 import javax.ws.rs.client.Client;
@@ -39,6 +40,8 @@ public class StagingDlrmCommandHelper {
     private static final String DOCUMENT_TYPE = "documentType";
     private static final String UPLOADED_DATE_TIME = "uploadedDateTime";
     private static final String RECEIVED_DATE_TIME = "receivedDateTime";
+    private static final String MIGRATION_SOURCE_SYSTEM = "migrationSourceSystem";
+    private static final String FIRST_COURT_HEARING_LOCATION = "firstCourtHearingLocation";
     public static final String AZURE_LOCATION = "azureLocation";
 
     private final LoggerHelper loggerHelper;
@@ -176,12 +179,16 @@ public class StagingDlrmCommandHelper {
 
     private JsonObject buildMigratedCaseJsonBuilder(final JsonObject migratedCaseJsonObject, final JsonObject metadataInput) {
 
-        final JsonObject migrationSourceSystem = metadataInput.getJsonObject("migrationSourceSystem");
+        final JsonObject migrationSourceSystem = metadataInput.getJsonObject(MIGRATION_SOURCE_SYSTEM);
 
         final JsonObjectBuilder migratedCaseJsonBuilder = createObjectBuilder();
 
+        JsonValue firstCourtHearingLocation = null;
+
         if (nonNull(migratedCaseJsonObject)) {
-            migratedCaseJsonBuilder.add("caseDetails", migratedCaseJsonObject.getJsonObject("caseDetails"));
+            final JsonObject caseDetails = migratedCaseJsonObject.getJsonObject("caseDetails");
+            firstCourtHearingLocation = nonNull(caseDetails) ? caseDetails.get(FIRST_COURT_HEARING_LOCATION) : null;
+            migratedCaseJsonBuilder.add("caseDetails", nonNull(firstCourtHearingLocation) ? copyWithout(caseDetails, FIRST_COURT_HEARING_LOCATION) : caseDetails);
 
             final JsonArray hearings = migratedCaseJsonObject.getJsonArray("hearings");
             if (nonNull(hearings)) {
@@ -195,9 +202,24 @@ public class StagingDlrmCommandHelper {
         }
 
         if (nonNull(migrationSourceSystem)) {
-            migratedCaseJsonBuilder.add("migrationSourceSystem", migrationSourceSystem);
+            final JsonObjectBuilder migrationSourceSystemBuilder = createObjectBuilder();
+            migrationSourceSystem.forEach(migrationSourceSystemBuilder::add);
+            if (nonNull(firstCourtHearingLocation)) {
+                migrationSourceSystemBuilder.add(FIRST_COURT_HEARING_LOCATION, firstCourtHearingLocation);
+            }
+            migratedCaseJsonBuilder.add(MIGRATION_SOURCE_SYSTEM, migrationSourceSystemBuilder.build());
         }
         return migratedCaseJsonBuilder.build();
+    }
+
+    private JsonObject copyWithout(final JsonObject source, final String excludedKey) {
+        final JsonObjectBuilder builder = createObjectBuilder();
+        source.forEach((key, value) -> {
+            if (!excludedKey.equals(key)) {
+                builder.add(key, value);
+            }
+        });
+        return builder.build();
     }
 
     private String convertToString(JsonObject jsonObject) {

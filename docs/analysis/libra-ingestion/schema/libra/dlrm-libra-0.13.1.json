@@ -77,6 +77,12 @@
           "type": "string",
           "maxLength": 92,
           "description": "Name of the person to be named as the informant in this case."
+        },
+        "firstCourtHearingLocation": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 7,
+          "description": "OU code of the court to which the case was originally sent by the prosecuting authority."
         }
       },
       "required": [

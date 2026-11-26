@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Map.of;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -172,6 +173,23 @@ class StagingDlrmCommandHelperTest {
 
         // "materials" is absent, not an empty array — pinned above too, but easy to miss in a fixture.
         assertNull(payload.getJsonArray("materials"));
+    }
+
+    @Test
+    void shouldMoveFirstCourtHearingLocationFromCaseDetailsToMigrationSourceSystem() {
+        final JsonObject caseInput = readJson(fixture(FIXTURES + "case-minimal.json")
+                .replace("\"initiationCode\": \"H\"", "\"initiationCode\": \"H\", \"firstCourtHearingLocation\": \"B01LY00\""));
+
+        final JsonObject migratedCase = stagingDlrmCommandHelper.generateMigratedCaseSubmissionPayload(
+                caseInput, List.of(), manifestWithoutMaterials(), FIXED_SUBMISSION_ID, LOCATION).getJsonObject("migratedCase");
+
+        final JsonObject caseDetails = migratedCase.getJsonObject("caseDetails");
+        final JsonObject migrationSourceSystem = migratedCase.getJsonObject("migrationSourceSystem");
+        assertFalse(caseDetails.containsKey("firstCourtHearingLocation"));
+        assertEquals("TVL55117DFXXV", caseDetails.getString("prosecutorCaseReference"));
+        assertEquals("B01LY00", migrationSourceSystem.getString("firstCourtHearingLocation"));
+        assertEquals(XHIBIT, migrationSourceSystem.getString("migrationSourceSystemName"));
+        assertEquals(XHIBIT + "-1234567890", migrationSourceSystem.getString("migrationSourceSystemCaseIdentifier"));
     }
 
     /** DD-43078 T2 AC10 — caller-supplied submissionId, azureLocation carrying the full blob path. */

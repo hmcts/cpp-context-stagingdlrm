@@ -23,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -214,6 +215,17 @@ class JsonSchemaValidatorTest {
         final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
 
         assertEquals(1, messages.size(), () -> messages.toString());
+    }
+
+    @ParameterizedTest(name = "caseDetails.firstCourtHearingLocation \"{0}\" → {1} message(s) (LIBRA)")
+    @CsvSource({"B01LY00,0", "B01LY0,1", "B01LY000,1"})
+    void shouldValidateLibraFirstCourtHearingLocationLength(final String firstCourtHearingLocation, final int expectedMessages) throws Exception {
+        final ObjectNode payload = (ObjectNode) MAPPER.readTree(libra(LIBRA_VALID_CASE));
+        ((ObjectNode) payload.get("migratedCase").get("caseDetails")).put("firstCourtHearingLocation", firstCourtHearingLocation);
+
+        final Set<ValidationMessage> messages = validateLibraCase(MAPPER.writeValueAsString(payload));
+
+        assertEquals(expectedMessages, messages.size(), messages::toString);
     }
 
     /**
@@ -1192,12 +1204,8 @@ class JsonSchemaValidatorTest {
                         FIXTURES + "manifest-with-upload-dates.json", 0),
                 arguments("a manifest whose first file has a non-ISO-8601 uploadedDateTime is rejected (XHIBIT)",
                         FIXTURES + "manifest-with-invalid-upload-date.json", 1),
-                arguments("a 7-character migrationSourceSystem.firstCourtHearingLocation is accepted (XHIBIT)",
-                        FIXTURES + "manifest-with-first-court-hearing-location.json", 0),
-                arguments("a 6-character migrationSourceSystem.firstCourtHearingLocation is rejected (XHIBIT)",
-                        FIXTURES + "manifest-with-short-first-court-hearing-location.json", 1),
-                arguments("an 8-character migrationSourceSystem.firstCourtHearingLocation is rejected (XHIBIT)",
-                        FIXTURES + "manifest-with-long-first-court-hearing-location.json", 1));
+                arguments("a manifest carrying migrationSourceSystem.firstCourtHearingLocation is rejected (XHIBIT)",
+                        FIXTURES + "manifest-with-first-court-hearing-location.json", 1));
     }
 
     @DisplayName("FR1 every fixture in this class binds its source system explicitly")

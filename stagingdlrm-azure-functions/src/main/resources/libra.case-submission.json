@@ -74,6 +74,11 @@
         "informant": {
           "type": "string",
           "maxLength": 92
+        },
+        "firstCourtHearingLocation": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 7
         }
       },
       "required": [
