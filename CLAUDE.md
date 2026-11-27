@@ -29,7 +29,7 @@ mvn verify -P stagingdlrm-integration-test -pl stagingdlrm-integration-test -Dit
 
 ## Local Development Setup
 
-Requires WildFly 10, PostgreSQL, and ActiveMQ running locally.
+Requires WildFly 40, PostgreSQL, and ActiveMQ running locally.
 
 **WildFly:** Start with the custom server config:
 ```bash
@@ -46,7 +46,10 @@ Deploy built WARs by copying them to WildFly's `deployments/` directory (or run 
 
 This service implements the **Staging DLRM** context — it ingests migrated criminal prosecution case files (from legacy systems `LIBRA`/`XHIBIT` via Azure Blob Storage), validates and forwards them to `cpp-context-prosecution-casefile-dlrm` (**pcfdlrm**), and reports outcomes back to Blob Storage. It follows the **CQRS + Event Sourcing** pattern used across the CPP framework, fronted by a standalone Azure Functions app that is *outside* the WildFly/JMS stack.
 
-For a full source-cited trace of every stage (payload assembly, retry/dead-letter rules, outcome file writers) see `docs/architecture/dlrm-flow-reference.md`. `docs/architecture/material-file-flow.md` continues the trace of material (document) files past pcfdlrm into Material/Alfresco/Progression.
+For a full source-cited trace of every stage (payload assembly, retry/dead-letter rules, outcome file
+writers) see `docs/architecture/dlrm-flow-reference.md`. `docs/architecture/material-file-flow.md`
+continues the trace of material (document) files past pcfdlrm into Material/Alfresco/Progression. Both
+predate the Java 25 work, so their version pins are the J17 ones — read them as the *before* picture.
 
 `docs/architecture/` holds only settled reference material for the service as it is today. Pre-pipeline investigation — feasibility studies, schema deltas, sizing drafts — lives in `docs/analysis/<topic>/`; this is the "supporting analysis" that story `00-input-brief.md` files link to. Each topic folder is **self-contained**: the write-ups, the source data they derive from, and the generated artefacts all sit together. `docs/analysis/libra-ingestion/` is the worked example — `libra-ingestion-analysis.md` and `libra-schema-impact.md`, the source `.xlsx` workbook, the generated `schema/` tree, and `libra-schema-impact.csv`.
 
@@ -143,7 +146,7 @@ Azure Pipelines (`azure-pipelines.yaml`) triggers on `main` and `team/*` branche
 - **PR builds** → `context-verify.yaml` (SonarQube analysis)
 - **Merge builds** → `context-validation.yaml` (full validation + IT)
 
-Build agents require `centos8-j17` capability (Java 17).
+Build agents require `ubuntu-j25` capability (Java 25).
 
 ### Reconciliation Tooling
 
@@ -184,6 +187,19 @@ local overrides needed for that part of the codebase.
   should scope tests to Python's stdlib `unittest` (no new dependency); `ci-orchestrator`'s
   Maven-triggered CI does not cover this directory — verification is a manual run against
   a real batch in a dev/sandbox environment.
+- **ADRs are named `<JIRA-KEY>-<slug>.md`, never numbered.** `docs/pipeline/adrs/DD-43191-j25-parity-method.md`.
+  A sequential number has to be allocated by someone at authoring time, which cannot work with stories
+  running in parallel on separate branches: two authors both reach for the next integer and neither sees
+  the other until merge. Every ADR is born from an epic or story that already carries a unique key, so
+  keying to it makes collision impossible, needs no register and no approval round-trip, gives a mirrored
+  ADR the same filename in both repos automatically, and makes `grep DD-43191` find the stories and their
+  ADRs together. An epic with several ADRs distinguishes them by slug, exactly as its story directories
+  do. Pre-existing numbered ADRs keep their names — they are not renumbered retroactively.
+- **Shared ADRs are mirrored, not linked across.** `cpp-context-stagingdlrm` and
+  `cpp-context-prosecution-casefile-dlrm` are worked independently, by separate developers, so each
+  repo's pipeline must be self-contained. A decision shared with the other DLRM repo is authored once
+  and committed to **both**, under the same filename, carrying a header line that names its mirror. Amend both copies in the same pair of PRs, or neither; sections applying to only one repo say
+  so inline so the two files stay byte-identical. Never reference the other repo by URL for anything a stage needs to read.
 - Pipeline artefacts go to one directory **per story**, named
   `docs/pipeline/<EPIC-KEY>-<STORY-KEY>-<slug>/` (created on first use, no pre-scaffolding
   required): `00-input-brief.md` → `01-requirements.md` → `02-design.md` → `03-stories.md`,

@@ -14,7 +14,7 @@ import uk.gov.moj.cpp.stagingdlrm.helper.AbstractTestHelper;
 
 import java.util.Optional;
 
-import javax.json.JsonObject;
+import jakarta.json.JsonObject;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
