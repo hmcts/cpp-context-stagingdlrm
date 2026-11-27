@@ -5,54 +5,30 @@
   "properties": {
     "files": {
       "type": "array",
-      "items": [
-        {
-          "type": "object",
-          "properties": {
-            "fileName": {
-              "type": "string"
-            },
-            "fileType": {
-              "type": "string"
-            },
-            "documentType": {
-              "type": "integer"
-            },
-            "uploadedDateTime": {
-              "type": "string",
-              "format": "date-time"
-            }
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
           },
-          "required": [
-            "fileName",
-            "fileType",
-            "documentType"
-          ]
+          "fileType": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "integer"
+          },
+          "uploadedDateTime": {
+            "type": "string",
+            "format": "date-time"
+          }
         },
-        {
-          "type": "object",
-          "properties": {
-            "fileName": {
-              "type": "string"
-            },
-            "fileType": {
-              "type": "string"
-            },
-            "documentType": {
-              "type": "integer"
-            },
-            "uploadedDateTime": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          "required": [
-            "fileName",
-            "fileType",
-            "documentType"
-          ]
-        }
-      ]
+        "required": [
+          "fileName",
+          "fileType",
+          "documentType"
+        ]
+      }
     },
     "migrationSourceSystem": {
       "$ref": "migrationSourceSystem.json"
