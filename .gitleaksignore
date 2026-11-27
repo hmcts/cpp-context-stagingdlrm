@@ -1,0 +1,5 @@
+# Historic finding brought in by merging main (Java 25 upgrade) into team/libra1.
+# Commit 7789e63 (DD-43191) named the internal Artifactory host in the J25 report;
+# it was redacted to <artifactory-host> in 7ddeb68 and the current file is clean.
+# The history is on main and cannot be rewritten, so only this fingerprint is ignored.
+7789e630d282cb26b0b9fcccd31942c5592dfcae:docs/analysis/j25-upgrade/j25-behavioural-change-investigation-report.md:internal-urls:60
