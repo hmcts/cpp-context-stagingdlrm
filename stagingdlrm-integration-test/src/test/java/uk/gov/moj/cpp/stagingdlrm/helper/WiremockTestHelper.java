@@ -1,6 +1,6 @@
 package uk.gov.moj.cpp.stagingdlrm.helper;
 
-import static javax.ws.rs.core.Response.Status.OK;
+import static jakarta.ws.rs.core.Response.Status.OK;
 import static uk.gov.justice.services.test.utils.core.http.RequestParamsBuilder.requestParams;
 import static uk.gov.justice.services.test.utils.core.http.RestPoller.poll;
 import static uk.gov.justice.services.test.utils.core.matchers.ResponseStatusMatcher.status;
@@ -11,7 +11,7 @@ import static uk.gov.moj.cpp.stagingdlrm.stub.PcfdlrmStub.stubForReceiveMigrated
 import uk.gov.justice.services.test.utils.core.http.RequestParams;
 import uk.gov.moj.cpp.stagingdlrm.stub.SystemIdMapperStub;
 
-import javax.ws.rs.core.Response.Status;
+import jakarta.ws.rs.core.Response.Status;
 
 /**
  * Provides helper methods for tests to interact with Wiremock instance

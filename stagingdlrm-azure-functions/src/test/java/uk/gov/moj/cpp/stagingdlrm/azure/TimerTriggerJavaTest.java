@@ -4,6 +4,7 @@ package uk.gov.moj.cpp.stagingdlrm.azure;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.gov.justice.services.messaging.JsonObjects.createObjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -39,9 +40,9 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.networknt.schema.ValidationMessage;
@@ -294,6 +295,55 @@ class TimerTriggerJavaTest {
 
         verify(storageCloudClient).deleteQueueMessage(queueMessage);
 
+    }
+
+    @Test
+    void shouldPrefixSchemaValidationFailureMarkerWhenCaseSchemaValidationFails() {
+        final String submissionId = UUID.randomUUID().toString();
+        final String queueMessage = "XHIBIT/2026-05-20/28DI10000175/" + submissionId;
+        final String caseJsonPayload = casePayload("CASEREF-0001");
+        final JsonObject metaDataJsonObject = getMetaJsonObject();
+        final JsonObject errorMigratedCaseSubmissionJsonObject = createObjectBuilder().add("submissionId", submissionId).build();
+
+        final String timerInfo = "timerInfo";
+
+        final ValidationMessage validationMessage = mock(ValidationMessage.class);
+        when(validationMessage.getMessage()).thenReturn("$.migratedCase.caseDetails: required property 'prosecutorCaseReference' not found");
+
+        final List<String> listBlobNames = List.of(queueMessage + "/test.pdf", queueMessage + "/test1.pdf", queueMessage + "/case.json", queueMessage + "/manifest.json");
+        final Map<String, QueueMessage> messageMap = new HashMap<>();
+        messageMap.put(queueMessage, new QueueMessage(queueMessage, 1L, listBlobNames));
+
+        final ArgumentCaptor<String> errorMessageCaptor = ArgumentCaptor.forClass(String.class);
+
+        when(context.getLogger()).thenReturn(logger);
+        when(storageCloudClient.receiveMessages()).thenReturn(messageMap);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/" + "case.json")).thenReturn(caseJsonPayload);
+        when(storageCloudClient.downloadBlobContents(submissionId, queueMessage + "/" + "manifest.json")).thenReturn(metaDataJsonObject.toString());
+        when(caseJsonSchemaValidator.validate(submissionId, caseJsonPayload)).thenReturn(Set.of(validationMessage));
+        when(manifestJsonSchemaValidator.validate(submissionId, metaDataJsonObject.toString())).thenReturn(Set.of());
+        when(stagingDlrmCommandHelper.generateErrorMigratedCaseSubmissionPayload(
+                eq(caseJsonPayload),
+                eq(submissionId),
+                eq("CASEREF-0001"),
+                eq(queueMessage),
+                errorMessageCaptor.capture()))
+                .thenReturn(errorMigratedCaseSubmissionJsonObject);
+        when(stagingDlrmCommandHelper.sendPostCommandApi(
+                "http://localhost:8080" + ERROR_MIGRATED_CASE_SUBMISSION_PATH,
+                errorMigratedCaseSubmissionJsonObject,
+                "application/vnd.stagingdlrm.receive-error-migrated-case-submission+json",
+                stagingDlrmUserId,
+                submissionId))
+                .thenReturn(Response.accepted().entity("").build());
+
+        timerTrigger.run(timerInfo, context);
+
+        final String capturedErrorMessage = errorMessageCaptor.getValue();
+        assertTrue(capturedErrorMessage.contains(JSON_SCHEMA_VALIDATION_FAILED));
+        assertTrue(capturedErrorMessage.contains("prosecutorCaseReference"));
+        verify(stagingDlrmCommandHelper, never()).generateMigratedCaseSubmissionPayload(any(), anyList(), any(), anyString(), anyString());
+        verify(storageCloudClient).deleteQueueMessage(queueMessage);
     }
 
     @Test

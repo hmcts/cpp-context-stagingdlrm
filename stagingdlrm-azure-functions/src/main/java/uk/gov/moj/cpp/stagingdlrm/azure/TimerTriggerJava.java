@@ -24,10 +24,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import javax.json.JsonException;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.ws.rs.core.Response;
+import jakarta.json.JsonException;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import jakarta.ws.rs.core.Response;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
@@ -43,11 +43,11 @@ public class TimerTriggerJava {
 
     public static final String ERROR_MIGRATED_CASE_SUBMISSION_PATH = "/stagingdlrm-command-api/command/api/rest/stagingdlrm/receive-error-migrated-case-submission";
 
+    public static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
+
     private static final String CASE_URN = "caseUrn";
 
     private static final String DESCRIPTION = "description";
-
-    public static final String JSON_SCHEMA_VALIDATION_FAILED = "JSON schema validation has failed";
 
     private static final int DEFAULT_RETRY = 3;
 
